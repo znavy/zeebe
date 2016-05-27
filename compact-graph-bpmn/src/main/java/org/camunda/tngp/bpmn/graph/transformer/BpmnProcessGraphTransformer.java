@@ -1,4 +1,6 @@
-package org.camunda.tngp.compactgraph.bpmn.transformer;
+package org.camunda.tngp.bpmn.graph.transformer;
+
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -12,15 +14,14 @@ import org.camunda.bpm.model.bpmn.instance.Process;
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
 import org.camunda.bpm.model.bpmn.instance.StartEvent;
 import org.camunda.bpm.model.bpmn.instance.SubProcess;
+import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 import org.camunda.bpm.model.xml.type.ModelElementType;
+import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.compactgraph.GraphEncoder;
-import org.camunda.tngp.compactgraph.bpmn.BpmnProcessGraph;
 import org.camunda.tngp.compactgraph.builder.GraphBuilder;
 import org.camunda.tngp.compactgraph.builder.NodeBuilder;
-import org.camunda.tngp.taskqueue.protocol.FlowElementDataEncoder;
-import org.camunda.tngp.taskqueue.protocol.ProcessDataEncoder;
-
-import static org.camunda.tngp.compactgraph.bpmn.BpmnProcessGraphEdgeTypes.*;
+import org.camunda.tngp.graph.bpmn.FlowElementDescriptorEncoder;
+import org.camunda.tngp.graph.bpmn.ProcessDescriptorEncoder;
 
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
@@ -30,8 +31,8 @@ public class BpmnProcessGraphTransformer
 
     protected final GraphBuilder graphBuilder = new GraphBuilder();
     protected final Process process;
-    protected final FlowElementDataEncoder flowElementDataEncoder = new FlowElementDataEncoder();
-    protected final ProcessDataEncoder processDataEncoder = new ProcessDataEncoder();
+    protected final FlowElementDescriptorEncoder flowElementDescriptorEncoder = new FlowElementDescriptorEncoder();
+    protected final ProcessDescriptorEncoder processDescriptorEncoder = new ProcessDescriptorEncoder();
 
     protected Map<String, Integer> nodeIdMap = new HashMap<>();
 
@@ -41,26 +42,36 @@ public class BpmnProcessGraphTransformer
         graphBuilder.edgeTypeCount(EDGE_TYPE_COUNT);
     }
 
-    public BpmnProcessGraph transform()
+    public ProcessGraph transform()
     {
+        createProcessNode();
         createFlowElements();
         connectSequenceFlows(process);
         writeProcessData();
         return encodeGraph();
     }
 
+    protected void createProcessNode()
+    {
+        final NodeBuilder nodeBuilder = graphBuilder
+            .newNode()
+            .nodeData(encodeFlowElementData(Process.class, process.getId()));
+
+        nodeIdMap.put(process.getId(), nodeBuilder.id());
+    }
+
     protected void writeProcessData()
     {
         final String processId = process.getId();
 
-        final int processDataBufferLength = processDataEncoder.sbeBlockLength() +
-                ProcessDataEncoder.stringIdHeaderLength() +
+        final int processDataBufferLength = processDescriptorEncoder.sbeBlockLength() +
+                FlowElementDescriptorEncoder.stringIdHeaderLength() +
                 (int) Math.ceil(processId.length() / UTF8_MAX_CHARS_PER_BYTE);
 
         final byte[] dataBuffer = new byte[processDataBufferLength];
 
-        processDataEncoder.wrap(new UnsafeBuffer(dataBuffer), 0)
-            .intialFlowNode(findInitialFlowNode(process))
+        processDescriptorEncoder.wrap(new UnsafeBuffer(dataBuffer), 0)
+            .intialFlowNodeId(findInitialFlowNode(process))
             .stringId(processId);
 
         graphBuilder.graphData(dataBuffer);
@@ -81,10 +92,10 @@ public class BpmnProcessGraphTransformer
         throw new RuntimeException("Cannot find none-start event");
     }
 
-    protected BpmnProcessGraph encodeGraph()
+    protected ProcessGraph encodeGraph()
     {
         final byte[] encodedGraph = new GraphEncoder(graphBuilder).encode();
-        return new BpmnProcessGraph().wrap(encodedGraph);
+        return new ProcessGraph().wrap(encodedGraph);
     }
 
     protected void connectSequenceFlows(BpmnModelElementInstance scope)
@@ -119,24 +130,27 @@ public class BpmnProcessGraphTransformer
 
         for (FlowElement flowElement : flowElements)
         {
+            final ModelElementType elementType = flowElement.getElementType();
+            final Class<? extends ModelElementInstance> instanceType = elementType.getInstanceType();
+            final String id = flowElement.getId();
+
             final NodeBuilder nodeBuilder = graphBuilder
                 .newNode()
-                .nodeData(encodeFlowElementData(flowElement));
+                .nodeData(encodeFlowElementData(instanceType, id));
 
             nodeIdMap.put(flowElement.getId(), nodeBuilder.id());
         }
     }
 
-    protected byte[] encodeFlowElementData(FlowElement flowElement)
+    protected byte[] encodeFlowElementData(final Class<? extends ModelElementInstance> instanceType, final String id)
     {
-        final ModelElementType elementType = flowElement.getElementType();
-        final String id = flowElement.getId();
-
-        final int maxNodeDataLength = flowElementDataEncoder.sbeBlockLength() + FlowElementDataEncoder.stringIdHeaderLength() + (int) Math.ceil(id.length() / UTF8_MAX_CHARS_PER_BYTE);
+        final int maxNodeDataLength = flowElementDescriptorEncoder.sbeBlockLength() + FlowElementDescriptorEncoder.stringIdHeaderLength() + (int) Math.ceil(id.length() / UTF8_MAX_CHARS_PER_BYTE);
         final byte[] nodeDataBuffer = new byte[maxNodeDataLength];
 
-        flowElementDataEncoder.wrap(new UnsafeBuffer(nodeDataBuffer), 0)
-            .type(BpmnGraphNodeTypeMap.graphNodeTypeForModelType(elementType.getInstanceType()))
+        flowElementDescriptorEncoder.wrap(new UnsafeBuffer(nodeDataBuffer), 0)
+            .type(FlowElementTypeMapping.graphNodeTypeForModelType(instanceType))
+            .onEnterEvent(ExecutionEventTypeMapping.onEnterEvent(instanceType))
+            .onLeaveEvent(ExecutionEventTypeMapping.onLeaveEvent(instanceType))
             .stringId(id);
 
         return nodeDataBuffer;

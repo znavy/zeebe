@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <sbe:messageSchema xmlns:sbe="http://www.fixprotocol.org/ns/simple/RC3"
-	package="org.camunda.tngp.taskqueue.protocol" id="2" version="1"
+	package="org.camunda.tngp.graph.bpmn" id="2" version="1"
 	semanticVersion="0.1.0" description="Bpmn Process Schema" byteOrder="littleEndian">
 
 	<types>
@@ -23,13 +23,15 @@
 	</types>
 
 	<types>
-		<enum name="BpmnGraphNodeType" encodingType="uint16">		
-			<validValue name="START_EVENT">0</validValue>
-			<validValue name="END_EVENT">1</validValue>
-			<validValue name="INTERMEDIATE_CATCH_EVENT">2</validValue>
-			<validValue name="INTERMEDIATE_THROW_EVENT">3</validValue>
-			<validValue name="BOUNDARY_EVENT">4</validValue>
-			<validValue name="SEQUENCE_FLOW">5</validValue>
+	
+		<enum name="FlowElementType" encodingType="uint16">		
+			<validValue name="PROCESS">0</validValue>
+			<validValue name="START_EVENT">1</validValue>
+			<validValue name="END_EVENT">2</validValue>
+			<validValue name="INTERMEDIATE_CATCH_EVENT">3</validValue>
+			<validValue name="INTERMEDIATE_THROW_EVENT">4</validValue>
+			<validValue name="BOUNDARY_EVENT">5</validValue>
+			<validValue name="SEQUENCE_FLOW">6</validValue>
 
 			<validValue name="SERVICE_TASK">100</validValue>
 			<validValue name="USER_TASK">101</validValue>
@@ -39,17 +41,33 @@
 			
 			<validValue name="MESSAGE_EVENT_DEFINITION">300</validValue>
 			<validValue name="ERROR_EVENT_DEFINITION">301</validValue>
+		</enum>		
+		
+		<enum name="ExecutionEventType" encodingType="uint16">		
+			<validValue name="PROC_INST_CREATED">0</validValue>
+			<validValue name="PROC_INST_COMPLETED">1</validValue>
+			<validValue name="EVT_SUBSCRIBED">100</validValue>
+			<validValue name="EVT_OCCURRED">101</validValue>
+			<validValue name="ACT_INST_CREATED">200</validValue>
+			<validValue name="ACT_INST_COMPLETED">201</validValue>
+			<validValue name="SQF_EXECUTED">300</validValue>
+			<validValue name="GW_ACTIVATED">400</validValue>
+			<validValue name="GW_COMPLETED">401</validValue>
 		</enum>
+		
 	</types>
 
-	<sbe:message name="ProcessData" id="1">
-		<field name="intialFlowNode" id="1" type="uint16" />
-		<data name="stringId" id="2" type="varDataEncoding" />		
+	<sbe:message name="ProcessDescriptor" id="1">
+		<field name="id" id="1" type="uint64" />
+		<field name="intialFlowNodeId" id="2" type="uint16" />
+		<data name="stringId" id="3" type="varDataEncoding" />		
 	</sbe:message>
 
-	<sbe:message name="FlowElementData" id="2" description="Data associated with a BPMN flow node">
-		<field name="type" id="1" type="BpmnGraphNodeType" />
-		<data name="stringId" id="2" type="varDataEncoding" />	
+	<sbe:message name="FlowElementDescriptor" id="2">
+		<field name="type" id="1" type="FlowElementType" />
+		<field name="onEnterEvent" id="2" type="ExecutionEventType" />
+		<field name="onLeaveEvent" id="3" type="ExecutionEventType" />
+		<data name="stringId" id="4" type="varDataEncoding" />	
 	</sbe:message>
 
 </sbe:messageSchema>

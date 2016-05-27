@@ -1,4 +1,6 @@
-package org.camunda.tngp.compactgraph.bpmn.transformer;
+package org.camunda.tngp.bpmn.graph.transformer;
+
+import static org.camunda.tngp.graph.bpmn.FlowElementType.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,21 +12,22 @@ import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway;
 import org.camunda.bpm.model.bpmn.instance.IntermediateCatchEvent;
 import org.camunda.bpm.model.bpmn.instance.IntermediateThrowEvent;
 import org.camunda.bpm.model.bpmn.instance.ParallelGateway;
+import org.camunda.bpm.model.bpmn.instance.Process;
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
 import org.camunda.bpm.model.bpmn.instance.ServiceTask;
 import org.camunda.bpm.model.bpmn.instance.StartEvent;
 import org.camunda.bpm.model.bpmn.instance.UserTask;
 import org.camunda.bpm.model.xml.instance.ModelElementInstance;
-import org.camunda.tngp.taskqueue.protocol.BpmnGraphNodeType;
+import org.camunda.tngp.graph.bpmn.FlowElementType;
 
-import static org.camunda.tngp.taskqueue.protocol.BpmnGraphNodeType.*;
-
-public class BpmnGraphNodeTypeMap
+public class FlowElementTypeMapping
 {
-    public static Map<Class<? extends BpmnModelElementInstance>, BpmnGraphNodeType> modelTypeToGraphTypeMap = new HashMap<>();
+    public static Map<Class<? extends BpmnModelElementInstance>, FlowElementType> modelTypeToGraphTypeMap = new HashMap<>();
 
     static
     {
+        modelTypeToGraphTypeMap.put(Process.class, PROCESS);
+
         modelTypeToGraphTypeMap.put(StartEvent.class, START_EVENT);
         modelTypeToGraphTypeMap.put(EndEvent.class, END_EVENT);
         modelTypeToGraphTypeMap.put(IntermediateCatchEvent.class, INTERMEDIATE_CATCH_EVENT);
@@ -37,10 +40,10 @@ public class BpmnGraphNodeTypeMap
         modelTypeToGraphTypeMap.put(UserTask.class, USER_TASK);
 
         modelTypeToGraphTypeMap.put(ExclusiveGateway.class, EXCLUSIVE_GATEWAY);
-        modelTypeToGraphTypeMap.put(ParallelGateway.class, BpmnGraphNodeType.PARALLEL_GATEWAY);
+        modelTypeToGraphTypeMap.put(ParallelGateway.class, PARALLEL_GATEWAY);
     }
 
-    public static BpmnGraphNodeType graphNodeTypeForModelType(Class<? extends ModelElementInstance> modelType)
+    public static FlowElementType graphNodeTypeForModelType(Class<? extends ModelElementInstance> modelType)
     {
         return modelTypeToGraphTypeMap.get(modelType);
     }

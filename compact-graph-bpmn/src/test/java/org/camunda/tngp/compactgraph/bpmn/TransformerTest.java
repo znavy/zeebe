@@ -1,24 +1,26 @@
 package org.camunda.tngp.compactgraph.bpmn;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
-import org.camunda.tngp.compactgraph.bpmn.transformer.BpmnModelInstanceTransformer;
-import org.camunda.tngp.taskqueue.protocol.ProcessDataDecoder;
+import org.camunda.tngp.bpmn.graph.FlowElementVisitor;
+import org.camunda.tngp.bpmn.graph.ProcessGraph;
+import org.camunda.tngp.bpmn.graph.transformer.BpmnModelInstanceTransformer;
+import org.camunda.tngp.graph.bpmn.ProcessDescriptorDecoder;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TransformerTest
 {
     BpmnModelInstanceTransformer transformer;
-    FlowNodeVisitor flowNodeVisitor;
+    FlowElementVisitor flowNodeVisitor;
 
     @Before
     public void setup()
     {
         transformer = new BpmnModelInstanceTransformer();
-        flowNodeVisitor = new FlowNodeVisitor();
+        flowNodeVisitor = new FlowElementVisitor();
     }
 
     @Test
@@ -33,27 +35,27 @@ public class TransformerTest
                 .endEvent(endEventId)
                 .done();
 
-        final BpmnProcessGraph processGraph = transformer.transpformSingleProcess(theProcess);
+        final ProcessGraph processGraph = transformer.transformSingleProcess(theProcess);
 
-        final ProcessDataDecoder processData = processGraph.getProcessData();
-        final int initialFlowNode = processData.intialFlowNode();
-        assertThat(initialFlowNode != ProcessDataDecoder.intialFlowNodeNullValue());
-        assertThat(processData.stringId()).isEqualTo(processId);
+        final int initialFlowNode = processGraph.intialFlowNodeId();
+        assertThat(initialFlowNode != ProcessDescriptorDecoder.intialFlowNodeIdNullValue());
+        assertThat(processGraph.stringId()).isEqualTo(processId);
 
         flowNodeVisitor.init(processGraph).moveToNode(initialFlowNode);
 
-        assertThat(flowNodeVisitor.getStringId()).isEqualTo(startEventId);
+        assertThat(flowNodeVisitor.stringId()).isEqualTo(startEventId);
         assertThat(flowNodeVisitor.hasOutgoingSequenceFlows()).isTrue();
         assertThat(flowNodeVisitor.hasIncomingSequenceFlows()).isFalse();
 
         flowNodeVisitor.traverseSingleOutgoingSequenceFlow();
 
-        assertThat(flowNodeVisitor.getStringId()).isEqualTo(endEventId);
+        assertThat(flowNodeVisitor.stringId()).isEqualTo(endEventId);
         assertThat(flowNodeVisitor.hasOutgoingSequenceFlows()).isFalse();
         assertThat(flowNodeVisitor.hasIncomingSequenceFlows()).isTrue();
 
         flowNodeVisitor.traverseSingleIncomingSequenceFlow();
-        assertThat(flowNodeVisitor.getStringId()).isEqualTo(startEventId);
+
+        assertThat(flowNodeVisitor.stringId()).isEqualTo(startEventId);
     }
 
 }

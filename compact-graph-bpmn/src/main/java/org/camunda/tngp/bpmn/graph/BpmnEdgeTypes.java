@@ -1,6 +1,6 @@
-package org.camunda.tngp.compactgraph.bpmn;
+package org.camunda.tngp.bpmn.graph;
 
-public class BpmnProcessGraphEdgeTypes
+public class BpmnEdgeTypes
 {
     public final static int NODE_OUTGOING_SEQUENCE_FLOWS = 0;
     public final static int NODE_INCOMMING_SEQUENCE_FLOWS = 1;

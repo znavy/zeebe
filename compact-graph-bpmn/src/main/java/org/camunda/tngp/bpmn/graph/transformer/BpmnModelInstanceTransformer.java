@@ -1,19 +1,19 @@
-package org.camunda.tngp.compactgraph.bpmn.transformer;
+package org.camunda.tngp.bpmn.graph.transformer;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
-import org.camunda.tngp.compactgraph.bpmn.BpmnProcessGraph;
 import org.camunda.bpm.model.bpmn.instance.Process;
+import org.camunda.tngp.bpmn.graph.ProcessGraph;
 
 public class BpmnModelInstanceTransformer
 {
-    public List<BpmnProcessGraph> transpformAll(BpmnModelInstance model)
+    public List<ProcessGraph> transpformAll(BpmnModelInstance model)
     {
         final Collection<Process> processes = model.getModelElementsByType(Process.class);
-        final List<BpmnProcessGraph> transformedProcesses = new ArrayList<>(processes.size());
+        final List<ProcessGraph> transformedProcesses = new ArrayList<>(processes.size());
 
         for (Process process : processes)
         {
@@ -27,7 +27,7 @@ public class BpmnModelInstanceTransformer
 
     }
 
-    public BpmnProcessGraph transpformSingleProcess(BpmnModelInstance model)
+    public ProcessGraph transformSingleProcess(BpmnModelInstance model)
     {
         final Collection<Process> processes = model.getModelElementsByType(Process.class);
         if(processes.size() != 1)
