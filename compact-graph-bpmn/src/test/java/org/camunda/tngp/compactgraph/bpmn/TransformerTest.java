@@ -35,7 +35,9 @@ public class TransformerTest
                 .endEvent(endEventId)
                 .done();
 
-        final ProcessGraph processGraph = transformer.transformSingleProcess(theProcess);
+        final ProcessGraph processGraph = transformer.transformSingleProcess(theProcess, 10L);
+
+        assertThat(processGraph.id()).isEqualTo(10L);
 
         final int initialFlowNode = processGraph.intialFlowNodeId();
         assertThat(initialFlowNode != ProcessDescriptorDecoder.intialFlowNodeIdNullValue());

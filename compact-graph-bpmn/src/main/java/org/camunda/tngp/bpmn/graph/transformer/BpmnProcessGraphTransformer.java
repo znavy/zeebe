@@ -31,14 +31,18 @@ public class BpmnProcessGraphTransformer
 
     protected final GraphBuilder graphBuilder = new GraphBuilder();
     protected final Process process;
+    protected final long id;
     protected final FlowElementDescriptorEncoder flowElementDescriptorEncoder = new FlowElementDescriptorEncoder();
     protected final ProcessDescriptorEncoder processDescriptorEncoder = new ProcessDescriptorEncoder();
 
     protected Map<String, Integer> nodeIdMap = new HashMap<>();
 
-    public BpmnProcessGraphTransformer(Process process)
+
+
+    public BpmnProcessGraphTransformer(Process process, long id)
     {
         this.process = process;
+        this.id = id;
         graphBuilder.edgeTypeCount(EDGE_TYPE_COUNT);
     }
 
@@ -71,6 +75,7 @@ public class BpmnProcessGraphTransformer
         final byte[] dataBuffer = new byte[processDataBufferLength];
 
         processDescriptorEncoder.wrap(new UnsafeBuffer(dataBuffer), 0)
+            .id(id)
             .intialFlowNodeId(findInitialFlowNode(process))
             .stringId(processId);
 
@@ -83,7 +88,7 @@ public class BpmnProcessGraphTransformer
 
         for (StartEvent startEvent : startEvents)
         {
-            if(startEvent.getEventDefinitions().isEmpty())
+            if (startEvent.getEventDefinitions().isEmpty())
             {
                 return nodeIdMap.get(startEvent.getId());
             }
