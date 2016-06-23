@@ -20,6 +20,7 @@
 			<type name="blockLength" primitiveType="uint16" />
 			<type name="numInGroup" primitiveType="uint8" semanticType="NumInGroup" />
 		</composite>
+		
 	</types>
 
 	<types>
@@ -41,7 +42,11 @@
 			
 			<validValue name="MESSAGE_EVENT_DEFINITION">300</validValue>
 			<validValue name="ERROR_EVENT_DEFINITION">301</validValue>
-		</enum>		
+		</enum>
+		
+		<enum name="BpmnAspect" encodingType="uint16">
+            <validValue name="START_PROCESS">1</validValue>
+		</enum>
 		
 		<enum name="ExecutionEventType" encodingType="uint16">		
 			<validValue name="PROC_INST_CREATED">0</validValue>
@@ -65,9 +70,11 @@
 
 	<sbe:message name="FlowElementDescriptor" id="2">
 		<field name="type" id="1" type="FlowElementType" />
-		<field name="onEnterEvent" id="2" type="ExecutionEventType" />
-		<field name="onLeaveEvent" id="3" type="ExecutionEventType" />
-		<data name="stringId" id="4" type="varDataEncoding" />	
+		<group name="eventBehaviorMapping" id="9" dimensionType="groupSizeEncoding">
+          <field name="event" id="10" type="ExecutionEventType" />
+          <field name="behavioralAspect" id="11" type="BpmnAspect" />
+	    </group>	
+		<data name="stringId" id="4" type="varDataEncoding" />
 	</sbe:message>
 
 </sbe:messageSchema>

@@ -1,6 +1,10 @@
 package org.camunda.tngp.bpmn.graph.transformer;
 
-import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.*;
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.EDGE_TYPE_COUNT;
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.NODE_INCOMMING_SEQUENCE_FLOWS;
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.NODE_OUTGOING_SEQUENCE_FLOWS;
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_SOURCE_NODE;
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_TARGET_NODE;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -20,7 +24,10 @@ import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.compactgraph.GraphEncoder;
 import org.camunda.tngp.compactgraph.builder.GraphBuilder;
 import org.camunda.tngp.compactgraph.builder.NodeBuilder;
+import org.camunda.tngp.graph.bpmn.BpmnAspect;
+import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 import org.camunda.tngp.graph.bpmn.FlowElementDescriptorEncoder;
+import org.camunda.tngp.graph.bpmn.FlowElementType;
 import org.camunda.tngp.graph.bpmn.ProcessDescriptorEncoder;
 
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -147,16 +154,33 @@ public class BpmnProcessGraphTransformer
 
     protected byte[] encodeFlowElementData(final Class<? extends ModelElementInstance> instanceType, final String id)
     {
-        final int maxNodeDataLength = flowElementDescriptorEncoder.sbeBlockLength() + FlowElementDescriptorEncoder.stringIdHeaderLength() + (int) Math.ceil(id.length() / UTF8_MAX_CHARS_PER_BYTE);
-        final byte[] nodeDataBuffer = new byte[maxNodeDataLength];
+        final byte[] nodeDataBuffer = new byte[1024 * 1024];
 
+        FlowElementType flowElementType = FlowElementTypeMapping.graphNodeTypeForModelType(instanceType);
         flowElementDescriptorEncoder.wrap(new UnsafeBuffer(nodeDataBuffer), 0)
-            .type(FlowElementTypeMapping.graphNodeTypeForModelType(instanceType))
-            .onEnterEvent(ExecutionEventTypeMapping.onEnterEvent(instanceType))
-            .onLeaveEvent(ExecutionEventTypeMapping.onLeaveEvent(instanceType))
-            .stringId(id);
+            .type(flowElementType);
 
-        return nodeDataBuffer;
+
+        if (FlowElementType.START_EVENT.equals(flowElementType))
+        {
+            flowElementDescriptorEncoder.eventBehaviorMappingCount(1)
+                .next()
+                .event(ExecutionEventType.EVT_OCCURRED)
+                .behavioralAspect(BpmnAspect.START_PROCESS);
+        }
+        else
+        {
+            flowElementDescriptorEncoder.eventBehaviorMappingCount(0);
+        }
+
+        flowElementDescriptorEncoder.stringId(id);
+
+        byte[] nodeData = new byte[flowElementDescriptorEncoder.encodedLength()];
+
+        // TODO: remove hack
+        System.arraycopy(nodeDataBuffer, 0, nodeData, 0, nodeData.length);
+
+        return nodeData;
     }
 
     private static void collectFlowElements(BpmnModelElementInstance scope, TreeSet<FlowElement> flowElements)
