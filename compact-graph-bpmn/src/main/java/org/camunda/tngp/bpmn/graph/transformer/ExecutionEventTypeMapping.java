@@ -22,8 +22,8 @@ import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 
 public class ExecutionEventTypeMapping
 {
-    public static Map<Class<? extends BpmnModelElementInstance>, ExecutionEventType> ON_ENTER_EVENTS = new HashMap<>();
-    public static Map<Class<? extends BpmnModelElementInstance>, ExecutionEventType> ON_LEAVE_EVENTS = new HashMap<>();
+    public static final Map<Class<? extends BpmnModelElementInstance>, ExecutionEventType> ON_ENTER_EVENTS = new HashMap<>();
+    public static final Map<Class<? extends BpmnModelElementInstance>, ExecutionEventType> ON_LEAVE_EVENTS = new HashMap<>();
 
     static
     {

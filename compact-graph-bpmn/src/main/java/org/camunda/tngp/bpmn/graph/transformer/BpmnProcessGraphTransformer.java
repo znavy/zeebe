@@ -27,7 +27,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 public class BpmnProcessGraphTransformer
 {
-    protected final static float UTF8_MAX_CHARS_PER_BYTE = StandardCharsets.UTF_8.newDecoder().maxCharsPerByte();
+    protected static final float UTF8_MAX_CHARS_PER_BYTE = StandardCharsets.UTF_8.newDecoder().maxCharsPerByte();
 
     protected final GraphBuilder graphBuilder = new GraphBuilder();
     protected final Process process;
@@ -36,8 +36,6 @@ public class BpmnProcessGraphTransformer
     protected final ProcessDescriptorEncoder processDescriptorEncoder = new ProcessDescriptorEncoder();
 
     protected Map<String, Integer> nodeIdMap = new HashMap<>();
-
-
 
     public BpmnProcessGraphTransformer(Process process, long id)
     {

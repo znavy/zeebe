@@ -15,7 +15,8 @@ public class BpmnModelInstanceTransformer
         {
             throw new IllegalArgumentException("Model instance must contain exactly one executable process.");
         }
-        Process process = processes.iterator().next();
+
+        final Process process = processes.iterator().next();
         if (!process.isExecutable())
         {
             throw new IllegalArgumentException("Model instance must contain exactly one executable process.");
