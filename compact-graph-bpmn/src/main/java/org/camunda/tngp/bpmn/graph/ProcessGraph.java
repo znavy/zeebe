@@ -10,6 +10,8 @@ public class ProcessGraph extends Graph
 {
     protected final ProcessDescriptorDecoder descriptorDecoder = new ProcessDescriptorDecoder();
 
+    protected int stringIdOffset;
+
     @Override
     public ProcessGraph wrap(byte[] buffer)
     {
@@ -27,6 +29,7 @@ public class ProcessGraph extends Graph
     {
         super.init();
         descriptorDecoder.wrap(buffer, dataOffset, ProcessDescriptorDecoder.BLOCK_LENGTH, ProcessDescriptorDecoder.SCHEMA_VERSION);
+        stringIdOffset = descriptorDecoder.limit();
     }
 
     public long id()
@@ -39,23 +42,27 @@ public class ProcessGraph extends Graph
         return descriptorDecoder.intialFlowNodeId();
     }
 
-    public int stringIdLength()
+    public int stringIdBytesLength()
     {
+        descriptorDecoder.limit(stringIdOffset);
         return descriptorDecoder.stringIdLength();
     }
 
     public int getStringId(MutableDirectBuffer dst, int dstOffset, int length)
     {
+        descriptorDecoder.limit(stringIdOffset);
         return descriptorDecoder.getStringId(dst, dstOffset, length);
     }
 
     public int getStringId(byte[] dst, int dstOffset, int length)
     {
+        descriptorDecoder.limit(stringIdOffset);
         return descriptorDecoder.getStringId(dst, dstOffset, length);
     }
 
     public String stringId()
     {
+        descriptorDecoder.limit(stringIdOffset);
         return descriptorDecoder.stringId();
     }
 

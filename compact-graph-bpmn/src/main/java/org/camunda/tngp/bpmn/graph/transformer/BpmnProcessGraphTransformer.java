@@ -156,7 +156,7 @@ public class BpmnProcessGraphTransformer
     {
         final byte[] nodeDataBuffer = new byte[1024 * 1024];
 
-        FlowElementType flowElementType = FlowElementTypeMapping.graphNodeTypeForModelType(instanceType);
+        final FlowElementType flowElementType = FlowElementTypeMapping.graphNodeTypeForModelType(instanceType);
         flowElementDescriptorEncoder.wrap(new UnsafeBuffer(nodeDataBuffer), 0)
             .type(flowElementType);
 
@@ -175,7 +175,7 @@ public class BpmnProcessGraphTransformer
 
         flowElementDescriptorEncoder.stringId(id);
 
-        byte[] nodeData = new byte[flowElementDescriptorEncoder.encodedLength()];
+        final byte[] nodeData = new byte[flowElementDescriptorEncoder.encodedLength()];
 
         // TODO: remove hack
         System.arraycopy(nodeDataBuffer, 0, nodeData, 0, nodeData.length);

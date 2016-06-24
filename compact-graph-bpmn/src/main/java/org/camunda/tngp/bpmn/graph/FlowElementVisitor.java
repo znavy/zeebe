@@ -7,12 +7,15 @@ import org.camunda.tngp.graph.bpmn.BpmnAspect;
 import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 import org.camunda.tngp.graph.bpmn.FlowElementDescriptorDecoder;
 import org.camunda.tngp.graph.bpmn.FlowElementDescriptorDecoder.EventBehaviorMappingDecoder;
+
+import uk.co.real_logic.agrona.MutableDirectBuffer;
+
 import org.camunda.tngp.graph.bpmn.FlowElementType;
 import org.camunda.tngp.graph.bpmn.GroupSizeEncodingDecoder;
 
 public class FlowElementVisitor extends NodeVisitor
 {
-    protected final FlowElementDescriptorDecoder flowElementDescriptorDecoder = new FlowElementDescriptorDecoder();
+    protected final FlowElementDescriptorDecoder descriptorDecoder = new FlowElementDescriptorDecoder();
 
     protected int stringIdOffset;
     protected int eventBehaviorMappingOffset;
@@ -27,15 +30,15 @@ public class FlowElementVisitor extends NodeVisitor
     protected void setOffset(int nodeOffset)
     {
         super.setOffset(nodeOffset);
-        flowElementDescriptorDecoder.wrap(buffer, nodeDataOffset(), FlowElementDescriptorDecoder.BLOCK_LENGTH, FlowElementDescriptorDecoder.SCHEMA_VERSION);
+        descriptorDecoder.wrap(buffer, nodeDataOffset(), FlowElementDescriptorDecoder.BLOCK_LENGTH, FlowElementDescriptorDecoder.SCHEMA_VERSION);
 
-        eventBehaviorMappingOffset = flowElementDescriptorDecoder.limit();
+        eventBehaviorMappingOffset = descriptorDecoder.limit();
 
-        EventBehaviorMappingDecoder behaviorMappingDecoder = flowElementDescriptorDecoder.eventBehaviorMapping();
+        final EventBehaviorMappingDecoder behaviorMappingDecoder = descriptorDecoder.eventBehaviorMapping();
 
-        stringIdOffset = eventBehaviorMappingOffset
-                + (behaviorMappingDecoder.actingBlockLength() * behaviorMappingDecoder.count())
-                + GroupSizeEncodingDecoder.ENCODED_LENGTH;
+        stringIdOffset = eventBehaviorMappingOffset +
+                (behaviorMappingDecoder.actingBlockLength() * behaviorMappingDecoder.count()) +
+                GroupSizeEncodingDecoder.ENCODED_LENGTH;
     }
 
     public boolean hasIncomingSequenceFlows()
@@ -92,8 +95,8 @@ public class FlowElementVisitor extends NodeVisitor
 
     public BpmnAspect aspectFor(ExecutionEventType event)
     {
-        flowElementDescriptorDecoder.limit(eventBehaviorMappingOffset);
-        EventBehaviorMappingDecoder behaviorMappingDecoder = flowElementDescriptorDecoder.eventBehaviorMapping();
+        descriptorDecoder.limit(eventBehaviorMappingOffset);
+        final EventBehaviorMappingDecoder behaviorMappingDecoder = descriptorDecoder.eventBehaviorMapping();
 
         while (behaviorMappingDecoder.hasNext())
         {
@@ -107,15 +110,33 @@ public class FlowElementVisitor extends NodeVisitor
         throw new RuntimeException("Event not understood");
     }
 
+    public int stringIdBytesLength()
+    {
+        descriptorDecoder.limit(stringIdOffset);
+        return descriptorDecoder.stringIdLength();
+    }
+
+    public int getStringId(MutableDirectBuffer dst, int dstOffset, int length)
+    {
+        descriptorDecoder.limit(stringIdOffset);
+        return descriptorDecoder.getStringId(dst, dstOffset, length);
+    }
+
+    public int getStringId(byte[] dst, int dstOffset, int length)
+    {
+        descriptorDecoder.limit(stringIdOffset);
+        return descriptorDecoder.getStringId(dst, dstOffset, length);
+    }
+
     public String stringId()
     {
-        flowElementDescriptorDecoder.limit(stringIdOffset);
-        return flowElementDescriptorDecoder.stringId();
+        descriptorDecoder.limit(stringIdOffset);
+        return descriptorDecoder.stringId();
     }
 
     public FlowElementType type()
     {
-        return flowElementDescriptorDecoder.type();
+        return descriptorDecoder.type();
     }
 
 }
