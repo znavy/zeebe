@@ -177,7 +177,6 @@ public class BpmnProcessGraphTransformer
 
         final byte[] nodeData = new byte[flowElementDescriptorEncoder.encodedLength()];
 
-        // TODO: remove hack
         System.arraycopy(nodeDataBuffer, 0, nodeData, 0, nodeData.length);
 
         return nodeData;
