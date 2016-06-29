@@ -7,11 +7,14 @@ import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_SOURCE_NOD
 import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_TARGET_NODE;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
+import org.camunda.bpm.model.bpmn.instance.BaseElement;
 import org.camunda.bpm.model.bpmn.instance.BpmnModelElementInstance;
 import org.camunda.bpm.model.bpmn.instance.FlowElement;
 import org.camunda.bpm.model.bpmn.instance.Process;
@@ -21,12 +24,18 @@ import org.camunda.bpm.model.bpmn.instance.SubProcess;
 import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 import org.camunda.bpm.model.xml.type.ModelElementType;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
+import org.camunda.tngp.bpmn.graph.transformer.aspect.ActivityHandler;
+import org.camunda.tngp.bpmn.graph.transformer.aspect.BpmnAspectHandler;
+import org.camunda.tngp.bpmn.graph.transformer.aspect.ProcessHandler;
+import org.camunda.tngp.bpmn.graph.transformer.aspect.ProcessScopeEventHandler;
+import org.camunda.tngp.bpmn.graph.transformer.aspect.SequenceFlowHandler;
 import org.camunda.tngp.compactgraph.GraphEncoder;
 import org.camunda.tngp.compactgraph.builder.GraphBuilder;
 import org.camunda.tngp.compactgraph.builder.NodeBuilder;
 import org.camunda.tngp.graph.bpmn.BpmnAspect;
 import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 import org.camunda.tngp.graph.bpmn.FlowElementDescriptorEncoder;
+import org.camunda.tngp.graph.bpmn.FlowElementDescriptorEncoder.EventBehaviorMappingEncoder;
 import org.camunda.tngp.graph.bpmn.FlowElementType;
 import org.camunda.tngp.graph.bpmn.ProcessDescriptorEncoder;
 
@@ -43,6 +52,16 @@ public class BpmnProcessGraphTransformer
     protected final ProcessDescriptorEncoder processDescriptorEncoder = new ProcessDescriptorEncoder();
 
     protected Map<String, Integer> nodeIdMap = new HashMap<>();
+
+    protected static final List<BpmnAspectHandler> BPMN_ASPECT_HANDLERS = new ArrayList<>();
+
+    static
+    {
+        BPMN_ASPECT_HANDLERS.add(new ActivityHandler());
+        BPMN_ASPECT_HANDLERS.add(new ProcessHandler());
+        BPMN_ASPECT_HANDLERS.add(new ProcessScopeEventHandler());
+        BPMN_ASPECT_HANDLERS.add(new SequenceFlowHandler());
+    }
 
     public BpmnProcessGraphTransformer(Process process, long id)
     {
@@ -64,7 +83,7 @@ public class BpmnProcessGraphTransformer
     {
         final NodeBuilder nodeBuilder = graphBuilder
             .newNode()
-            .nodeData(encodeFlowElementData(Process.class, process.getId()));
+            .nodeData(encodeFlowElementData(process));
 
         nodeIdMap.put(process.getId(), nodeBuilder.id());
     }
@@ -140,37 +159,42 @@ public class BpmnProcessGraphTransformer
 
         for (FlowElement flowElement : flowElements)
         {
-            final ModelElementType elementType = flowElement.getElementType();
-            final Class<? extends ModelElementInstance> instanceType = elementType.getInstanceType();
-            final String id = flowElement.getId();
-
             final NodeBuilder nodeBuilder = graphBuilder
                 .newNode()
-                .nodeData(encodeFlowElementData(instanceType, id));
+                .nodeData(encodeFlowElementData(flowElement));
 
             nodeIdMap.put(flowElement.getId(), nodeBuilder.id());
         }
     }
 
-    protected byte[] encodeFlowElementData(final Class<? extends ModelElementInstance> instanceType, final String id)
+    protected byte[] encodeFlowElementData(final BaseElement element)
     {
+        final ModelElementType elementType = element.getElementType();
+        final Class<? extends ModelElementInstance> instanceType = elementType.getInstanceType();
+        final String id = element.getId();
+
         final byte[] nodeDataBuffer = new byte[1024 * 1024];
 
         final FlowElementType flowElementType = FlowElementTypeMapping.graphNodeTypeForModelType(instanceType);
         flowElementDescriptorEncoder.wrap(new UnsafeBuffer(nodeDataBuffer), 0)
             .type(flowElementType);
 
+        final Map<ExecutionEventType, BpmnAspect> aspectMap = new HashMap<>();
 
-        if (FlowElementType.START_EVENT.equals(flowElementType))
+        for (BpmnAspectHandler handler : BPMN_ASPECT_HANDLERS)
         {
-            flowElementDescriptorEncoder.eventBehaviorMappingCount(1)
-                .next()
-                .event(ExecutionEventType.EVT_OCCURRED)
-                .behavioralAspect(BpmnAspect.START_PROCESS);
+            handler.addBehavioralAspects(element, aspectMap);
         }
-        else
+
+        final EventBehaviorMappingEncoder eventBehaviorMappingEncoder =
+            flowElementDescriptorEncoder.eventBehaviorMappingCount(aspectMap.size());
+
+        for (Map.Entry<ExecutionEventType, BpmnAspect> aspect : aspectMap.entrySet())
         {
-            flowElementDescriptorEncoder.eventBehaviorMappingCount(0);
+            eventBehaviorMappingEncoder
+                .next()
+                .event(aspect.getKey())
+                .behavioralAspect(aspect.getValue());
         }
 
         flowElementDescriptorEncoder.stringId(id);

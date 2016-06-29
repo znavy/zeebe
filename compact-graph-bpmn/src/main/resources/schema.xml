@@ -46,6 +46,8 @@
 		
 		<enum name="BpmnAspect" encodingType="uint16">
             <validValue name="START_PROCESS">1</validValue>
+            <validValue name="TAKE_INITIAL_FLOWS">2</validValue>
+            <validValue name="CREATE_ACTIVITY_INSTANCE">3</validValue>
 		</enum>
 		
 		<enum name="ExecutionEventType" encodingType="uint16">		

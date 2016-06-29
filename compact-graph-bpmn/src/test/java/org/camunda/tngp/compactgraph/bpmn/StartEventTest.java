@@ -66,6 +66,4 @@ public class StartEventTest
         assertThat(flowElementVisitor.aspectFor(EVT_OCCURRED)).isEqualTo(START_PROCESS);
     }
 
-
-
 }

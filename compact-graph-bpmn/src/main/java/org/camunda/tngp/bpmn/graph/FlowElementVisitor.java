@@ -1,17 +1,19 @@
 package org.camunda.tngp.bpmn.graph;
 
-import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.*;
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.NODE_INCOMMING_SEQUENCE_FLOWS;
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.NODE_OUTGOING_SEQUENCE_FLOWS;
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_SOURCE_NODE;
+import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_TARGET_NODE;
 
 import org.camunda.tngp.compactgraph.NodeVisitor;
 import org.camunda.tngp.graph.bpmn.BpmnAspect;
 import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 import org.camunda.tngp.graph.bpmn.FlowElementDescriptorDecoder;
 import org.camunda.tngp.graph.bpmn.FlowElementDescriptorDecoder.EventBehaviorMappingDecoder;
-
-import uk.co.real_logic.agrona.MutableDirectBuffer;
-
 import org.camunda.tngp.graph.bpmn.FlowElementType;
 import org.camunda.tngp.graph.bpmn.GroupSizeEncodingDecoder;
+
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 
 public class FlowElementVisitor extends NodeVisitor
 {
@@ -91,6 +93,11 @@ public class FlowElementVisitor extends NodeVisitor
         traverseEdge(SEQUENCE_FLOW_SOURCE_NODE);
 
         return this;
+    }
+
+    public FlowElementVisitor moveToNode(int nodeId)
+    {
+        return (FlowElementVisitor) super.moveToNode(nodeId);
     }
 
     public BpmnAspect aspectFor(ExecutionEventType event)

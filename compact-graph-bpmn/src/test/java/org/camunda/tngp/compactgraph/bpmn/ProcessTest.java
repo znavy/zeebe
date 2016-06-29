@@ -1,16 +1,17 @@
 package org.camunda.tngp.compactgraph.bpmn;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.camunda.tngp.compactgraph.bpmn.TestUtil.*;
-import static org.camunda.tngp.graph.bpmn.FlowElementType.*;
-
-import static java.nio.charset.StandardCharsets.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.camunda.tngp.compactgraph.bpmn.TestUtil.nodeIdByStringId;
+import static org.camunda.tngp.graph.bpmn.FlowElementType.PROCESS;
 
 import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.tngp.bpmn.graph.FlowElementVisitor;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.bpmn.graph.transformer.BpmnModelInstanceTransformer;
+import org.camunda.tngp.graph.bpmn.BpmnAspect;
+import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -107,6 +108,23 @@ public class ProcessTest
 
         // then
         assertThat(processGraph.intialFlowNodeId()).isGreaterThan(0);
+    }
+
+    @Test
+    public void shouldEncodeAspects()
+    {
+        // given
+        final BpmnModelInstance theProcess = Bpmn.createExecutableProcess("processId")
+                .startEvent("startEventId")
+                .done();
+
+        final ProcessGraph processGraph = transformer.transformSingleProcess(theProcess, 10L);
+
+        flowNodeVisitor.init(processGraph)
+            .moveToNode(nodeIdByStringId(processGraph, "processId"));
+
+        // then
+        assertThat(flowNodeVisitor.aspectFor(ExecutionEventType.PROC_INST_CREATED)).isEqualTo(BpmnAspect.TAKE_INITIAL_FLOWS);
     }
 
 }

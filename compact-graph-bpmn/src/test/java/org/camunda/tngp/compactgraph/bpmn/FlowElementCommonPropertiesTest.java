@@ -32,7 +32,7 @@ public class FlowElementCommonPropertiesTest
     }
 
     @Test
-    public void shoulEncodeProperties()
+    public void shouldEncodeProperties()
     {
         final String expectedSringId = "startEventId";
         final byte[] expectedStringIdBytes = expectedSringId.getBytes(StandardCharsets.UTF_8);
@@ -60,6 +60,28 @@ public class FlowElementCommonPropertiesTest
         readBufferView.setMemory(0, 0, (byte) 0);
         flowElementVisitor.getStringId(readBufferView, 0, readBufferView.capacity());
         assertThat(readBuffer).isEqualTo(expectedStringIdBytes);
+    }
+
+    @Test
+    public void shouldEncodeSequenceFlows()
+    {
+        // given
+        final BpmnModelInstance theProcess = Bpmn.createExecutableProcess("processId")
+                .startEvent("startEventId")
+                .sequenceFlowId("flowId")
+                .endEvent()
+                .done();
+
+        // when
+        final ProcessGraph processGraph = transformer.transformSingleProcess(theProcess, 10L);
+
+        flowElementVisitor.init(processGraph)
+            .moveToNode(processGraph.intialFlowNodeId());
+
+        // then
+        assertThat(flowElementVisitor.hasOutgoingSequenceFlows()).isTrue();
+        assertThat(flowElementVisitor.outgoingSequenceFlowsCount()).isEqualTo(1);
+        assertThat(flowElementVisitor.hasOutgoingSequenceFlows()).isTrue();
     }
 
 }
