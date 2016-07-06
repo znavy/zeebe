@@ -13,5 +13,6 @@ public class BpmnExecutionValidators
     {
         VALIDATORS.add(new ProcessSingleStartEventValidator());
         VALIDATORS.add(new ProcessStartEventSupportedTypesValidator());
+        VALIDATORS.add(new ServiceTaskExtensionValidator());
     }
 }

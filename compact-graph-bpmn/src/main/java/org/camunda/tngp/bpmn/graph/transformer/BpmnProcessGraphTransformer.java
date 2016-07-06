@@ -14,11 +14,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
+import org.camunda.bpm.model.bpmn.impl.BpmnModelConstants;
 import org.camunda.bpm.model.bpmn.instance.BaseElement;
 import org.camunda.bpm.model.bpmn.instance.BpmnModelElementInstance;
 import org.camunda.bpm.model.bpmn.instance.FlowElement;
 import org.camunda.bpm.model.bpmn.instance.Process;
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
+import org.camunda.bpm.model.bpmn.instance.ServiceTask;
 import org.camunda.bpm.model.bpmn.instance.StartEvent;
 import org.camunda.bpm.model.bpmn.instance.SubProcess;
 import org.camunda.bpm.model.xml.instance.ModelElementInstance;
@@ -179,6 +181,19 @@ public class BpmnProcessGraphTransformer
         flowElementDescriptorEncoder.wrap(new UnsafeBuffer(nodeDataBuffer), 0)
             .type(flowElementType);
 
+        String taskType = "";
+        short taskQueueId = FlowElementDescriptorEncoder.taskQueueIdNullValue();
+
+        if (element instanceof ServiceTask)
+        {
+            final String taskQueueIdAttribute = element.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, "taskQueueId");
+            taskQueueId = Short.parseShort(taskQueueIdAttribute);
+
+            taskType = element.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, "taskType");
+        }
+
+        flowElementDescriptorEncoder.taskQueueId(taskQueueId);
+
         final Map<ExecutionEventType, BpmnAspect> aspectMap = new HashMap<>();
 
         for (BpmnAspectHandler handler : BPMN_ASPECT_HANDLERS)
@@ -198,6 +213,7 @@ public class BpmnProcessGraphTransformer
         }
 
         flowElementDescriptorEncoder.stringId(id);
+        flowElementDescriptorEncoder.taskType(taskType);
 
         final byte[] nodeData = new byte[flowElementDescriptorEncoder.encodedLength()];
 

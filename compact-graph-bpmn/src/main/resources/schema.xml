@@ -72,11 +72,13 @@
 
 	<sbe:message name="FlowElementDescriptor" id="2">
 		<field name="type" id="1" type="FlowElementType" />
+        <field name="taskQueueId" id="2" type="int16" />
 		<group name="eventBehaviorMapping" id="9" dimensionType="groupSizeEncoding">
           <field name="event" id="10" type="ExecutionEventType" />
           <field name="behavioralAspect" id="11" type="BpmnAspect" />
-	    </group>	
-		<data name="stringId" id="4" type="varDataEncoding" />
+	    </group>
+		<data name="stringId" id="4" type="varDataEncoding" />    
+        <data name="taskType" id="5" type="varDataEncoding" />    
 	</sbe:message>
 
 </sbe:messageSchema>

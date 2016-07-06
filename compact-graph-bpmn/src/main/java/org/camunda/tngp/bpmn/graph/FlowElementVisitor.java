@@ -13,7 +13,9 @@ import org.camunda.tngp.graph.bpmn.FlowElementDescriptorDecoder.EventBehaviorMap
 import org.camunda.tngp.graph.bpmn.FlowElementType;
 import org.camunda.tngp.graph.bpmn.GroupSizeEncodingDecoder;
 
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 public class FlowElementVisitor extends NodeVisitor
 {
@@ -21,6 +23,8 @@ public class FlowElementVisitor extends NodeVisitor
 
     protected int stringIdOffset;
     protected int eventBehaviorMappingOffset;
+
+    protected final UnsafeBuffer taskTypeBuffer = new UnsafeBuffer(0, 0);
 
     public FlowElementVisitor init(ProcessGraph graph)
     {
@@ -41,6 +45,25 @@ public class FlowElementVisitor extends NodeVisitor
         stringIdOffset = eventBehaviorMappingOffset +
                 (behaviorMappingDecoder.actingBlockLength() * behaviorMappingDecoder.count()) +
                 GroupSizeEncodingDecoder.ENCODED_LENGTH;
+
+        descriptorDecoder.limit(stringIdOffset);
+
+        final int taskTypeOffset = stringIdOffset +
+                FlowElementDescriptorDecoder.stringIdHeaderLength() +
+                descriptorDecoder.stringIdLength();
+
+        descriptorDecoder.limit(taskTypeOffset);
+
+        final int taskTypeLength = descriptorDecoder.taskTypeLength();
+        if (taskTypeLength > 0)
+        {
+            taskTypeBuffer.wrap(buffer, taskTypeOffset + FlowElementDescriptorDecoder.taskTypeHeaderLength(), descriptorDecoder.taskTypeLength());
+        }
+        else
+        {
+            taskTypeBuffer.wrap(0, 0);
+        }
+
     }
 
     public boolean hasIncomingSequenceFlows()
@@ -144,6 +167,16 @@ public class FlowElementVisitor extends NodeVisitor
     public FlowElementType type()
     {
         return descriptorDecoder.type();
+    }
+
+    public DirectBuffer taskType()
+    {
+        return taskTypeBuffer;
+    }
+
+    public short taskQueueId()
+    {
+        return descriptorDecoder.taskQueueId();
     }
 
 }
