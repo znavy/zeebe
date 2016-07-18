@@ -2,19 +2,19 @@ package org.camunda.tngp.compactgraph.bpmn;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.camunda.tngp.compactgraph.bpmn.TestUtil.nodeIdByStringId;
-import static org.camunda.tngp.graph.bpmn.BpmnAspect.START_PROCESS;
-import static org.camunda.tngp.graph.bpmn.ExecutionEventType.EVT_OCCURRED;
-import static org.camunda.tngp.graph.bpmn.FlowElementType.START_EVENT;
 
 import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.tngp.bpmn.graph.FlowElementVisitor;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.bpmn.graph.transformer.BpmnModelInstanceTransformer;
+import org.camunda.tngp.graph.bpmn.BpmnAspect;
+import org.camunda.tngp.graph.bpmn.ExecutionEventType;
+import org.camunda.tngp.graph.bpmn.FlowElementType;
 import org.junit.Before;
 import org.junit.Test;
 
-public class StartEventTest
+public class EndEventTest
 {
     BpmnModelInstanceTransformer transformer;
     FlowElementVisitor flowElementVisitor;
@@ -31,16 +31,18 @@ public class StartEventTest
     {
         // given
         final BpmnModelInstance theProcess = Bpmn.createExecutableProcess("processId")
-                .startEvent("startEventId")
+                .startEvent("startEvent")
+                .endEvent("endEvent")
                 .done();
 
+        // when
         final ProcessGraph processGraph = transformer.transformSingleProcess(theProcess, 10L);
 
-        flowElementVisitor.init(processGraph)
-            .moveToNode(nodeIdByStringId(processGraph, "startEventId"));
-
         // then
-        assertThat(flowElementVisitor.type()).isEqualTo(START_EVENT);
+        flowElementVisitor.init(processGraph)
+            .moveToNode(nodeIdByStringId(processGraph, "endEvent"));
+
+        assertThat(flowElementVisitor.type()).isEqualTo(FlowElementType.END_EVENT);
     }
 
     @Test
@@ -48,16 +50,18 @@ public class StartEventTest
     {
         // given
         final BpmnModelInstance theProcess = Bpmn.createExecutableProcess("processId")
-                .startEvent("startEventId")
+                .startEvent("startEvent")
+                .endEvent("endEvent")
                 .done();
 
+        // when
         final ProcessGraph processGraph = transformer.transformSingleProcess(theProcess, 10L);
 
-        flowElementVisitor.init(processGraph)
-            .moveToNode(nodeIdByStringId(processGraph, "startEventId"));
-
         // then
-        assertThat(flowElementVisitor.aspectFor(EVT_OCCURRED)).isEqualTo(START_PROCESS);
+        flowElementVisitor.init(processGraph)
+            .moveToNode(nodeIdByStringId(processGraph, "endEvent"));
+
+        assertThat(flowElementVisitor.aspectFor(ExecutionEventType.EVT_OCCURRED)).isEqualTo(BpmnAspect.END_PROCESS);
     }
 
 }

@@ -6,8 +6,9 @@ import org.camunda.bpm.model.bpmn.instance.BaseElement;
 import org.camunda.tngp.graph.bpmn.BpmnAspect;
 import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 
-public interface BpmnAspectHandler
+public interface BpmnAspectHandler<T extends BaseElement>
 {
-    void addBehavioralAspects(BaseElement element, Map<ExecutionEventType, BpmnAspect> aspectsForElement);
+    void addBehavioralAspects(T element, Map<ExecutionEventType, BpmnAspect> aspectsForElement);
 
+    Class<T> getHandledElementType();
 }

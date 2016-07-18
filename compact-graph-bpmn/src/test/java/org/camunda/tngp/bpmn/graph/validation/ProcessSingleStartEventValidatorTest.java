@@ -1,8 +1,9 @@
 package org.camunda.tngp.bpmn.graph.validation;
 
-import static org.camunda.tngp.bpmn.graph.validation.ValidationCodes.*;
-import static org.camunda.tngp.bpmn.graph.validation.ValidationResultsAssert.*;
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.camunda.tngp.bpmn.graph.validation.ValidationCodes.PROCESS_MULTIPLE_START_EVENTS;
+import static org.camunda.tngp.bpmn.graph.validation.ValidationCodes.PROCESS_NO_START_EVENT;
+import static org.camunda.tngp.bpmn.graph.validation.ValidationResultsAssert.assertThat;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -11,18 +12,13 @@ import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.bpm.model.bpmn.builder.ProcessBuilder;
 import org.camunda.bpm.model.xml.validation.ModelElementValidator;
-import org.camunda.bpm.model.xml.validation.ValidationResultCollector;
 import org.camunda.bpm.model.xml.validation.ValidationResults;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 public class ProcessSingleStartEventValidatorTest
 {
-    @Mock
-    public ValidationResultCollector collector;
-
     Collection<ModelElementValidator<?>> validators;
 
     @Before

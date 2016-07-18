@@ -124,7 +124,7 @@ public class ProcessTest
             .moveToNode(nodeIdByStringId(processGraph, "processId"));
 
         // then
-        assertThat(flowNodeVisitor.aspectFor(ExecutionEventType.PROC_INST_CREATED)).isEqualTo(BpmnAspect.TAKE_INITIAL_FLOWS);
+        assertThat(flowNodeVisitor.aspectFor(ExecutionEventType.PROC_INST_CREATED)).isEqualTo(BpmnAspect.TAKE_OUTGOING_FLOWS);
     }
 
 }

@@ -5,6 +5,7 @@ import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.NODE_INCOMMING_SEQUENCE_
 import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.NODE_OUTGOING_SEQUENCE_FLOWS;
 import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_SOURCE_NODE;
 import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_TARGET_NODE;
+import static org.camunda.tngp.broker.test.util.bpmn.TngpModelInstance.wrap;
 import static org.camunda.tngp.compactgraph.bpmn.TestUtil.nodeIdByStringId;
 
 import java.util.HashSet;
@@ -287,8 +288,11 @@ public class SequenceFlowTest
         final BpmnModelInstance theProcess = Bpmn.createExecutableProcess("processId")
                 .startEvent("startEventId")
                 .sequenceFlowId("flowId")
+                .serviceTask("serviceTask")
                 .endEvent()
                 .done();
+
+        wrap(theProcess).taskAttributes("serviceTask", "foo", 1);
 
         final ProcessGraph processGraph = transformer.transformSingleProcess(theProcess, 10L);
 
