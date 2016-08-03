@@ -11,6 +11,8 @@ public class BpmnExecutionValidators
 
     static
     {
+        VALIDATORS.add(new DefinitionsSingleProcessValidator());
+
         VALIDATORS.add(new ProcessSingleStartEventValidator());
         VALIDATORS.add(new ProcessStartEventSupportedTypesValidator());
         VALIDATORS.add(new ProcessExecutableValidator());
