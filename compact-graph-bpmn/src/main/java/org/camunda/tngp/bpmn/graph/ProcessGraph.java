@@ -3,8 +3,8 @@ package org.camunda.tngp.bpmn.graph;
 import org.camunda.tngp.compactgraph.Graph;
 import org.camunda.tngp.graph.bpmn.ProcessDescriptorDecoder;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.MutableDirectBuffer;
+import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
 
 public class ProcessGraph extends Graph
 {

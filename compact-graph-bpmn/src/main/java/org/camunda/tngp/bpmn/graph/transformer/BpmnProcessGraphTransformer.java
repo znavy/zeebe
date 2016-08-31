@@ -35,7 +35,7 @@ import org.camunda.tngp.graph.bpmn.FlowElementDescriptorEncoder.EventBehaviorMap
 import org.camunda.tngp.graph.bpmn.FlowElementType;
 import org.camunda.tngp.graph.bpmn.ProcessDescriptorEncoder;
 
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 
 public class BpmnProcessGraphTransformer
 {

@@ -13,9 +13,9 @@ import org.camunda.tngp.graph.bpmn.FlowElementDescriptorDecoder.EventBehaviorMap
 import org.camunda.tngp.graph.bpmn.FlowElementType;
 import org.camunda.tngp.graph.bpmn.GroupSizeEncodingDecoder;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.MutableDirectBuffer;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 
 public class FlowElementVisitor extends NodeVisitor
 {
