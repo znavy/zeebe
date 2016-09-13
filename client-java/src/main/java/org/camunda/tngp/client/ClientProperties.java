@@ -2,6 +2,9 @@ package org.camunda.tngp.client;
 
 import java.util.Properties;
 
+import org.camunda.tngp.client.task.TaskHandler;
+import org.camunda.tngp.client.task.TaskSubscription;
+
 public class ClientProperties
 {
     /**
@@ -27,10 +30,16 @@ public class ClientProperties
 
     /**
      * Possible values:
-     * SHARED: a single thread is used by the client
+     * SHARED: a single thread is used by the client for network communication
      * DEDICATED: a dedicated thread is used for running the sender, receive and conductor agent.
      */
     public static final String CLIENT_THREADINGMODE = "tngp.client.threadingmode";
+
+    /**
+     * The number of threads for invocation of {@link TaskHandler}. Setting this value to 0 effectively disables
+     * the feature of managed {@link TaskSubscription}s.
+     */
+    public static final String CLIENT_TASK_EXECUTION_THREADS = "tngp.client.tasks.execution.threads";
 
     public static void setDefaults(Properties properties)
     {
@@ -39,5 +48,6 @@ public class ClientProperties
         properties.putIfAbsent(CLIENT_MAXREQUESTS, "64");
         properties.putIfAbsent(CLIENT_SENDBUFFER_SIZE, "16");
         properties.putIfAbsent(CLIENT_THREADINGMODE, "SHARED");
+        properties.putIfAbsent(CLIENT_TASK_EXECUTION_THREADS, "2");
     }
 }
