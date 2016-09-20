@@ -121,7 +121,10 @@ public class TngpClientImpl implements TngpClient, AsyncTasksClient, WorkflowsCl
     @Override
     public void close()
     {
-        disconnect(); // TODO: only disconnect if currently connected
+        if (isConnected())
+        {
+            disconnect();
+        }
 
         try
         {
@@ -141,6 +144,12 @@ public class TngpClientImpl implements TngpClient, AsyncTasksClient, WorkflowsCl
             e.printStackTrace();
         }
     }
+
+    protected boolean isConnected()
+    {
+        return channel != null;
+    }
+
 
     public TransportConnectionPool getConnectionPool()
     {

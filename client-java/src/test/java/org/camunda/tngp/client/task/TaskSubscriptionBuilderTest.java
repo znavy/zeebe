@@ -9,7 +9,9 @@ import org.camunda.tngp.client.task.impl.TaskAcquisition;
 import org.camunda.tngp.client.task.impl.TaskSubscriptionBuilderImpl;
 import org.camunda.tngp.client.task.impl.TaskSubscriptionImpl;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -18,6 +20,9 @@ public class TaskSubscriptionBuilderTest
 
     @Mock
     protected TaskAcquisition acquisition;
+
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
     @Before
     public void setUp()
@@ -79,4 +84,61 @@ public class TaskSubscriptionBuilderTest
         verify(acquisition).openSubscription(subscriptionImpl);
     }
 
+    @Test
+    public void shouldValidateMissingTaskType()
+    {
+        // given
+        final PollableTaskSubscriptionBuilder builder = new PollableTaskSubscriptionBuilderImpl(acquisition);
+
+        builder
+            .lockTime(654L)
+            .taskQueueId(123);
+
+        // then
+        exception.expect(RuntimeException.class);
+        exception.expectMessage("taskType must not be null");
+
+        // when
+        builder.open();
+    }
+
+    @Test
+    public void shouldValidateMissingTaskHandler()
+    {
+        // given
+        final TaskSubscriptionBuilder builder = new TaskSubscriptionBuilderImpl(acquisition);
+
+        builder
+            .lockTime(654L)
+            .taskQueueId(123)
+            .taskType("foo");
+
+        // then
+        exception.expect(RuntimeException.class);
+        exception.expectMessage("taskHandler must not be null");
+
+        // when
+        builder.open();
+    }
+
+    @Test
+    public void shouldValidateLockTime()
+    {
+        // given
+        final TaskSubscriptionBuilder builder = new TaskSubscriptionBuilderImpl(acquisition);
+
+        builder
+            .lockTime(0L)
+            .taskQueueId(123)
+            .taskType("foo")
+            .handler((t) ->
+            { });
+
+        // then
+        exception.expect(RuntimeException.class);
+        exception.expectMessage("lockTime must be greater than 0");
+
+        // when
+        builder.open();
+    }
 }

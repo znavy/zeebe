@@ -1,5 +1,7 @@
 package org.camunda.tngp.client.task.impl;
 
+import java.util.Date;
+
 import org.camunda.tngp.client.AsyncTasksClient;
 import org.camunda.tngp.client.task.Task;
 
@@ -8,18 +10,26 @@ public class TaskImpl implements Task
     protected AsyncTasksClient tasksClient;
 
     protected long id;
+    protected Long workflowInstanceId;
     protected String type;
-    protected long lockExpirationTime;
+    protected Date lockExpirationTime;
     protected int taskQueueId;
 
     protected int state;
     protected static final int STATE_LOCKED = 0;
     protected static final int STATE_COMPLETED = 1;
 
-    public TaskImpl(AsyncTasksClient tasksClient, long id, String type, long lockExpirationTime, int taskQueueId)
+    public TaskImpl(
+            AsyncTasksClient tasksClient,
+            long id,
+            Long wfInstanceId,
+            String type,
+            Date lockExpirationTime,
+            int taskQueueId)
     {
         this.tasksClient = tasksClient;
         this.id = id;
+        this.workflowInstanceId = wfInstanceId;
         this.type = type;
         this.lockExpirationTime = lockExpirationTime;
         this.taskQueueId = taskQueueId;
@@ -49,13 +59,19 @@ public class TaskImpl implements Task
     }
 
     @Override
+    public Long getWorkflowInstanceId()
+    {
+        return workflowInstanceId;
+    }
+
+    @Override
     public String getType()
     {
         return type;
     }
 
     @Override
-    public long getLockExpirationTime()
+    public Date getLockExpirationTime()
     {
         return lockExpirationTime;
     }

@@ -37,7 +37,7 @@ public class ClientProperties
 
     /**
      * The number of threads for invocation of {@link TaskHandler}. Setting this value to 0 effectively disables
-     * the feature of managed {@link TaskSubscription}s.
+     * managed task execution via {@link TaskSubscription}s.
      */
     public static final String CLIENT_TASK_EXECUTION_THREADS = "tngp.client.tasks.execution.threads";
 

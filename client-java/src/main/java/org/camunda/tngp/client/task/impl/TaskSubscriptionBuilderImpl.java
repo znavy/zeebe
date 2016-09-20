@@ -4,11 +4,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.camunda.tngp.client.task.TaskHandler;
 import org.camunda.tngp.client.task.TaskSubscriptionBuilder;
+import org.camunda.tngp.util.EnsureUtil;
 
 public class TaskSubscriptionBuilderImpl implements TaskSubscriptionBuilder
 {
 
-    protected String topic;
+    protected String taskType;
     protected long lockTime = TimeUnit.MINUTES.toMillis(1);
     protected int taskQueueId = 0;
     protected TaskHandler taskHandler;
@@ -21,9 +22,9 @@ public class TaskSubscriptionBuilderImpl implements TaskSubscriptionBuilder
     }
 
     @Override
-    public TaskSubscriptionBuilder taskType(String topic)
+    public TaskSubscriptionBuilder taskType(String taskType)
     {
-        this.topic = topic;
+        this.taskType = taskType;
         return this;
     }
 
@@ -51,9 +52,12 @@ public class TaskSubscriptionBuilderImpl implements TaskSubscriptionBuilder
     @Override
     public TaskSubscriptionImpl open()
     {
-        // TODO: ensure parameters have valid values
+        EnsureUtil.ensureNotNull("taskHandler", taskHandler);
+        EnsureUtil.ensureNotNull("taskType", taskType);
+        EnsureUtil.ensureGreaterThan("lockTime", lockTime, 0L);
+
         final TaskSubscriptionImpl subscription =
-                new TaskSubscriptionImpl(taskHandler, topic, taskQueueId, lockTime, 1, taskAcquisition);
+                new TaskSubscriptionImpl(taskHandler, taskType, taskQueueId, lockTime, 1, taskAcquisition);
         subscription.open();
         return subscription;
     }

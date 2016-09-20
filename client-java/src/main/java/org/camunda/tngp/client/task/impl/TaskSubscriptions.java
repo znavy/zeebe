@@ -5,12 +5,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TaskSubscriptions
 {
-    // TODO: should have a status such that no new subscriptions can be added once closeAll has been called
-    // TODO: Idee: Acquistion sollte single writer der subscriptions sein; subscriptions sollen Zustand haben (closing, etc.)
-    //   => Acquisition übernimmt das Schließen der Subscription und kann ohne Synchronisation entscheiden,
-    //   wann für die Subscription garantiert keine Tasks mehr akquiriert werden
-
-
     protected List<TaskSubscriptionImpl> pollableSubscriptions = new CopyOnWriteArrayList<>();
     protected List<TaskSubscriptionImpl> managedExecutionSubscriptions = new CopyOnWriteArrayList<>();
 

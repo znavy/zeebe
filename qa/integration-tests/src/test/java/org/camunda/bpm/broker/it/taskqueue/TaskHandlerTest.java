@@ -18,6 +18,7 @@ import org.camunda.tngp.client.TngpClient;
 import org.camunda.tngp.client.WorkflowsClient;
 import org.camunda.tngp.client.cmd.LockedTasksBatch;
 import org.camunda.tngp.client.cmd.WorkflowDefinition;
+import org.camunda.tngp.client.task.PollableTaskSubscription;
 import org.camunda.tngp.client.task.Task;
 import org.camunda.tngp.client.task.TaskHandler;
 import org.camunda.tngp.client.task.TaskSubscription;
@@ -220,10 +221,35 @@ public class TaskHandlerTest
         TestUtil.waitUntil(() -> taskHandler.getNumTasksHandled() == 2);
     }
 
-    // TODO: test pollable subscriptions
-    // TODO: test that two subscriptions for the same type don't interfere
+    @Test
+    public void testPollableSubscription()
+    {
+        // given
+        final TngpClient client = clientRule.getClient();
+        final AsyncTasksClient taskService = client.tasks();
 
-    class RecordingTaskHandler implements TaskHandler
+        final PollableTaskSubscription subscription = taskService.newPollableSubscription()
+            .lockTime(123L)
+            .taskType("foo")
+            .taskQueueId(0)
+            .open();
+
+        final Long taskId = taskService.create()
+            .taskQueueId(0)
+            .taskType("foo")
+            .execute();
+
+        // when
+        final RecordingTaskHandler taskHandler = new RecordingTaskHandler();
+
+        TestUtil.doRepeatedly(() -> subscription.poll(taskHandler))
+            .until((workCount) -> workCount == 1);
+
+        assertThat(taskHandler.handledTasks).hasSize(1);
+        assertThat(taskHandler.handledTasks.get(0).getId()).isEqualTo(taskId);
+    }
+
+    public static class RecordingTaskHandler implements TaskHandler
     {
         protected List<Task> handledTasks = Collections.synchronizedList(new ArrayList<>());
 

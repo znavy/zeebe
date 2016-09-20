@@ -18,7 +18,6 @@ public class TaskSubscriptionImpl implements TaskSubscription, PollableTaskSubsc
 
     protected TaskHandler taskHandler;
 
-    // TODO: make capacity configurable
     protected Queue<TaskImpl> acquiredTasks = new ManyToManyConcurrentArrayQueue<>(CAPACITY);
 
     protected String taskType;
