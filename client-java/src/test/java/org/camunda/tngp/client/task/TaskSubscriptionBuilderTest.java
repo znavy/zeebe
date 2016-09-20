@@ -2,23 +2,22 @@ package org.camunda.tngp.client.task;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
+import org.camunda.tngp.client.impl.TngpClientImpl;
 import org.camunda.tngp.client.task.impl.PollableTaskSubscriptionBuilderImpl;
 import org.camunda.tngp.client.task.impl.TaskAcquisition;
 import org.camunda.tngp.client.task.impl.TaskSubscriptionBuilderImpl;
 import org.camunda.tngp.client.task.impl.TaskSubscriptionImpl;
+import org.camunda.tngp.client.task.impl.TaskSubscriptions;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 public class TaskSubscriptionBuilderTest
 {
 
-    @Mock
+    protected TaskSubscriptions subscriptions;
     protected TaskAcquisition acquisition;
 
     @Rule
@@ -27,7 +26,13 @@ public class TaskSubscriptionBuilderTest
     @Before
     public void setUp()
     {
-        MockitoAnnotations.initMocks(this);
+        subscriptions = new TaskSubscriptions();
+        acquisition = new TaskAcquisition(mock(TngpClientImpl.class), subscriptions)
+        {
+            {
+                this.cmdQueue = new ImmediateCommandQueue<>(this);
+            }
+        };
     }
 
     @Test
@@ -55,7 +60,7 @@ public class TaskSubscriptionBuilderTest
         assertThat(subscriptionImpl.getTaskQueueId()).isEqualTo(123);
         assertThat(subscriptionImpl.getTaskType()).isEqualTo("fooo");
 
-        verify(acquisition).openSubscription(subscriptionImpl);
+        assertThat(subscriptions.getManagedExecutionSubscriptions()).contains(subscriptionImpl);
     }
 
     @Test
@@ -81,7 +86,7 @@ public class TaskSubscriptionBuilderTest
         assertThat(subscriptionImpl.getTaskQueueId()).isEqualTo(123);
         assertThat(subscriptionImpl.getTaskType()).isEqualTo("fooo");
 
-        verify(acquisition).openSubscription(subscriptionImpl);
+        assertThat(subscriptions.getPollableSubscriptions()).contains(subscriptionImpl);
     }
 
     @Test

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 import org.camunda.tngp.client.cmd.LockedTask;
 import org.camunda.tngp.client.cmd.LockedTasksBatch;
 import org.camunda.tngp.client.impl.TngpClientImpl;
@@ -17,13 +16,13 @@ public class TaskAcquisition implements Agent, Consumer<AcquisitionCmd>
 
     protected TngpClientImpl client;
     protected TaskSubscriptions taskSubscriptions;
-    protected ManyToOneConcurrentArrayQueue<AcquisitionCmd> cmdQueue;
+    protected CommandQueue<AcquisitionCmd> cmdQueue;
 
     public TaskAcquisition(TngpClientImpl client, TaskSubscriptions subscriptions)
     {
         this.client = client;
         this.taskSubscriptions = subscriptions;
-        this.cmdQueue = new ManyToOneConcurrentArrayQueue<>(32);
+        this.cmdQueue = new DeferredCommandQueue<>(this);
     }
 
     @Override
@@ -39,7 +38,7 @@ public class TaskAcquisition implements Agent, Consumer<AcquisitionCmd>
 
     public int evaluateCommands()
     {
-        return cmdQueue.drain(this);
+        return cmdQueue.drain();
     }
 
     public int acquireTasksForSubscriptions()
