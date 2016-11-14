@@ -78,7 +78,7 @@ public class ActivityRequestHandler implements LogEntryTypeHandler<ActivityInsta
         // default output mapping is append
 
         final byte[] newBranchPayload = new byte[branchPayload.capacity() + taskPayload.capacity()];
-        branchPayload.getBytes(0, newBranchPayload);
+        branchPayload.getBytes(0, newBranchPayload, 0, branchPayload.capacity());
         taskPayload.getBytes(0, newBranchPayload, branchPayload.capacity(), taskPayload.capacity());
 
         newBranchPayloadBuffer.wrap(newBranchPayload);

@@ -2,6 +2,9 @@ package org.camunda.tngp.client.task;
 
 import java.time.Instant;
 
+import org.agrona.DirectBuffer;
+
+
 /**
  * Represents a task that was received by a subscription.
  *
@@ -31,4 +34,10 @@ public interface Task extends WaitStateResponse
      *   and can be exclusively processed by this client.
      */
     Instant getLockExpirationTime();
+
+    DirectBuffer getPayload();
+
+    String getPayloadString();
+
+    void setPayloadString(String updatedPayload);
 }

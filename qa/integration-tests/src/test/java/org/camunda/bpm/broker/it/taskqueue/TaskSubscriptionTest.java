@@ -2,6 +2,7 @@ package org.camunda.bpm.broker.it.taskqueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.ManyToManyConcurrentArrayQueue;
 import org.camunda.bpm.broker.it.ClientRule;
 import org.camunda.bpm.broker.it.EmbeddedBrokerRule;
@@ -323,6 +325,10 @@ public class TaskSubscriptionTest
         @Override
         public void handle(Task task)
         {
+            final DirectBuffer payload = task.getPayload();
+            final byte[] bytes = new byte[payload.capacity()];
+            payload.getBytes(0, bytes, 0, payload.capacity());
+            System.out.println("Task payload: " + new String(bytes, StandardCharsets.UTF_8));
             handledTasks.add(task);
             task.complete();
         }

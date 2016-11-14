@@ -34,7 +34,8 @@ public class TaskInstanceRequestWriter extends LogEntryWriter<TaskInstanceReques
         bodyEncoder.wrap(buffer, offset)
             .key(key)
             .lockOwnerId(lockOwnerId)
-            .type(type);
+            .type(type)
+            .putPayload(payloadBuffer, 0, payloadBuffer.capacity());
     }
 
     public TaskInstanceRequestWriter type(TaskInstanceRequestType type)

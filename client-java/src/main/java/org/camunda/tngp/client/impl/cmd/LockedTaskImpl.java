@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.time.Instant;
 
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.client.cmd.LockedTask;
 
 public class LockedTaskImpl implements LockedTask
@@ -12,6 +13,7 @@ public class LockedTaskImpl implements LockedTask
     protected long id;
     protected Long workflowInstanceId;
     protected Instant lockTime;
+    protected UnsafeBuffer payload = new UnsafeBuffer(0, 0);
 
     public void setId(long taskId)
     {
