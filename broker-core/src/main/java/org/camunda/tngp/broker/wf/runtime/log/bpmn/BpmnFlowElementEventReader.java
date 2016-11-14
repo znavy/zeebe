@@ -58,4 +58,8 @@ public class BpmnFlowElementEventReader implements BufferReader
         return flowElementIdStringBuffer;
     }
 
+    public long bpmnBranchKey()
+    {
+        return bodyDecoder.bpmnBranchKey();
+    }
 }

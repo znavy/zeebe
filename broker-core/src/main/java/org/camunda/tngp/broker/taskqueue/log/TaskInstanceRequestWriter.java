@@ -1,6 +1,8 @@
 package org.camunda.tngp.broker.taskqueue.log;
 
+import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.broker.log.LogEntryWriter;
 import org.camunda.tngp.protocol.log.TaskInstanceRequestEncoder;
 import org.camunda.tngp.protocol.log.TaskInstanceRequestType;
@@ -16,11 +18,14 @@ public class TaskInstanceRequestWriter extends LogEntryWriter<TaskInstanceReques
     protected long key;
     protected long lockOwnerId;
     protected TaskInstanceRequestType type;
+    protected UnsafeBuffer payloadBuffer = new UnsafeBuffer(0, 0);
 
     @Override
     protected int getBodyLength()
     {
-        return TaskInstanceRequestEncoder.BLOCK_LENGTH;
+        return TaskInstanceRequestEncoder.BLOCK_LENGTH +
+                TaskInstanceRequestEncoder.payloadHeaderLength() +
+                payloadBuffer.capacity();
     }
 
     @Override
@@ -47,6 +52,12 @@ public class TaskInstanceRequestWriter extends LogEntryWriter<TaskInstanceReques
     public TaskInstanceRequestWriter lockOwnerId(long lockOwnerId)
     {
         this.lockOwnerId = lockOwnerId;
+        return this;
+    }
+
+    public TaskInstanceRequestWriter payload(DirectBuffer payload, int offset, int length)
+    {
+        this.payloadBuffer.wrap(payload, offset, length);
         return this;
     }
 

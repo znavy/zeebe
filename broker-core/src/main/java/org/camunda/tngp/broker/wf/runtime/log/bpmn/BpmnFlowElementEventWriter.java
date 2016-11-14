@@ -15,6 +15,7 @@ public class BpmnFlowElementEventWriter extends LogEntryWriter<BpmnFlowElementEv
     protected long workflowInstanceId;
     protected ExecutionEventType eventType;
     protected int flowElementId;
+    protected long bpmnBranchKey;
 
     protected final UnsafeBuffer flowElementIdStringBuffer = new UnsafeBuffer(0, 0);
 
@@ -74,6 +75,12 @@ public class BpmnFlowElementEventWriter extends LogEntryWriter<BpmnFlowElementEv
     public BpmnFlowElementEventWriter flowElementIdString(DirectBuffer flowElementIdString, int offset, int length)
     {
         flowElementIdStringBuffer.wrap(flowElementIdString, offset, length);
+        return this;
+    }
+
+    public BpmnFlowElementEventWriter bpmnBranchKey(long bpmnBranchKey)
+    {
+        this.bpmnBranchKey = bpmnBranchKey;
         return this;
     }
 }
