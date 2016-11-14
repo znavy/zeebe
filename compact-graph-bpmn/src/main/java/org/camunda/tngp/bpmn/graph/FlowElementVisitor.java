@@ -24,6 +24,7 @@ public class FlowElementVisitor extends NodeVisitor
     protected int stringIdOffset;
     protected int eventBehaviorMappingOffset;
 
+    protected final UnsafeBuffer stringIdBuffer = new UnsafeBuffer(0, 0);
     protected final UnsafeBuffer taskTypeBuffer = new UnsafeBuffer(0, 0);
 
     public FlowElementVisitor init(ProcessGraph graph)
@@ -47,10 +48,20 @@ public class FlowElementVisitor extends NodeVisitor
                 GroupSizeEncodingDecoder.ENCODED_LENGTH;
 
         descriptorDecoder.limit(stringIdOffset);
+        final int stringIdLength = descriptorDecoder.stringIdLength();
+
+        if (stringIdLength > 0)
+        {
+            stringIdBuffer.wrap(buffer, stringIdOffset + FlowElementDescriptorDecoder.stringIdHeaderLength(), stringIdLength);
+        }
+        else
+        {
+            stringIdBuffer.wrap(0, 0);
+        }
 
         final int taskTypeOffset = stringIdOffset +
                 FlowElementDescriptorDecoder.stringIdHeaderLength() +
-                descriptorDecoder.stringIdLength();
+                stringIdLength;
 
         descriptorDecoder.limit(taskTypeOffset);
 
@@ -118,6 +129,7 @@ public class FlowElementVisitor extends NodeVisitor
         return this;
     }
 
+    @Override
     public FlowElementVisitor moveToNode(int nodeId)
     {
         return (FlowElementVisitor) super.moveToNode(nodeId);
@@ -172,6 +184,11 @@ public class FlowElementVisitor extends NodeVisitor
     public DirectBuffer taskType()
     {
         return taskTypeBuffer;
+    }
+
+    public DirectBuffer stringIdBuffer()
+    {
+        return stringIdBuffer;
     }
 
     public short taskQueueId()
