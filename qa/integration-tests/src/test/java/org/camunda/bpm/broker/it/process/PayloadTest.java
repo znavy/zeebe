@@ -44,15 +44,11 @@ public class PayloadTest
         workflowsClient
             .start()
             .workflowDefinitionId(workflowDefinition.getId())
+            .payload("foo")
             .execute();
 
         // when
         final PayloadRecordingHandler taskHandler = new PayloadRecordingHandler();
-
-        taskService.newSubscription()
-            .handler(taskHandler)
-            .taskType("bar")
-            .open();
 
         taskService.newSubscription()
             .handler((t) ->
@@ -62,6 +58,12 @@ public class PayloadTest
             })
             .taskType("foo")
             .open();
+
+        taskService.newSubscription()
+            .handler(taskHandler)
+            .taskType("bar")
+            .open();
+
 
         // then
         TestUtil.waitUntil(() -> taskHandler.payloads.size() == 2);

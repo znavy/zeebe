@@ -26,7 +26,16 @@ public class BpmnBranchEventReader implements BufferReader
         offset = bodyDecoder.limit();
         offset += BpmnBranchEventDecoder.materializedPayloadHeaderLength();
 
-        materializedPayloadBuffer.wrap(buffer, offset, bodyDecoder.materializedPayloadLength());
+        final int payloadLength = bodyDecoder.materializedPayloadLength();
+
+        if (payloadLength > 0)
+        {
+            materializedPayloadBuffer.wrap(buffer, offset, payloadLength);
+        }
+        else
+        {
+            materializedPayloadBuffer.wrap(0, 0);
+        }
     }
 
     public DirectBuffer materializedPayload()

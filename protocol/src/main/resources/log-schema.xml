@@ -101,6 +101,7 @@
     <field name="flowElementId" id="5" type="uint16" />
     <field name="bpmnBranchKey" id="6" type="uint64" />
     <data name="flowElementIdString" id="7" type="varDataEncoding" />
+    <data name="payload" id="8" type="varDataEncoding" />
   </sbe:message>
 
   <sbe:message name="BpmnActivityEvent" id="6">
@@ -130,6 +131,7 @@
     <field name="wfDefinitionId" id="2" type="uint64" />
     <field name="wfInstanceId" id="3" type="uint64" />
     <data name="wfDefinitionKey" id="4" type="varDataEncoding" />
+    <data name="payload" id="5" type="varDataEncoding" />
   </sbe:message>
   
   <sbe:message name="ActivityInstanceRequest" id="8">

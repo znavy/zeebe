@@ -18,6 +18,7 @@ public class BpmnFlowElementEventWriter extends LogEntryWriter<BpmnFlowElementEv
     protected long bpmnBranchKey;
 
     protected final UnsafeBuffer flowElementIdStringBuffer = new UnsafeBuffer(0, 0);
+    protected final UnsafeBuffer payloadBuffer = new UnsafeBuffer(0, 0);
 
     public BpmnFlowElementEventWriter()
     {
@@ -27,7 +28,11 @@ public class BpmnFlowElementEventWriter extends LogEntryWriter<BpmnFlowElementEv
     @Override
     protected int getBodyLength()
     {
-        return BpmnFlowElementEventEncoder.BLOCK_LENGTH + BpmnFlowElementEventEncoder.flowElementIdStringHeaderLength() + flowElementIdStringBuffer.capacity();
+        return BpmnFlowElementEventEncoder.BLOCK_LENGTH +
+                BpmnFlowElementEventEncoder.flowElementIdStringHeaderLength() +
+                flowElementIdStringBuffer.capacity() +
+                BpmnFlowElementEventEncoder.payloadHeaderLength() +
+                payloadBuffer.capacity();
     }
 
     @Override
@@ -39,7 +44,8 @@ public class BpmnFlowElementEventWriter extends LogEntryWriter<BpmnFlowElementEv
             .wfInstanceId(workflowInstanceId)
             .event(eventType.value())
             .flowElementId(flowElementId)
-            .putFlowElementIdString(flowElementIdStringBuffer, 0, flowElementIdStringBuffer.capacity());
+            .putFlowElementIdString(flowElementIdStringBuffer, 0, flowElementIdStringBuffer.capacity())
+            .putPayload(payloadBuffer, 0, payloadBuffer.capacity());
     }
 
     public BpmnFlowElementEventWriter key(long key)
@@ -81,6 +87,12 @@ public class BpmnFlowElementEventWriter extends LogEntryWriter<BpmnFlowElementEv
     public BpmnFlowElementEventWriter bpmnBranchKey(long bpmnBranchKey)
     {
         this.bpmnBranchKey = bpmnBranchKey;
+        return this;
+    }
+
+    public BpmnFlowElementEventWriter payload(DirectBuffer buffer, int offset, int length)
+    {
+        this.payloadBuffer.wrap(buffer, offset, length);
         return this;
     }
 }

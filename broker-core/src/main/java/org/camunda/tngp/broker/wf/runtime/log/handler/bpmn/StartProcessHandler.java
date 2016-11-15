@@ -1,8 +1,6 @@
 package org.camunda.tngp.broker.wf.runtime.log.handler.bpmn;
 
-import java.nio.charset.StandardCharsets;
-
-import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.DirectBuffer;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.broker.log.LogEntryHandler;
 import org.camunda.tngp.broker.log.LogWriters;
@@ -23,9 +21,9 @@ public class StartProcessHandler implements BpmnFlowElementAspectHandler
     public int handle(BpmnFlowElementEventReader flowElementEventReader, ProcessGraph process, LogWriters logWriters, IdGenerator idGenerator)
     {
 
-        // TODO: not garbage free
+        final DirectBuffer payload = flowElementEventReader.payload();
         branchEventWriter
-            .materializedPayload(new UnsafeBuffer("foo".getBytes(StandardCharsets.UTF_8)), 0, 3);
+            .materializedPayload(payload, 0, payload.capacity());
 
         final long bpmnBranchKey = logWriters.writeToCurrentLog(branchEventWriter);
 
