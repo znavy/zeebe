@@ -1,11 +1,15 @@
 package org.camunda.tngp.client.task.impl;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 import org.agrona.DirectBuffer;
 import org.camunda.tngp.client.AsyncTasksClient;
+import org.camunda.tngp.client.cmd.CompleteAsyncTaskCmd;
+import org.camunda.tngp.client.task.Payload;
 import org.camunda.tngp.client.task.Task;
 import org.camunda.tngp.protocol.taskqueue.SubscribedTaskReader;
+import org.camunda.tngp.util.EnsureUtil;
 
 public class TaskImpl implements Task
 {
@@ -16,7 +20,7 @@ public class TaskImpl implements Task
     protected final String type;
     protected final Instant lockExpirationTime;
     protected final int taskQueueId;
-    protected final PayloadField payload = new PayloadField();
+    protected final PayloadImpl payload = new PayloadImpl();
 
     protected int state;
     protected static final int STATE_LOCKED = 0;
@@ -37,19 +41,36 @@ public class TaskImpl implements Task
         this.state = STATE_LOCKED;
 
         final DirectBuffer payloadBuffer = taskReader.payload();
-        payload.initFromPayloadBuffer(payloadBuffer, 0, payloadBuffer.capacity());
+        payload.wrap(payloadBuffer, 0, payloadBuffer.capacity());
     }
 
     @Override
     public void complete()
     {
-        final DirectBuffer payloadBuffer = payload.getPayloadBuffer();
+        complete((byte[]) null);
+    }
 
-        tasksClient.complete()
+    @Override
+    public void complete(String payload)
+    {
+        // TODO: ensure not null
+        EnsureUtil.ensureNotNull("payload", payload);
+        complete(payload.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public void complete(byte[] payload)
+    {
+        final CompleteAsyncTaskCmd completeCmd = tasksClient.complete()
             .taskId(id)
-            .taskQueueId(taskQueueId)
-            .payload(payloadBuffer, 0, payloadBuffer.capacity())
-            .execute();
+            .taskQueueId(taskQueueId);
+
+        if (payload != null)
+        {
+            completeCmd.payload(payload);
+        }
+
+        completeCmd.execute();
 
         state = STATE_COMPLETED;
     }
@@ -84,15 +105,10 @@ public class TaskImpl implements Task
     }
 
     @Override
-    public String getPayloadString()
+    public Payload getPayload()
     {
-        return payload.getPayloadString();
+        return payload;
     }
 
-    @Override
-    public void setPayloadString(String updatedPayload)
-    {
-        payload.setPayloadString(updatedPayload);
-    }
 
 }

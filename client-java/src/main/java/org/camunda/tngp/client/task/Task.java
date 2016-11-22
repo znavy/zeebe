@@ -33,7 +33,6 @@ public interface Task extends WaitStateResponse
      */
     Instant getLockExpirationTime();
 
-    String getPayloadString();
+    Payload getPayload();
 
-    void setPayloadString(String updatedPayload);
 }

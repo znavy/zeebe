@@ -57,6 +57,8 @@ public class StartWorkflowInstanceHandler implements BrokerRequestHandler<WfRunt
 
         final LogWriter logWriter = context.getLogWriter();
 
+        // TODO: validate payload is actually JSON
+
         logRequestWriter.type(ProcessInstanceRequestType.NEW)
             .wfDefinitionId(wfDefinitionId)
             .wfDefinitionKey(wfDefinitionKey, 0, wfDefinitionKey.capacity())

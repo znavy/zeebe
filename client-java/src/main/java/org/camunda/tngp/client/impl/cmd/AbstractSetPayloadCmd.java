@@ -2,11 +2,11 @@ package org.camunda.tngp.client.impl.cmd;
 
 import java.nio.ByteBuffer;
 
+import org.agrona.DirectBuffer;
 import org.camunda.tngp.client.ClientCommand;
 import org.camunda.tngp.client.cmd.SetPayloadCmd;
 import org.camunda.tngp.client.impl.ClientCmdExecutor;
 import org.camunda.tngp.util.buffer.PayloadRequestWriter;
-import org.agrona.DirectBuffer;
 
 @SuppressWarnings("unchecked")
 public abstract class AbstractSetPayloadCmd<R, C extends ClientCommand<R>>

@@ -2,6 +2,9 @@ package org.camunda.bpm.broker.it.taskqueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
@@ -11,11 +14,13 @@ import org.camunda.bpm.broker.it.ClientRule;
 import org.camunda.bpm.broker.it.EmbeddedBrokerRule;
 import org.camunda.bpm.broker.it.util.ParallelRequests;
 import org.camunda.bpm.broker.it.util.ParallelRequests.SilentFuture;
+import org.camunda.bpm.model.xml.impl.util.IoUtil;
 import org.camunda.tngp.client.AsyncTasksClient;
 import org.camunda.tngp.client.TngpClient;
 import org.camunda.tngp.client.cmd.BrokerRequestException;
 import org.camunda.tngp.client.cmd.LockedTask;
 import org.camunda.tngp.client.cmd.LockedTasksBatch;
+import org.camunda.tngp.client.task.Payload;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -165,7 +170,7 @@ public class TaskQueueTest
     }
 
     @Test
-    public void testLockTaskWithPayload()
+    public void testLockTaskWithPayload() throws IOException
     {
         // given
         final TngpClient client = clientRule.getClient();
@@ -173,9 +178,11 @@ public class TaskQueueTest
 
         System.out.println("Creating task");
 
+        final String payloadString = "{\"foo\":\"bar\"}";
+        final byte[] payloadBytes = payloadString.getBytes(StandardCharsets.UTF_8);
         final Long taskId = taskService.create()
             .taskQueueId(0)
-            .payload("foo")
+            .payload(payloadString)
             .taskType("bar")
             .execute();
 
@@ -192,7 +199,9 @@ public class TaskQueueTest
         final List<LockedTask> tasks = lockedTasksBatch.getLockedTasks();
         assertThat(tasks).hasSize(1);
         assertThat(tasks.get(0).getId()).isEqualTo(taskId);
-        assertThat(tasks.get(0).getPayloadString()).isEqualTo("foo");
+        final Payload payload = tasks.get(0).getPayload();
+        System.out.println(IoUtil.getStringFromInputStream(payload.getRaw()));
+        assertThat(payload.getRaw()).hasSameContentAs(new ByteArrayInputStream(payloadBytes));
 
     }
 

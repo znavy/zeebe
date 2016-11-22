@@ -8,7 +8,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.broker.log.ResponseControl;
@@ -88,11 +87,8 @@ public class ActivityRequestHandlerTest
 
         final BpmnBranchEventReader newBpmnBranchEvent = logWriter.getEntryAs(0, BpmnBranchEventReader.class);
 
-        final byte[] branchPayloadBytes = branchPayload.getBytes(StandardCharsets.UTF_8);
-        final byte[] expectedPayload = Arrays.copyOf(branchPayloadBytes, branchPayloadBytes.length + TASK_PAYLOAD.length);
-        System.arraycopy(TASK_PAYLOAD, 0, expectedPayload, branchPayloadBytes.length, TASK_PAYLOAD.length);
-
-        assertThatBuffer(newBpmnBranchEvent.materializedPayload()).hasBytes(expectedPayload);
+        // default is that activity payload overwrites branch payload
+        assertThatBuffer(newBpmnBranchEvent.materializedPayload()).hasBytes(TASK_PAYLOAD);
         assertThat(newBpmnBranchEvent.key()).isEqualTo(999L);
 
         final BpmnActivityEventReader newLogEntry = logWriter.getEntryAs(1, BpmnActivityEventReader.class);
@@ -104,6 +100,40 @@ public class ActivityRequestHandlerTest
         assertThat(newLogEntry.wfDefinitionId()).isEqualTo(WfRuntimeEvents.PROCESS_ID);
         assertThat(newLogEntry.wfInstanceId()).isEqualTo(WfRuntimeEvents.PROCESS_INSTANCE_ID);
         assertThatBuffer(newLogEntry.getFlowElementIdString()).hasBytes(WfRuntimeEvents.FLOW_ELEMENT_ID_STRING);
+    }
+
+    /**
+     * Should not overwrite the branch payload in this case
+     */
+    @Test
+    public void shouldHandleCompleteRequestWithEmptyPayload()
+    {
+        // given
+        final ActivityRequestHandler handler = new ActivityRequestHandler(logReader, index);
+
+        final String branchPayload = "payload";
+        final BpmnBranchEventWriter bpmnBranchEvent = WfRuntimeEvents.bpmnBranchEvent(branchPayload, 999L);
+        logReader.addEntry(bpmnBranchEvent);
+        final BpmnActivityEventWriter activityInstanceEvent = WfRuntimeEvents.createActivityInstanceEvent(ExecutionEventType.ACT_INST_CREATED);
+        activityInstanceEvent.bpmnBranchKey(999L);
+        logReader.addEntry(activityInstanceEvent);
+
+        when(index.get(eq(999L), anyLong())).thenReturn(logReader.getEntryPosition(0));
+        when(index.get(eq(WfRuntimeEvents.KEY), anyLong())).thenReturn(logReader.getEntryPosition(1));
+
+        final ActivityInstanceRequestReader requestReader = mock(ActivityInstanceRequestReader.class);
+        when(requestReader.activityInstanceKey()).thenReturn(WfRuntimeEvents.KEY);
+        when(requestReader.type()).thenReturn(ActivityInstanceRequestType.COMPLETE);
+        when(requestReader.payload()).thenReturn(new UnsafeBuffer(0, 0));
+
+
+        // when
+        handler.handle(requestReader, responseControl, logWriters);
+
+        // then
+        final BpmnBranchEventReader newBpmnBranchEvent = logWriter.getEntryAs(0, BpmnBranchEventReader.class);
+
+        assertThatBuffer(newBpmnBranchEvent.materializedPayload()).hasBytes(branchPayload.getBytes(StandardCharsets.UTF_8));
     }
 
     @Test

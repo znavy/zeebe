@@ -29,7 +29,9 @@ public class CreateTaskInstanceRequestReader implements BufferReader
         taskTypeBuffer.wrap(buffer, offset, bodyDecoder.taskTypeLength());
 
         offset += bodyDecoder.taskTypeLength();
+        bodyDecoder.limit(offset);
         offset += CreateTaskInstanceDecoder.payloadHeaderLength();
+
         payloadBuffer.wrap(buffer, offset, bodyDecoder.payloadLength());
     }
 

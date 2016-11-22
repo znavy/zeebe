@@ -2,6 +2,8 @@ package org.camunda.tngp.client.cmd;
 
 import java.time.Instant;
 
+import org.camunda.tngp.client.task.Payload;
+
 public interface LockedTask
 {
     long getId();
@@ -10,5 +12,5 @@ public interface LockedTask
 
     Instant getLockTime();
 
-    String getPayloadString();
+    Payload getPayload();
 }

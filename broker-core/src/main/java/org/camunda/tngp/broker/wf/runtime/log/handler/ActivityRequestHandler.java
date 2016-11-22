@@ -72,20 +72,23 @@ public class ActivityRequestHandler implements LogEntryTypeHandler<ActivityInsta
         logReader.next()
              .readValue(bpmnBranchReader);
 
-        final DirectBuffer branchPayload = bpmnBranchReader.materializedPayload();
         final DirectBuffer taskPayload = requestReader.payload();
+        final DirectBuffer newBranchPayload;
 
-        // default output mapping is append
-
-        final byte[] newBranchPayload = new byte[branchPayload.capacity() + taskPayload.capacity()];
-        branchPayload.getBytes(0, newBranchPayload, 0, branchPayload.capacity());
-        taskPayload.getBytes(0, newBranchPayload, branchPayload.capacity(), taskPayload.capacity());
-
-        newBranchPayloadBuffer.wrap(newBranchPayload);
+        // default output mappings: if payload is provided, replace branch payload;
+        //   if no payload is provided, keep branch payload as is
+        if (taskPayload.capacity() > 0)
+        {
+            newBranchPayload = taskPayload;
+        }
+        else
+        {
+            newBranchPayload = bpmnBranchReader.materializedPayload();
+        }
 
         bpmnBranchWriter
-             .materializedPayload(newBranchPayloadBuffer, 0, newBranchPayloadBuffer.capacity())
-             .key(bpmnBranchReader.key());
+            .key(bpmnBranchReader.key())
+            .materializedPayload(newBranchPayload, 0, newBranchPayload.capacity());
 
         logWriters.writeToCurrentLog(bpmnBranchWriter);
 

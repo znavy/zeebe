@@ -2,6 +2,8 @@ package org.camunda.bpm.broker.it.process;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,14 +14,19 @@ import org.camunda.tngp.client.AsyncTasksClient;
 import org.camunda.tngp.client.TngpClient;
 import org.camunda.tngp.client.WorkflowsClient;
 import org.camunda.tngp.client.cmd.WorkflowDefinition;
+import org.camunda.tngp.client.task.Payload;
 import org.camunda.tngp.client.task.Task;
 import org.camunda.tngp.client.task.TaskHandler;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class PayloadTest
 {
+
     public EmbeddedBrokerRule brokerRule = new EmbeddedBrokerRule();
 
     public ClientRule clientRule = new ClientRule();
@@ -28,6 +35,14 @@ public class PayloadTest
     public RuleChain ruleChain = RuleChain
         .outerRule(brokerRule)
         .around(clientRule);
+
+    protected ObjectMapper objectMapper;
+
+    @Before
+    public void setUp()
+    {
+        objectMapper = new ObjectMapper();
+    }
 
     @Test
     public void testPayloadModification() throws InterruptedException
@@ -44,7 +59,7 @@ public class PayloadTest
         workflowsClient
             .start()
             .workflowDefinitionId(workflowDefinition.getId())
-            .payload("foo")
+            .payload("{\"key\":\"val\"}")
             .execute();
 
         // when
@@ -54,7 +69,12 @@ public class PayloadTest
             .handler((t) ->
             {
                 taskHandler.handle(t);
-                t.setPayloadString("bar");
+                final MyCustomPayload unmarshalledPayload =
+                        objectMapper.readValue(t.getPayload().getRaw(), MyCustomPayload.class);
+                unmarshalledPayload.setKey("newVal");
+
+                final byte[] marshalledPayload = objectMapper.writeValueAsBytes(unmarshalledPayload);
+                t.complete(marshalledPayload);
             })
             .taskType("foo")
             .open();
@@ -70,8 +90,8 @@ public class PayloadTest
 
         assertThat(taskHandler.payloads).hasSize(2);
 
-        assertThat(taskHandler.payloads.get(0)).isEqualTo("foo");
-        assertThat(taskHandler.payloads.get(1)).isEqualTo("foobar");
+        assertThat(taskHandler.payloads.get(0)).isEqualTo("{\"key\":\"val\"}");
+        assertThat(taskHandler.payloads.get(1)).isEqualTo("{\"key\":\"newVal\"}");
     }
 
     public static final class PayloadRecordingHandler implements TaskHandler
@@ -82,7 +102,19 @@ public class PayloadTest
         @Override
         public void handle(Task task)
         {
-            payloads.add(task.getPayloadString());
+            final Payload payload = task.getPayload();
+            final byte[] bytes = new byte[payload.rawSize()];
+            try
+            {
+                payload.getRaw().read(bytes, 0, bytes.length);
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException(e);
+            }
+
+
+            payloads.add(new String(bytes, StandardCharsets.UTF_8));
         }
 
     }

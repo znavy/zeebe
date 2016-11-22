@@ -152,7 +152,7 @@ public class TaskSubscriptionTest
     }
 
     @Test
-    public void shouldInvokeHandlerOnPoll()
+    public void shouldInvokeHandlerOnPoll() throws Exception
     {
         // given
         final TaskSubscriptions subscriptions = new TaskSubscriptions();
@@ -224,7 +224,7 @@ public class TaskSubscriptionTest
     }
 
     @Test
-    public void shouldNotAutoCompleteTaskOnException()
+    public void shouldNotAutoCompleteTaskOnException() throws Exception
     {
         // given
         final TaskSubscriptions subscriptions = new TaskSubscriptions();
@@ -343,7 +343,7 @@ public class TaskSubscriptionTest
     }
 
     @Test
-    public void shouldPollSubscription()
+    public void shouldPollSubscription() throws Exception
     {
         // given
         final TaskSubscriptions subscriptions = new TaskSubscriptions();
@@ -402,7 +402,7 @@ public class TaskSubscriptionTest
     }
 
     @Test
-    public void shouldPopulateTaskProperties()
+    public void shouldPopulateTaskProperties() throws Exception
     {
         // given
         final TaskSubscriptions subscriptions = new TaskSubscriptions();

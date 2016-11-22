@@ -2,9 +2,8 @@ package org.camunda.tngp.client.cmd;
 
 import java.nio.ByteBuffer;
 
-import org.camunda.tngp.client.ClientCommand;
-
 import org.agrona.DirectBuffer;
+import org.camunda.tngp.client.ClientCommand;
 
 public interface SetPayloadCmd<R, C extends ClientCommand<R>> extends ClientCommand<R>
 {
