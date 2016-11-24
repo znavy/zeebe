@@ -66,6 +66,7 @@ public class LockableTaskFinder implements LogEntryHandler<LogEntryHeaderReader>
         return lockableTaskPosition;
     }
 
+    // TODO: move to util as general buffer content equality function
     public static boolean taskTypeEqual(
             DirectBuffer actualTaskType,
             DirectBuffer taskTypeToPoll)

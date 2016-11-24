@@ -10,9 +10,11 @@ import org.camunda.tngp.broker.services.HashIndexManager;
 import org.camunda.tngp.broker.wf.runtime.log.handler.ActivityRequestHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.WfDefinitionRequestHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.WorkflowInstanceRequestHandler;
+import org.camunda.tngp.broker.wf.runtime.log.handler.bpmn.ActivateGatewayHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.bpmn.ActivityEventHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.bpmn.CreateActivityInstanceHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.bpmn.EndProcessHandler;
+import org.camunda.tngp.broker.wf.runtime.log.handler.bpmn.ExclusiveGatewayHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.bpmn.FlowElementEventHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.bpmn.ProcessEventHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.bpmn.StartProcessHandler;
@@ -96,6 +98,8 @@ public class WfRuntimeContextService implements Service<WfRuntimeContext>
             flowElementEventHandler.addAspectHandler(new CreateActivityInstanceHandler(new BufferedLogReader(log), indexManager.getIndex()));
             flowElementEventHandler.addAspectHandler(new TriggerNoneEventHandler());
             flowElementEventHandler.addAspectHandler(endProcessHandler);
+            flowElementEventHandler.addAspectHandler(new ExclusiveGatewayHandler(new BufferedLogReader(log), indexManager.getIndex()));
+            flowElementEventHandler.addAspectHandler(new ActivateGatewayHandler());
             wfRuntimeConsumer.addHandler(Templates.FLOW_ELEMENT_EVENT, flowElementEventHandler);
 
             wfRuntimeConsumer.addHandler(Templates.WF_INSTANCE_REQUEST, new WorkflowInstanceRequestHandler(wfDefinitionCache, idGenerator));
