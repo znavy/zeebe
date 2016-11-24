@@ -12,30 +12,26 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
 
-import org.camunda.bpm.model.bpmn.impl.BpmnModelConstants;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.bpm.model.bpmn.instance.BaseElement;
 import org.camunda.bpm.model.bpmn.instance.BpmnModelElementInstance;
 import org.camunda.bpm.model.bpmn.instance.FlowElement;
 import org.camunda.bpm.model.bpmn.instance.Process;
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
-import org.camunda.bpm.model.bpmn.instance.ServiceTask;
 import org.camunda.bpm.model.bpmn.instance.StartEvent;
 import org.camunda.bpm.model.bpmn.instance.SubProcess;
-import org.camunda.bpm.model.xml.instance.ModelElementInstance;
-import org.camunda.bpm.model.xml.type.ModelElementType;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.bpmn.graph.transformer.aspect.BpmnAspectHandlers;
+import org.camunda.tngp.bpmn.graph.transformer.element.BpmnElementTransformers;
+import org.camunda.tngp.bpmn.graph.transformer.element.FlowElementDescriptorWriter;
 import org.camunda.tngp.compactgraph.GraphEncoder;
 import org.camunda.tngp.compactgraph.builder.GraphBuilder;
 import org.camunda.tngp.compactgraph.builder.NodeBuilder;
 import org.camunda.tngp.graph.bpmn.BpmnAspect;
 import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 import org.camunda.tngp.graph.bpmn.FlowElementDescriptorEncoder;
-import org.camunda.tngp.graph.bpmn.FlowElementDescriptorEncoder.EventBehaviorMappingEncoder;
-import org.camunda.tngp.graph.bpmn.FlowElementType;
+import org.camunda.tngp.graph.bpmn.MessageHeaderEncoder;
 import org.camunda.tngp.graph.bpmn.ProcessDescriptorEncoder;
-
-import org.agrona.concurrent.UnsafeBuffer;
 
 public class BpmnProcessGraphTransformer
 {
@@ -155,50 +151,22 @@ public class BpmnProcessGraphTransformer
 
     protected byte[] encodeFlowElementData(final BaseElement element)
     {
-        final ModelElementType elementType = element.getElementType();
-        final Class<? extends ModelElementInstance> instanceType = elementType.getInstanceType();
-        final String id = element.getId();
+        final FlowElementDescriptorWriter writer = new FlowElementDescriptorWriter();
 
-        final byte[] nodeDataBuffer = new byte[1024 * 1024];
-
-        final FlowElementType flowElementType = FlowElementTypeMapping.graphNodeTypeForModelType(instanceType);
-        flowElementDescriptorEncoder.wrap(new UnsafeBuffer(nodeDataBuffer), 0)
-            .type(flowElementType);
-
-        String taskType = "";
-        short taskQueueId = FlowElementDescriptorEncoder.taskQueueIdNullValue();
-
-        if (element instanceof ServiceTask)
-        {
-            final String taskQueueIdAttribute = element.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, "taskQueueId");
-            taskQueueId = Short.parseShort(taskQueueIdAttribute);
-
-            taskType = element.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, "taskType");
-        }
-
-        flowElementDescriptorEncoder.taskQueueId(taskQueueId);
+        BpmnElementTransformers.applyTransformers(element, writer);
 
         final Map<ExecutionEventType, BpmnAspect> aspectMap = BpmnAspectHandlers.getBehavioralAspects(element);
+        writer.bpmnAspects(aspectMap);
 
-        final EventBehaviorMappingEncoder eventBehaviorMappingEncoder =
-            flowElementDescriptorEncoder.eventBehaviorMappingCount(aspectMap.size());
+        final byte[] nodeData = new byte[writer.getLength()];
+        final UnsafeBuffer nodeDataBuffer = new UnsafeBuffer(nodeData);
 
-        for (Map.Entry<ExecutionEventType, BpmnAspect> aspect : aspectMap.entrySet())
-        {
-            eventBehaviorMappingEncoder
-                .next()
-                .event(aspect.getKey())
-                .behavioralAspect(aspect.getValue());
-        }
+        writer.write(nodeDataBuffer, 0);
+        final int lengthWithoutHeader = nodeData.length - MessageHeaderEncoder.ENCODED_LENGTH;
+        final byte[] nodeDataWithoutHeader = new byte[lengthWithoutHeader];
+        System.arraycopy(nodeData, MessageHeaderEncoder.ENCODED_LENGTH, nodeDataWithoutHeader, 0, lengthWithoutHeader);
 
-        flowElementDescriptorEncoder.stringId(id);
-        flowElementDescriptorEncoder.taskType(taskType);
-
-        final byte[] nodeData = new byte[flowElementDescriptorEncoder.encodedLength()];
-
-        System.arraycopy(nodeDataBuffer, 0, nodeData, 0, nodeData.length);
-
-        return nodeData;
+        return nodeDataWithoutHeader;
     }
 
     private static void collectFlowElements(BpmnModelElementInstance scope, TreeSet<FlowElement> flowElements)

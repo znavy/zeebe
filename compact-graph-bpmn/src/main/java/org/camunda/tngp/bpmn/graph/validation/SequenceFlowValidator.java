@@ -16,9 +16,10 @@ public class SequenceFlowValidator implements ModelElementValidator<SequenceFlow
     @Override
     public void validate(SequenceFlow element, ValidationResultCollector validationResultCollector)
     {
-        if (element.getConditionExpression() != null)
-        {
-            validationResultCollector.addError(ValidationCodes.SEQUENCE_FLOW_UNSUPPORTED_CONDITION, "Sequence flows may not have conditions");
-        }
+        // TODO: validate condition expression
+//        if (element.getConditionExpression() != null)
+//        {
+//            validationResultCollector.addError(ValidationCodes.SEQUENCE_FLOW_UNSUPPORTED_CONDITION, "Sequence flows may not have conditions");
+//        }
     }
 }

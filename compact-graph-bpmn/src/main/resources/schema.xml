@@ -50,6 +50,8 @@
             <validValue name="CREATE_ACTIVITY_INSTANCE">3</validValue>
             <validValue name="TAKE_OUTGOING_FLOWS">4</validValue>
             <validValue name="TRIGGER_NONE_EVENT">5</validValue>
+            <validValue name="EXCLUSIVE_SPLIT">6</validValue>
+            <validValue name="ACTIVE_GATEWAY">7</validValue>
 		</enum>
 		
 		<enum name="ExecutionEventType" encodingType="uint16">		
@@ -61,8 +63,24 @@
 			<validValue name="ACT_INST_COMPLETED">201</validValue>
 			<validValue name="SQF_EXECUTED">300</validValue>
 			<validValue name="GW_ACTIVATED">400</validValue>
-			<validValue name="GW_COMPLETED">401</validValue>
 		</enum>
+        
+        <enum name="ConditionOperator" encodingType="uint16">
+            <validValue name="GREATER_THAN">1</validValue>
+            <validValue name="LOWER_THAN">2</validValue>
+            <validValue name="GREATER_THAN_OR_EQUAL">3</validValue>
+            <validValue name="LOWER_THAN_OR_EQUAL">4</validValue>
+            <validValue name="EQUAL">5</validValue>
+            <validValue name="NOT_EQUAL">6</validValue>
+        </enum>
+        
+        <enum name="JsonType" encodingType="uint16">
+            <validValue name="STRING">1</validValue>
+            <validValue name="NUMBER">2</validValue>
+            <validValue name="BOOLEAN">3</validValue>
+            <validValue name="EXPRESSION">4</validValue>
+            <validValue name="NULL">5</validValue>
+        </enum>
 		
 	</types>
 
@@ -75,12 +93,17 @@
 	<sbe:message name="FlowElementDescriptor" id="2">
 		<field name="type" id="1" type="FlowElementType" />
         <field name="taskQueueId" id="2" type="int16" />
-		<group name="eventBehaviorMapping" id="9" dimensionType="groupSizeEncoding">
-          <field name="event" id="10" type="ExecutionEventType" />
-          <field name="behavioralAspect" id="11" type="BpmnAspect" />
+        <field name="conditionOperator" id="3" type="ConditionOperator" />
+        <field name="conditionArg1Type" id="4" type="JsonType" />
+        <field name="conditionArg2Type" id="5" type="JsonType" />
+		<group name="eventBehaviorMapping" id="6" dimensionType="groupSizeEncoding">
+          <field name="event" id="7" type="ExecutionEventType" />
+          <field name="behavioralAspect" id="8" type="BpmnAspect" />
 	    </group>
-		<data name="stringId" id="4" type="varDataEncoding" />    
-        <data name="taskType" id="5" type="varDataEncoding" />    
+		<data name="stringId" id="9" type="varDataEncoding" />    
+        <data name="taskType" id="10" type="varDataEncoding" />    
+        <data name="conditionArg1" id="11" type="varDataEncoding" />
+        <data name="conditionArg2" id="12" type="varDataEncoding" />
 	</sbe:message>
 
 </sbe:messageSchema>

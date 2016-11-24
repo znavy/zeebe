@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.camunda.bpm.model.bpmn.instance.Activity;
 import org.camunda.bpm.model.bpmn.instance.Event;
+import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway;
 import org.camunda.bpm.model.bpmn.instance.FlowNode;
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
 import org.camunda.tngp.graph.bpmn.BpmnAspect;
@@ -23,6 +24,10 @@ public class SequenceFlowHandler implements BpmnAspectHandler<SequenceFlow>
         else if (target instanceof Event)
         {
             aspectsForElement.put(ExecutionEventType.SQF_EXECUTED, BpmnAspect.TRIGGER_NONE_EVENT);
+        }
+        else if (target instanceof ExclusiveGateway)
+        {
+            aspectsForElement.put(ExecutionEventType.SQF_EXECUTED, BpmnAspect.ACTIVE_GATEWAY);
         }
     }
 

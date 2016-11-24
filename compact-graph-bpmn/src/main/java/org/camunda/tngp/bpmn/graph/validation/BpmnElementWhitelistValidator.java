@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.camunda.bpm.model.bpmn.instance.EndEvent;
+import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway;
 import org.camunda.bpm.model.bpmn.instance.FlowNode;
 import org.camunda.bpm.model.bpmn.instance.ServiceTask;
 import org.camunda.bpm.model.bpmn.instance.StartEvent;
@@ -20,6 +21,7 @@ public class BpmnElementWhitelistValidator implements ModelElementValidator<Flow
         SUPPORTED_FLOW_NODES.add(StartEvent.class);
         SUPPORTED_FLOW_NODES.add(EndEvent.class);
         SUPPORTED_FLOW_NODES.add(ServiceTask.class);
+        SUPPORTED_FLOW_NODES.add(ExclusiveGateway.class);
     }
 
     @Override

@@ -5,17 +5,17 @@ import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.NODE_OUTGOING_SEQUENCE_F
 import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_SOURCE_NODE;
 import static org.camunda.tngp.bpmn.graph.BpmnEdgeTypes.SEQUENCE_FLOW_TARGET_NODE;
 
+import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.compactgraph.NodeVisitor;
 import org.camunda.tngp.graph.bpmn.BpmnAspect;
+import org.camunda.tngp.graph.bpmn.ConditionOperator;
 import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 import org.camunda.tngp.graph.bpmn.FlowElementDescriptorDecoder;
 import org.camunda.tngp.graph.bpmn.FlowElementDescriptorDecoder.EventBehaviorMappingDecoder;
 import org.camunda.tngp.graph.bpmn.FlowElementType;
 import org.camunda.tngp.graph.bpmn.GroupSizeEncodingDecoder;
-
-import org.agrona.DirectBuffer;
-import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.UnsafeBuffer;
 
 public class FlowElementVisitor extends NodeVisitor
 {
@@ -26,6 +26,9 @@ public class FlowElementVisitor extends NodeVisitor
 
     protected final UnsafeBuffer stringIdBuffer = new UnsafeBuffer(0, 0);
     protected final UnsafeBuffer taskTypeBuffer = new UnsafeBuffer(0, 0);
+
+    protected final JsonPropertyReader conditionArg1Reader = new JsonPropertyReader();
+    protected final JsonPropertyReader conditionArg2Reader = new JsonPropertyReader();
 
     public FlowElementVisitor init(ProcessGraph graph)
     {
@@ -49,15 +52,7 @@ public class FlowElementVisitor extends NodeVisitor
 
         descriptorDecoder.limit(stringIdOffset);
         final int stringIdLength = descriptorDecoder.stringIdLength();
-
-        if (stringIdLength > 0)
-        {
-            stringIdBuffer.wrap(buffer, stringIdOffset + FlowElementDescriptorDecoder.stringIdHeaderLength(), stringIdLength);
-        }
-        else
-        {
-            stringIdBuffer.wrap(0, 0);
-        }
+        stringIdBuffer.wrap(buffer, stringIdOffset + FlowElementDescriptorDecoder.stringIdHeaderLength(), stringIdLength);
 
         final int taskTypeOffset = stringIdOffset +
                 FlowElementDescriptorDecoder.stringIdHeaderLength() +
@@ -66,15 +61,33 @@ public class FlowElementVisitor extends NodeVisitor
         descriptorDecoder.limit(taskTypeOffset);
 
         final int taskTypeLength = descriptorDecoder.taskTypeLength();
-        if (taskTypeLength > 0)
-        {
-            taskTypeBuffer.wrap(buffer, taskTypeOffset + FlowElementDescriptorDecoder.taskTypeHeaderLength(), descriptorDecoder.taskTypeLength());
-        }
-        else
-        {
-            taskTypeBuffer.wrap(0, 0);
-        }
+        taskTypeBuffer.wrap(buffer, taskTypeOffset + FlowElementDescriptorDecoder.taskTypeHeaderLength(), taskTypeLength);
 
+
+        final int conditionArg1Offset = taskTypeOffset +
+                FlowElementDescriptorDecoder.taskTypeHeaderLength() +
+                taskTypeLength;
+
+        descriptorDecoder.limit(conditionArg1Offset);
+
+        final int conditionArg1Length = descriptorDecoder.conditionArg1Length();
+        conditionArg1Reader.wrap(descriptorDecoder.conditionArg1Type(),
+                buffer,
+                conditionArg1Offset + FlowElementDescriptorDecoder.conditionArg1HeaderLength(),
+                conditionArg1Length);
+
+        final int conditionArg2Offset = conditionArg1Offset +
+                FlowElementDescriptorDecoder.conditionArg1HeaderLength() +
+                conditionArg1Length;
+
+        descriptorDecoder.limit(conditionArg2Offset);
+
+        final int conditionArg2Length = descriptorDecoder.conditionArg2Length();
+
+        conditionArg2Reader.wrap(descriptorDecoder.conditionArg2Type(),
+                buffer,
+                conditionArg2Offset + FlowElementDescriptorDecoder.conditionArg2HeaderLength(),
+                conditionArg2Length);
     }
 
     public boolean hasIncomingSequenceFlows()
@@ -195,5 +208,20 @@ public class FlowElementVisitor extends NodeVisitor
     {
         return descriptorDecoder.taskQueueId();
     }
+
+    public JsonPropertyReader conditionArg1()
+    {
+        return conditionArg1Reader;
+    }
+    public JsonPropertyReader conditionArg2()
+    {
+        return conditionArg2Reader;
+    }
+
+    public ConditionOperator conditionOperator()
+    {
+        return descriptorDecoder.conditionOperator();
+    }
+
 
 }

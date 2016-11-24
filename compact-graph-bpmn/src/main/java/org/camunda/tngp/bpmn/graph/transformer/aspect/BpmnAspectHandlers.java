@@ -20,6 +20,7 @@ public class BpmnAspectHandlers
         HANDLERS.add(new ProcessHandler());
         HANDLERS.add(new SequenceFlowHandler());
         HANDLERS.add(new StartEventHandler());
+        HANDLERS.add(new ExclusiveGatewayHandler());
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
