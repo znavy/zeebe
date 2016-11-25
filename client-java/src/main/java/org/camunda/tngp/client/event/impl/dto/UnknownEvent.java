@@ -13,13 +13,15 @@
 package org.camunda.tngp.client.event.impl.dto;
 
 import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.client.event.Event;
 
 public class UnknownEvent implements Event
 {
     protected long position;
 
-    protected DirectBuffer rawBuffer;
+    protected final MutableDirectBuffer rawBuffer = new UnsafeBuffer(0, 0);
 
     protected int templateId;
 
@@ -52,7 +54,8 @@ public class UnknownEvent implements Event
 
     public void setRawBuffer(DirectBuffer rawBuffer)
     {
-        this.rawBuffer = rawBuffer;
+        this.rawBuffer.wrap(new byte[rawBuffer.capacity()]);
+        this.rawBuffer.putBytes(0, rawBuffer, 0, rawBuffer.capacity());
     }
 
     @Override
@@ -63,6 +66,8 @@ public class UnknownEvent implements Event
         builder.append(position);
         builder.append(", templateId=");
         builder.append(templateId);
+        builder.append(", eventLength=");
+        builder.append(rawBuffer.capacity());
         builder.append("]");
         return builder.toString();
     }
