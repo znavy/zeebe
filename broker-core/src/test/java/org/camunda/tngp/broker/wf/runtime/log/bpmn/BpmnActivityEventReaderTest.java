@@ -40,7 +40,8 @@ public class BpmnActivityEventReaderTest
             .wfDefinitionId(8765L)
             .wfInstanceId(45678L)
             .taskQueueId(5)
-            .taskType("ping");
+            .taskType("ping")
+            .flowElementIdString("pong");
 
         eventLength = headerEncoder.encodedLength() + bodyEncoder.encodedLength();
     }
@@ -64,5 +65,8 @@ public class BpmnActivityEventReaderTest
         assertThatBuffer(reader.getTaskType())
             .hasCapacity(4)
             .hasBytes("ping".getBytes(StandardCharsets.UTF_8));
+        assertThatBuffer(reader.getFlowElementIdString())
+            .hasCapacity(4)
+            .hasBytes("pong".getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -110,6 +110,7 @@ public class CreateActivityInstanceHandlerTest
         verify(eventWriter).wfInstanceId(9876L);
         verify(eventWriter).taskQueueId(6);
         verify(eventWriter).taskType(argThat(hasBytes("foo".getBytes(StandardCharsets.UTF_8))), eq(0), eq(3));
+        verify(eventWriter).flowElementIdString(argThat(hasBytes("serviceTask".getBytes(StandardCharsets.UTF_8))), eq(0), eq(11));
         verify(eventWriter).payload(argThat(hasBytes("payload".getBytes(StandardCharsets.UTF_8))), eq(0), eq(7));
 
         verify(logWriters).writeToCurrentLog(eventWriter);

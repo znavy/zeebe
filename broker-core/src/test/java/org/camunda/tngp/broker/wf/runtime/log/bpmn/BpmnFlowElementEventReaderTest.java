@@ -1,6 +1,9 @@
 package org.camunda.tngp.broker.wf.runtime.log.bpmn;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.camunda.tngp.broker.test.util.BufferAssert.assertThatBuffer;
+
+import java.nio.charset.StandardCharsets;
 
 import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 import org.camunda.tngp.protocol.log.BpmnFlowElementEventEncoder;
@@ -35,7 +38,8 @@ public class BpmnFlowElementEventReaderTest
             .flowElementId(75)
             .key(1234L)
             .wfDefinitionId(8765L)
-            .wfInstanceId(45678L);
+            .wfInstanceId(45678L)
+            .flowElementIdString("pong");
 
         eventLength = headerEncoder.encodedLength() + bodyEncoder.encodedLength();
     }
@@ -55,5 +59,9 @@ public class BpmnFlowElementEventReaderTest
         assertThat(reader.key()).isEqualTo(1234L);
         assertThat(reader.wfDefinitionId()).isEqualTo(8765L);
         assertThat(reader.wfInstanceId()).isEqualTo(45678L);
+
+        assertThatBuffer(reader.flowElementIdString())
+            .hasCapacity(4)
+            .hasBytes("pong".getBytes(StandardCharsets.UTF_8));
     }
 }

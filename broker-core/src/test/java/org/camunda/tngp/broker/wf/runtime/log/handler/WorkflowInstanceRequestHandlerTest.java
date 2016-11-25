@@ -1,13 +1,16 @@
 package org.camunda.tngp.broker.wf.runtime.log.handler;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.camunda.tngp.broker.test.util.BufferAssert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import java.nio.charset.StandardCharsets;
 
 import org.agrona.concurrent.UnsafeBuffer;
+import org.camunda.tngp.bpmn.graph.FlowElementVisitor;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.broker.util.mocks.StubLogWriter;
 import org.camunda.tngp.broker.util.mocks.StubLogWriters;
@@ -37,6 +40,9 @@ public class WorkflowInstanceRequestHandlerTest
     @Mock
     protected WfDefinitionCache wfDefinitionCache;
 
+    @Mock
+    protected FlowElementVisitor flowElementVisitor;
+
     protected StubLogWriter logWriter;
     protected StubResponseControl responseControl;
     protected StubLogWriters logWriters;
@@ -58,6 +64,10 @@ public class WorkflowInstanceRequestHandlerTest
 
         when(process.intialFlowNodeId()).thenReturn(987);
         when(process.id()).thenReturn(1234L);
+
+        final UnsafeBuffer flowElementStringIdBuffer = new UnsafeBuffer("ping".getBytes(StandardCharsets.UTF_8));
+        when(flowElementVisitor.stringIdBuffer()).thenReturn(flowElementStringIdBuffer);
+        when(flowElementVisitor.nodeId()).thenReturn(987);
     }
 
     @Test
@@ -65,6 +75,7 @@ public class WorkflowInstanceRequestHandlerTest
     {
         // given
         final WorkflowInstanceRequestHandler handler = new WorkflowInstanceRequestHandler(wfDefinitionCache, idGenerator);
+        handler.flowElementVisitor = flowElementVisitor;
 
         final WorkflowInstanceRequestReader requestReader = mock(WorkflowInstanceRequestReader.class);
         when(requestReader.type()).thenReturn(ProcessInstanceRequestType.NEW);
@@ -89,6 +100,7 @@ public class WorkflowInstanceRequestHandlerTest
         assertThat(flowElementEventReader.flowElementId()).isEqualTo(987);
         assertThat(flowElementEventReader.wfDefinitionId()).isEqualTo(1234L);
         assertThat(flowElementEventReader.wfInstanceId()).isEqualTo(11L);
+        assertThatBuffer(flowElementEventReader.flowElementIdString()).hasBytes("ping".getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -96,6 +108,7 @@ public class WorkflowInstanceRequestHandlerTest
     {
         // given
         final WorkflowInstanceRequestHandler handler = new WorkflowInstanceRequestHandler(wfDefinitionCache, idGenerator);
+        handler.flowElementVisitor = flowElementVisitor;
 
         final byte[] key = new byte[]{ 1, 2, 3 };
 
@@ -126,6 +139,7 @@ public class WorkflowInstanceRequestHandlerTest
         assertThat(flowElementEventReader.flowElementId()).isEqualTo(987);
         assertThat(flowElementEventReader.wfDefinitionId()).isEqualTo(1234L);
         assertThat(flowElementEventReader.wfInstanceId()).isEqualTo(11L);
+        assertThatBuffer(flowElementEventReader.flowElementIdString()).hasBytes("ping".getBytes(StandardCharsets.UTF_8));
     }
 
     @Test

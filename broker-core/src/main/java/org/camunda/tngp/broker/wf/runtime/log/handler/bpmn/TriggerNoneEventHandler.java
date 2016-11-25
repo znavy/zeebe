@@ -1,5 +1,6 @@
 package org.camunda.tngp.broker.wf.runtime.log.handler.bpmn;
 
+import org.agrona.DirectBuffer;
 import org.camunda.tngp.bpmn.graph.BpmnEdgeTypes;
 import org.camunda.tngp.bpmn.graph.FlowElementVisitor;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
@@ -30,6 +31,11 @@ public class TriggerNoneEventHandler implements BpmnFlowElementAspectHandler
             .key(idGenerator.nextId())
             .processId(flowElementEventReader.wfDefinitionId())
             .workflowInstanceId(flowElementEventReader.wfInstanceId());
+
+        final DirectBuffer stringIdBuffer = flowElementVisitor.stringIdBuffer();
+
+        eventWriter
+            .flowElementIdString(stringIdBuffer, 0, stringIdBuffer.capacity());
 
         logWriters.writeToCurrentLog(eventWriter);
         return LogEntryHandler.CONSUME_ENTRY_RESULT;

@@ -1,6 +1,7 @@
 package org.camunda.tngp.broker.wf.runtime.log.handler;
 
 import org.agrona.DirectBuffer;
+import org.camunda.tngp.bpmn.graph.FlowElementVisitor;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.broker.log.LogEntryTypeHandler;
 import org.camunda.tngp.broker.log.LogWriters;
@@ -21,6 +22,8 @@ public class WorkflowInstanceRequestHandler implements LogEntryTypeHandler<Workf
 
     protected final WfDefinitionCache wfDefinitionCache;
     protected final IdGenerator idGenerator;
+
+    protected FlowElementVisitor flowElementVisitor = new FlowElementVisitor();
 
     protected StartWorkflowInstanceResponseWriter responseWriter = new StartWorkflowInstanceResponseWriter();
     protected ErrorWriter errorWriter = new ErrorWriter();
@@ -72,6 +75,9 @@ public class WorkflowInstanceRequestHandler implements LogEntryTypeHandler<Workf
             final long workflowInstanceId = idGenerator.nextId();
             final long eventId = idGenerator.nextId();
 
+            flowElementVisitor.init(processGraph);
+            flowElementVisitor.moveToNode(processGraph.intialFlowNodeId());
+
             responseWriter.id(workflowInstanceId);
 
             final DirectBuffer payload = requestReader.payload();
@@ -82,8 +88,13 @@ public class WorkflowInstanceRequestHandler implements LogEntryTypeHandler<Workf
                 .workflowInstanceId(workflowInstanceId)
                 .processId(processGraph.id())
                 .eventType(ExecutionEventType.EVT_OCCURRED)
-                .flowElementId(processGraph.intialFlowNodeId())
+                .flowElementId(flowElementVisitor.nodeId())
                 .payload(payload, 0, payload.capacity());
+
+            final DirectBuffer stringIdBuffer = flowElementVisitor.stringIdBuffer();
+
+            flowElementEventWriter
+                .flowElementIdString(stringIdBuffer, 0, stringIdBuffer.capacity());
 
             logWriters.writeToCurrentLog(flowElementEventWriter);
             responseControl.accept(responseWriter);
