@@ -28,6 +28,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
 {
 
+    public static final int NO_FLOW_ID = -1; // note: this assumes flow element IDs are positive!
+
     protected static final BooleanBiFunction<JsonScalarReader> EQUAL_OPERATOR = new EqualOperator();
     protected static final BooleanBiFunction<JsonScalarReader> GREATER_THAN_OPERATOR = new GreaterThanOperator();
     protected static final BooleanBiFunction<JsonScalarReader> LOWER_THAN_OPERATOR = new LowerThanOperator();
@@ -58,42 +60,66 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
             IdGenerator idGenerator)
     {
         flowElementVisitor.init(process);
+
+        final int flowToTake = determineActivatedFlow(gatewayEvent);
+
+        if (flowToTake == NO_FLOW_ID)
+        {
+            System.err.println("Could not take any of the outgoing sequence flows. Workflow instance " + gatewayEvent.wfInstanceId() + " is stuck and won't continue execution");
+        }
+        else
+        {
+            flowElementVisitor.moveToNode(flowToTake);
+            takeSequenceFlow(gatewayEvent, flowElementVisitor, logWriters);
+        }
+
+        return 0;
+    }
+
+    protected int determineActivatedFlow(BpmnFlowElementEventReader gatewayEvent)
+    {
         final int gatewayId = gatewayEvent.flowElementId();
         flowElementVisitor.moveToNode(gatewayId);
 
         final int outgoingSequenceFlowsCount = flowElementVisitor.outgoingSequenceFlowsCount();
         initJsonDocument(gatewayEvent.bpmnBranchKey());
 
-        boolean flowTaken = false;
         int sequenceFlowIndex = 0;
+        int defaultFlowId = NO_FLOW_ID;
+        int flowToTake = NO_FLOW_ID;
 
-        while (sequenceFlowIndex < outgoingSequenceFlowsCount && !flowTaken)
+        while (sequenceFlowIndex < outgoingSequenceFlowsCount && flowToTake == NO_FLOW_ID)
         {
             flowElementVisitor.moveToNode(gatewayId);
             flowElementVisitor.traverseEdge(BpmnEdgeTypes.NODE_OUTGOING_SEQUENCE_FLOWS, sequenceFlowIndex);
 
-            final Boolean conditionResult = evaluateCondition(
-                    jsonDocument,
-                    flowElementVisitor.conditionArg1(),
-                    flowElementVisitor.conditionOperator(),
-                    flowElementVisitor.conditionArg2());
-
-            if (conditionResult == Boolean.TRUE)
+            if (flowElementVisitor.isDefaultFlow())
             {
-                takeSequenceFlow(gatewayEvent, flowElementVisitor, logWriters);
-                flowTaken = true;
+                defaultFlowId = flowElementVisitor.nodeId();
+            }
+            else
+            {
+                final Boolean conditionResult = evaluateCondition(
+                        jsonDocument,
+                        flowElementVisitor.conditionArg1(),
+                        flowElementVisitor.conditionOperator(),
+                        flowElementVisitor.conditionArg2());
+
+                if (conditionResult == Boolean.TRUE)
+                {
+                    flowToTake = flowElementVisitor.nodeId();
+                }
             }
 
             sequenceFlowIndex++;
         }
 
-        if (!flowTaken)
+        if (flowToTake == NO_FLOW_ID)
         {
-            System.err.println("Could not take any of the outgoing sequence flows. Workflow instance " + gatewayEvent.wfInstanceId() + " is stuck and won't continue execution");
+            flowToTake = defaultFlowId;
         }
 
-
-        return 0;
+        return flowToTake;
     }
 
     protected void takeSequenceFlow(BpmnFlowElementEventReader gatewayEvent, FlowElementVisitor sequenceFlow, LogWriters logWriters)

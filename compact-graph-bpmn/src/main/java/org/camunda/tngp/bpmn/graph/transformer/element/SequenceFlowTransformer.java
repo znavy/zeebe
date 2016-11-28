@@ -2,6 +2,8 @@ package org.camunda.tngp.bpmn.graph.transformer.element;
 
 import org.camunda.bpm.model.bpmn.impl.BpmnModelConstants;
 import org.camunda.bpm.model.bpmn.instance.ConditionExpression;
+import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway;
+import org.camunda.bpm.model.bpmn.instance.FlowNode;
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
 import org.camunda.tngp.graph.bpmn.ConditionOperator;
 
@@ -28,8 +30,15 @@ public class SequenceFlowTransformer implements BpmnElementTransformer<SequenceF
 
             final String conditionArg2 = conditionExpression.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, CAMUNDA_ATTRIBUTE_CONDITION_ARG2);
             populateJsonProperty(element.getId(), conditionArg2, elementWriter.conditionArg2());
+        }
 
-
+        final FlowNode source = element.getSource();
+        if (source instanceof ExclusiveGateway)
+        {
+            if (((ExclusiveGateway) source).getDefault() == element)
+            {
+                elementWriter.defaultFlow();
+            }
         }
     }
 

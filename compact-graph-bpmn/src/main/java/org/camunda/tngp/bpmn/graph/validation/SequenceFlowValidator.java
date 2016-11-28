@@ -17,6 +17,7 @@ public class SequenceFlowValidator implements ModelElementValidator<SequenceFlow
     public void validate(SequenceFlow element, ValidationResultCollector validationResultCollector)
     {
         // TODO: validate condition expression
+        // TODO: validate that conditions can only be used on flows leaving exclusive gateways
 //        if (element.getConditionExpression() != null)
 //        {
 //            validationResultCollector.addError(ValidationCodes.SEQUENCE_FLOW_UNSUPPORTED_CONDITION, "Sequence flows may not have conditions");

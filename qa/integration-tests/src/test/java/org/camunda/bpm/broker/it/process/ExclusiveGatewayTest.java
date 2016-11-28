@@ -115,6 +115,39 @@ public class ExclusiveGatewayTest
         assertThat(task.getType()).isEqualTo(TASK_TYPE2);
     }
 
+    @Test
+    public void testDefaultFlow()
+    {
+        // given
+        final TngpClient client = clientRule.getClient();
+        final WorkflowsClient workflowService = client.workflows();
+
+        final WorkflowDefinition workflow = clientRule.deployProcess(
+             wrap(EXCLUSIVE_GATEWAY_PROCESS)
+                 .conditionExpression("flow1", "true", "EQUAL", "false")
+                 .defaultFlow("flow2"));
+
+        final RecordingTaskHandler taskHandler = new RecordingTaskHandler();
+
+        subscribeToTasks(TASK_TYPE1, taskHandler);
+        subscribeToTasks(TASK_TYPE2, taskHandler);
+
+        // when
+        workflowService
+            .start()
+            .workflowDefinitionId(workflow.getId())
+            .payload("{\"price\":2000, \"maximum\":10000}")
+            .execute();
+
+        // then
+        TestUtil.waitUntil(() -> !taskHandler.handledTasks.isEmpty());
+
+        assertThat(taskHandler.handledTasks).hasSize(1);
+
+        final Task task = taskHandler.handledTasks.get(0);
+        assertThat(task.getType()).isEqualTo(TASK_TYPE2);
+    }
+
     protected void subscribeToTasks(String taskType, TaskHandler taskHandler)
     {
         clientRule.getClient().tasks().newSubscription()

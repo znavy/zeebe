@@ -223,5 +223,10 @@ public class FlowElementVisitor extends NodeVisitor
         return descriptorDecoder.conditionOperator();
     }
 
+    public boolean isDefaultFlow()
+    {
+        return descriptorDecoder.isDefault() != 0;
+    }
+
 
 }

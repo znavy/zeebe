@@ -33,6 +33,8 @@ public class FlowElementDescriptorWriter implements BufferWriter
 
     protected Map<ExecutionEventType, BpmnAspect> bpmnAspects;
 
+    protected boolean isDefault;
+
     public FlowElementDescriptorWriter()
     {
         reset();
@@ -41,6 +43,7 @@ public class FlowElementDescriptorWriter implements BufferWriter
     protected void reset()
     {
         flowElementType = FlowElementType.NULL_VAL;
+        isDefault = false;
         taskQueueId = FlowElementDescriptorEncoder.taskQueueIdNullValue();
         stringIdBuffer.wrap(0, 0);
         taskTypeBuffer.wrap(0, 0);
@@ -113,6 +116,12 @@ public class FlowElementDescriptorWriter implements BufferWriter
         return this;
     }
 
+    public FlowElementDescriptorWriter defaultFlow()
+    {
+        this.isDefault = true;
+        return this;
+    }
+
     protected void wrapString(String argument, UnsafeBuffer buffer)
     {
         final byte[] bytes = argument.getBytes(StandardCharsets.UTF_8);
@@ -136,7 +145,8 @@ public class FlowElementDescriptorWriter implements BufferWriter
             .taskQueueId(taskQueueId)
             .conditionArg1Type(arg1Writer.jsonType())
             .conditionArg2Type(arg2Writer.jsonType())
-            .conditionOperator(conditionOperator);
+            .conditionOperator(conditionOperator)
+            .isDefault(isDefault ? (byte) 1 : (byte) 0);
 
         final EventBehaviorMappingEncoder eventBehaviorMappingEncoder =
                 bodyEncoder.eventBehaviorMappingCount(bpmnAspects.size());
