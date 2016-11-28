@@ -1,9 +1,11 @@
 package org.camunda.tngp.bpmn.graph.validation;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.agrona.collections.Int2IntHashMap;
 import org.assertj.core.api.AbstractAssert;
 import org.camunda.bpm.model.bpmn.instance.BaseElement;
 import org.camunda.bpm.model.bpmn.instance.BpmnModelElementInstance;
@@ -52,6 +54,13 @@ public class ValidationResultsAssert extends AbstractAssert<ValidationResultsAss
 
     public ValidationResultsAssert hasError(int expectedCode)
     {
+        hasErrors(expectedCode);
+
+        return this;
+    }
+
+    public ValidationResultsAssert hasErrors(int... expectedErrorCodes)
+    {
         final List<ValidationResult> resultList;
 
         if (element == null)
@@ -65,16 +74,35 @@ public class ValidationResultsAssert extends AbstractAssert<ValidationResultsAss
             resultList = actual.getResults().get(element);
         }
 
-        final boolean hasError = resultList.stream()
-                .anyMatch((v) -> expectedCode == v.getCode());
+        final Int2IntHashMap expectedErrorCodeOccurrences = Arrays.stream(expectedErrorCodes).collect(
+            () -> new Int2IntHashMap(0),
+            (map, i) -> map.put(i, map.get(i) + 1),
+            (map, map2) ->
+            { });
 
-        if (!hasError)
+
+        final Int2IntHashMap actualErrorCodeOccurrences = resultList.stream().mapToInt((r) -> r.getCode()).collect(
+            () -> new Int2IntHashMap(0),
+            (map, i) -> map.put(i, map.get(i) + 1),
+            (map, map2) ->
+            { });
+
+
+        final boolean mismatching = expectedErrorCodeOccurrences.keySet().stream()
+            .filter((code) -> expectedErrorCodeOccurrences.get(code) != actualErrorCodeOccurrences.get(code))
+            .findAny()
+            .isPresent();
+
+        if (mismatching)
         {
+            final String expectedErrorCodesString = Arrays.stream(expectedErrorCodes)
+                .mapToObj((i) -> Integer.toString(i))
+                .collect(Collectors.joining(","));
             final String actualCodes = resultList.stream()
                 .map((o) -> String.valueOf(o.getCode()))
                 .collect(Collectors.joining(","));
 
-            failWithMessage("Expected validation to have provided error with code <%s> but got <%s>", expectedCode, actualCodes);
+            failWithMessage("Expected validation to have provided errors with codes <%s> but got <%s>", expectedErrorCodesString, actualCodes);
         }
 
         return this;

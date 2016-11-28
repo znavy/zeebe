@@ -69,7 +69,7 @@ public class SequenceFlowTransformer implements BpmnElementTransformer<SequenceF
         }
     }
 
-    protected boolean isJsonNumber(String value)
+    public static boolean isJsonNumber(String value)
     {
         try
         {
@@ -82,22 +82,22 @@ public class SequenceFlowTransformer implements BpmnElementTransformer<SequenceF
         }
     }
 
-    protected boolean isJsonPathExpression(String value)
+    public static boolean isJsonPathExpression(String value)
     {
         return value.startsWith("$");
     }
 
-    protected boolean isJsonString(String value)
+    public static boolean isJsonString(String value)
     {
         return value.startsWith("\"") && value.endsWith("\"");
     }
 
-    protected boolean isJsonBoolean(String value)
+    public static boolean isJsonBoolean(String value)
     {
         return "true".equals(value) || "false".equals(value);
     }
 
-    protected boolean isJsonNull(String value)
+    public static boolean isJsonNull(String value)
     {
         return "null".equals(value);
     }

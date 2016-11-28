@@ -15,5 +15,9 @@ public class ValidationCodes
     public static final int SERVICE_TASK_INVALID_TASK_QUEUE_ID = 302;
 
     public static final int SEQUENCE_FLOW_UNSUPPORTED_CONDITION = 400;
+    public static final int SEQUENCE_FLOW_BPMN_FORBIDDEN_CONDITION = 401;
+    public static final int SEQUENCE_FLOW_MISSING_CONDITION = 402;
+    public static final int SEQUENCE_FLOW_MISSING_CONDITION_ATTRIBUTE = 403;
+    public static final int SEQUENCE_FLOW_INVALID_CONDITION_ATTRIBUTE = 404;
 
 }
