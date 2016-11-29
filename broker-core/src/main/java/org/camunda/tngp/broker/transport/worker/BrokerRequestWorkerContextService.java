@@ -54,5 +54,4 @@ public class BrokerRequestWorkerContextService implements Service<AsyncRequestWo
     {
         return responsePoolInjector;
     }
-
 }

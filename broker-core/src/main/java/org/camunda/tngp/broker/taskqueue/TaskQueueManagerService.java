@@ -17,6 +17,7 @@ import org.camunda.tngp.broker.system.ConfigurationManager;
 import org.camunda.tngp.broker.taskqueue.cfg.TaskQueueCfg;
 import org.camunda.tngp.broker.transport.TransportServiceNames;
 import org.camunda.tngp.broker.wf.runtime.WfRuntimeContext;
+import org.camunda.tngp.broker.wf.runtime.data.JsonComponent;
 import org.camunda.tngp.hashindex.Bytes2LongHashIndex;
 import org.camunda.tngp.hashindex.Long2LongHashIndex;
 import org.camunda.tngp.log.Log;
@@ -110,6 +111,7 @@ public class TaskQueueManagerService extends AbstractResourceContextProvider<Tas
             .dependency(workerResponsePoolServiceName(TaskQueueComponent.WORKER_NAME), taskQueueContextService.getResponsePoolServiceInjector())
             .dependency(workerDataFramePoolServiceName(TaskQueueComponent.WORKER_NAME), taskQueueContextService.getDataFramePoolInjector())
             .dependency(TransportServiceNames.TRANSPORT, taskQueueContextService.getTransportInjector())
+            .dependency(JsonComponent.JSON_SERVICE_NAME, taskQueueContextService.getJsonConfigurationInjector())
             .install();
     }
 

@@ -2,6 +2,7 @@ package org.camunda.bpm.broker.it.process;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.camunda.tngp.broker.test.util.bpmn.TngpModelInstance.wrap;
+import static org.camunda.tngp.broker.test.util.bpmn.TngpModelInstance.wrapCopy;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -57,7 +58,7 @@ public class ExclusiveGatewayTest
         final WorkflowsClient workflowService = client.workflows();
 
         final WorkflowDefinition workflow = clientRule.deployProcess(
-             wrap(EXCLUSIVE_GATEWAY_PROCESS)
+             wrapCopy(EXCLUSIVE_GATEWAY_PROCESS)
                 .conditionExpression("flow1", "$.key", "EQUAL", "1")
                 .conditionExpression("flow2", "$.key", "NOT_EQUAL", "1"));
 
@@ -90,7 +91,7 @@ public class ExclusiveGatewayTest
         final WorkflowsClient workflowService = client.workflows();
 
         final WorkflowDefinition workflow = clientRule.deployProcess(
-             wrap(EXCLUSIVE_GATEWAY_PROCESS)
+            wrapCopy(EXCLUSIVE_GATEWAY_PROCESS)
                 .conditionExpression("flow1", "$.price", "GREATER_THAN", "$.maximum")
                 .conditionExpression("flow2", "$.price", "LOWER_THAN_OR_EQUAL", "$.maximum"));
 
@@ -123,7 +124,7 @@ public class ExclusiveGatewayTest
         final WorkflowsClient workflowService = client.workflows();
 
         final WorkflowDefinition workflow = clientRule.deployProcess(
-             wrap(EXCLUSIVE_GATEWAY_PROCESS)
+            wrapCopy(EXCLUSIVE_GATEWAY_PROCESS)
                  .conditionExpression("flow1", "true", "EQUAL", "false")
                  .defaultFlow("flow2"));
 

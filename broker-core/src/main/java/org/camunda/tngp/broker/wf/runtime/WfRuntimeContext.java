@@ -3,6 +3,7 @@ package org.camunda.tngp.broker.wf.runtime;
 import org.camunda.tngp.broker.log.LogConsumer;
 import org.camunda.tngp.broker.log.LogWriter;
 import org.camunda.tngp.broker.transport.worker.spi.ResourceContext;
+import org.camunda.tngp.broker.wf.runtime.data.JsonValidator;
 import org.camunda.tngp.log.Log;
 
 public class WfRuntimeContext implements ResourceContext
@@ -15,6 +16,7 @@ public class WfRuntimeContext implements ResourceContext
     protected LogConsumer logConsumer;
 
     protected Log log;
+    protected JsonValidator jsonValidator;
 
     public WfRuntimeContext(int id, String name)
     {
@@ -61,5 +63,15 @@ public class WfRuntimeContext implements ResourceContext
     public void setLogConsumer(LogConsumer logConsumer)
     {
         this.logConsumer = logConsumer;
+    }
+
+    public void setJsonValidator(JsonValidator jsonValidator)
+    {
+        this.jsonValidator = jsonValidator;
+    }
+
+    public JsonValidator getJsonValidator()
+    {
+        return jsonValidator;
     }
 }

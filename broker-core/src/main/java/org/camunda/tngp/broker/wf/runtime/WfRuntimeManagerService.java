@@ -18,6 +18,7 @@ import org.camunda.tngp.broker.taskqueue.TaskQueueContext;
 import org.camunda.tngp.broker.wf.TaskQueueLogProcessorService;
 import org.camunda.tngp.broker.wf.WfComponent;
 import org.camunda.tngp.broker.wf.cfg.WfRuntimeCfg;
+import org.camunda.tngp.broker.wf.runtime.data.JsonComponent;
 import org.camunda.tngp.hashindex.Bytes2LongHashIndex;
 import org.camunda.tngp.hashindex.Long2LongHashIndex;
 import org.camunda.tngp.log.Log;
@@ -134,6 +135,7 @@ public class WfRuntimeManagerService
             .dependency(workerResponsePoolServiceName(WfComponent.WORKER_NAME), wfRuntimeContextService.getResponsePoolServiceInjector())
             .dependency(wfDefinitionIdIndexServiceName, wfRuntimeContextService.getWfDefinitionIdIndexInjector())
             .dependency(wfDefinitionKeyIndexServiceName, wfRuntimeContextService.getWfDefinitionKeyIndexInjector())
+            .dependency(JsonComponent.JSON_SERVICE_NAME, wfRuntimeContextService.getJsonConfigurationInjector())
             .install();
     }
 

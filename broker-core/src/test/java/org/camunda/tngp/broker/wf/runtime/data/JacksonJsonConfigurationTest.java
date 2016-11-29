@@ -7,29 +7,26 @@ import java.nio.charset.StandardCharsets;
 
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.camunda.tngp.broker.services.JacksonJsonService;
+import org.camunda.tngp.broker.services.JsonConfiguration;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.Configuration;
-
-public class JacksonJsonDocumentTest
+public class JacksonJsonConfigurationTest
 {
-    protected ObjectMapper objectMapper;
-    protected Configuration jsonPathConfiguration;
+    protected JsonConfiguration jsonConfiguration;
 
     @Before
     public void setUp()
     {
-        objectMapper = new ObjectMapper();
-        jsonPathConfiguration = TngpJsonPath.getConfiguration();
+        jsonConfiguration = JacksonJsonService.buildJsonConfiguration();
     }
 
     @Test
     public void shouldProcessJsonPath()
     {
         // given
-        final JacksonJsonDocument jsonDocument = new JacksonJsonDocument(objectMapper, jsonPathConfiguration, 1);
+        final JsonDocument jsonDocument = jsonConfiguration.buildJsonDocument(1);
         final DirectBuffer jsonBuffer = encode("{\"key\":\"value\"}");
         jsonDocument.wrap(jsonBuffer, 0, jsonBuffer.capacity());
 
@@ -48,7 +45,7 @@ public class JacksonJsonDocumentTest
     public void shouldNotifyOfUnresolvedJsonPath()
     {
         // given
-        final JacksonJsonDocument jsonDocument = new JacksonJsonDocument(objectMapper, jsonPathConfiguration, 1);
+        final JsonDocument jsonDocument = jsonConfiguration.buildJsonDocument(1);
         final DirectBuffer jsonBuffer = encode("{}");
         jsonDocument.wrap(jsonBuffer, 0, jsonBuffer.capacity());
 
@@ -65,7 +62,7 @@ public class JacksonJsonDocumentTest
     public void shouldReuseResultInstancesRoundRobin()
     {
         // given
-        final JacksonJsonDocument jsonDocument = new JacksonJsonDocument(objectMapper, jsonPathConfiguration, 2);
+        final JsonDocument jsonDocument = jsonConfiguration.buildJsonDocument(2);
         final DirectBuffer jsonBuffer = encode("{\"key\":\"value\"}");
         jsonDocument.wrap(jsonBuffer, 0, jsonBuffer.capacity());
 

@@ -13,6 +13,7 @@ import org.camunda.bpm.broker.it.TestUtil;
 import org.camunda.tngp.client.AsyncTasksClient;
 import org.camunda.tngp.client.TngpClient;
 import org.camunda.tngp.client.WorkflowsClient;
+import org.camunda.tngp.client.cmd.BrokerRequestException;
 import org.camunda.tngp.client.cmd.WorkflowDefinition;
 import org.camunda.tngp.client.task.Payload;
 import org.camunda.tngp.client.task.Task;
@@ -20,6 +21,7 @@ import org.camunda.tngp.client.task.TaskHandler;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,6 +37,9 @@ public class PayloadTest
     public RuleChain ruleChain = RuleChain
         .outerRule(brokerRule)
         .around(clientRule);
+
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
     protected ObjectMapper objectMapper;
 
@@ -92,6 +97,29 @@ public class PayloadTest
 
         assertThat(taskHandler.payloads.get(0)).isEqualTo("{\"key\":\"val\"}");
         assertThat(taskHandler.payloads.get(1)).isEqualTo("{\"key\":\"newVal\"}");
+    }
+
+    @Test
+    public void shouldRejectInvalidJson()
+    {
+     // given
+        final TngpClient client = clientRule.getClient();
+        final WorkflowsClient workflowsClient = client.workflows();
+
+        final WorkflowDefinition workflowDefinition = workflowsClient.deploy()
+            .bpmnModelInstance(ProcessModels.TWO_TASKS_PROCESS)
+            .execute();
+
+        // then
+        exception.expect(BrokerRequestException.class);
+        exception.expectMessage("Invalid JSON payload");
+
+        // when
+        workflowsClient
+            .start()
+            .workflowDefinitionId(workflowDefinition.getId())
+            .payload("this is not json")
+            .execute();
     }
 
     public static final class PayloadRecordingHandler implements TaskHandler

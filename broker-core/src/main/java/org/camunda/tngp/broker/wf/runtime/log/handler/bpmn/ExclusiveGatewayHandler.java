@@ -7,11 +7,10 @@ import org.camunda.tngp.bpmn.graph.JsonPropertyReader;
 import org.camunda.tngp.bpmn.graph.JsonScalarReader;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.broker.log.LogWriters;
+import org.camunda.tngp.broker.services.JsonConfiguration;
 import org.camunda.tngp.broker.taskqueue.request.handler.LockableTaskFinder;
-import org.camunda.tngp.broker.wf.runtime.data.JacksonJsonDocument;
 import org.camunda.tngp.broker.wf.runtime.data.JsonDocument;
 import org.camunda.tngp.broker.wf.runtime.data.JsonPathResult;
-import org.camunda.tngp.broker.wf.runtime.data.TngpJsonPath;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnBranchEventReader;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnFlowElementEventReader;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnFlowElementEventWriter;
@@ -22,8 +21,6 @@ import org.camunda.tngp.graph.bpmn.JsonType;
 import org.camunda.tngp.hashindex.Long2LongHashIndex;
 import org.camunda.tngp.log.LogReader;
 import org.camunda.tngp.log.idgenerator.IdGenerator;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
 {
@@ -41,12 +38,13 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
     protected final Long2LongHashIndex eventIndex;
     protected final LogReader logReader;
 
-    protected JsonDocument jsonDocument = new JacksonJsonDocument(new ObjectMapper(), TngpJsonPath.getConfiguration(), 2);
+    protected final JsonDocument jsonDocument;
 
-    public ExclusiveGatewayHandler(LogReader logReader, Long2LongHashIndex eventIndex)
+    public ExclusiveGatewayHandler(LogReader logReader, Long2LongHashIndex eventIndex, JsonConfiguration jsonConfiguration)
     {
         this.eventIndex = eventIndex;
         this.logReader = logReader;
+        this.jsonDocument = jsonConfiguration.buildJsonDocument(2);
     }
 
     @Override

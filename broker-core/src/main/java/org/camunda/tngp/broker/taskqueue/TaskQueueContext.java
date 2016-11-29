@@ -5,6 +5,7 @@ import org.camunda.tngp.broker.log.LogWriter;
 import org.camunda.tngp.broker.services.HashIndexManager;
 import org.camunda.tngp.broker.taskqueue.subscription.LockTasksOperator;
 import org.camunda.tngp.broker.transport.worker.spi.ResourceContext;
+import org.camunda.tngp.broker.wf.runtime.data.JsonValidator;
 import org.camunda.tngp.hashindex.Bytes2LongHashIndex;
 import org.camunda.tngp.log.Log;
 import org.camunda.tngp.log.idgenerator.IdGenerator;
@@ -26,6 +27,8 @@ public class TaskQueueContext implements ResourceContext
     protected LogConsumer logConsumer;
 
     protected LockTasksOperator lockedTasksOperator;
+
+    protected JsonValidator jsonValidator;
 
     public TaskQueueContext(String taskQueueName, int taskQueueId)
     {
@@ -115,4 +118,13 @@ public class TaskQueueContext implements ResourceContext
         this.lockedTasksOperator = lockedTasksOperator;
     }
 
+    public void setJsonValidator(JsonValidator jsonValidator)
+    {
+        this.jsonValidator = jsonValidator;
+    }
+
+    public JsonValidator getJsonValidator()
+    {
+        return jsonValidator;
+    }
 }
