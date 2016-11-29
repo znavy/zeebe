@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sbe:messageSchema xmlns:sbe="http://www.fixprotocol.org/ns/simple/RC3"
+	package="org.camunda.tngp.graph.bpmn" id="2" version="1"
+	semanticVersion="0.1.0" description="Bpmn Process Schema" byteOrder="littleEndian">
+
+	<types>
+		<composite name="messageHeader"
+			description="Message identifiers and length of message root">
+			<type name="blockLength" primitiveType="uint16" />
+			<type name="templateId" primitiveType="uint16" />
+			<type name="schemaId" primitiveType="uint16" />
+			<type name="version" primitiveType="uint16" />
+		</composite>
+		<composite name="varDataEncoding">
+			<type name="length" primitiveType="uint16" />
+			<type name="varData" primitiveType="uint8" length="0"
+				characterEncoding="UTF-8" />
+		</composite>
+		<composite name="groupSizeEncoding" description="Repeating group dimensions">
+			<type name="blockLength" primitiveType="uint16" />
+			<type name="numInGroup" primitiveType="uint8" semanticType="NumInGroup" />
+		</composite>
+		
+	</types>
+
+	<types>
+	
+		<enum name="FlowElementType" encodingType="uint16">		
+			<validValue name="PROCESS">0</validValue>
+			<validValue name="START_EVENT">1</validValue>
+			<validValue name="END_EVENT">2</validValue>
+			<validValue name="INTERMEDIATE_CATCH_EVENT">3</validValue>
+			<validValue name="INTERMEDIATE_THROW_EVENT">4</validValue>
+			<validValue name="BOUNDARY_EVENT">5</validValue>
+			<validValue name="SEQUENCE_FLOW">6</validValue>
+
+			<validValue name="SERVICE_TASK">100</validValue>
+			<validValue name="USER_TASK">101</validValue>
+		
+			<validValue name="EXCLUSIVE_GATEWAY">200</validValue>
+			<validValue name="PARALLEL_GATEWAY">201</validValue>
+			
+			<validValue name="MESSAGE_EVENT_DEFINITION">300</validValue>
+			<validValue name="ERROR_EVENT_DEFINITION">301</validValue>
+		</enum>
+		
+		<enum name="BpmnAspect" encodingType="uint16">
+            <validValue name="START_PROCESS">1</validValue>
+            <validValue name="END_PROCESS">2</validValue>
+            <validValue name="CREATE_ACTIVITY_INSTANCE">3</validValue>
+            <validValue name="TAKE_OUTGOING_FLOWS">4</validValue>
+            <validValue name="TRIGGER_NONE_EVENT">5</validValue>
+            <validValue name="EXCLUSIVE_SPLIT">6</validValue>
+            <validValue name="ACTIVE_GATEWAY">7</validValue>
+		</enum>
+		
+		<enum name="ExecutionEventType" encodingType="uint16">		
+			<validValue name="PROC_INST_CREATED">0</validValue>
+			<validValue name="PROC_INST_COMPLETED">1</validValue>
+			<validValue name="EVT_SUBSCRIBED">100</validValue>
+			<validValue name="EVT_OCCURRED">101</validValue>
+			<validValue name="ACT_INST_CREATED">200</validValue>
+			<validValue name="ACT_INST_COMPLETED">201</validValue>
+			<validValue name="SQF_EXECUTED">300</validValue>
+			<validValue name="GW_ACTIVATED">400</validValue>
+		</enum>
+        
+        <enum name="ConditionOperator" encodingType="uint16">
+            <validValue name="GREATER_THAN">1</validValue>
+            <validValue name="LOWER_THAN">2</validValue>
+            <validValue name="GREATER_THAN_OR_EQUAL">3</validValue>
+            <validValue name="LOWER_THAN_OR_EQUAL">4</validValue>
+            <validValue name="EQUAL">5</validValue>
+            <validValue name="NOT_EQUAL">6</validValue>
+        </enum>
+        
+        <enum name="JsonType" encodingType="uint16">
+            <validValue name="STRING">1</validValue>
+            <validValue name="NUMBER">2</validValue>
+            <validValue name="BOOLEAN">3</validValue>
+            <validValue name="EXPRESSION">4</validValue>
+            <validValue name="NULL">5</validValue>
+        </enum>
+		
+	</types>
+
+	<sbe:message name="ProcessDescriptor" id="1">
+		<field name="id" id="1" type="uint64" />
+		<field name="intialFlowNodeId" id="2" type="uint16" />
+		<data name="stringId" id="3" type="varDataEncoding" />		
+	</sbe:message>
+
+	<sbe:message name="FlowElementDescriptor" id="2">
+		<field name="type" id="1" type="FlowElementType" />
+        <field name="taskQueueId" id="2" type="int16" />
+        <field name="conditionOperator" id="3" type="ConditionOperator" />
+        <field name="conditionArg1Type" id="4" type="JsonType" />
+        <field name="conditionArg2Type" id="5" type="JsonType" />
+		<group name="eventBehaviorMapping" id="6" dimensionType="groupSizeEncoding">
+          <field name="event" id="7" type="ExecutionEventType" />
+          <field name="behavioralAspect" id="8" type="BpmnAspect" />
+	    </group>
+		<data name="stringId" id="9" type="varDataEncoding" />    
+        <data name="taskType" id="10" type="varDataEncoding" />    
+        <data name="conditionArg1" id="11" type="varDataEncoding" />
+        <data name="conditionArg2" id="12" type="varDataEncoding" />
+	</sbe:message>
+
+</sbe:messageSchema>
