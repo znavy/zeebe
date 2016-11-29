@@ -28,6 +28,7 @@ import org.camunda.tngp.transport.TransportChannelListener;
 import org.camunda.tngp.transport.requestresponse.server.DeferredResponse;
 import org.camunda.tngp.transport.singlemessage.DataFramePool;
 import org.camunda.tngp.util.BoundedArrayQueue;
+import org.camunda.tngp.util.buffer.BufferUtil;
 
 public class LockTasksOperator implements Consumer<Consumer<LockTasksOperator>>, TransportChannelListener
 {
@@ -163,7 +164,7 @@ public class LockTasksOperator implements Consumer<Consumer<LockTasksOperator>>,
             {
                 final DirectBuffer taskType = candidateSubscription.getTaskType();
 
-                if (LockableTaskFinder.taskTypeEqual(taskType, foundTaskType))
+                if (BufferUtil.contentsEqual(taskType, foundTaskType))
                 {
                     candidateFound = true;
                     creditsAvailable = candidateSubscription.getCredits() > 0L;

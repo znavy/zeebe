@@ -21,7 +21,6 @@ public class SequenceFlowTransformer implements BpmnElementTransformer<SequenceF
         final ConditionExpression conditionExpression = element.getConditionExpression();
         if (conditionExpression != null)
         {
-            // TODO: write validator for attribute presence if a condition expression is defined
             final String conditionArg1 = conditionExpression.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, CAMUNDA_ATTRIBUTE_CONDITION_ARG1);
             populateJsonProperty(element.getId(), conditionArg1, elementWriter.conditionArg1());
 
@@ -62,7 +61,6 @@ public class SequenceFlowTransformer implements BpmnElementTransformer<SequenceF
         }
         else
         {
-            // TODO: write validator for condition attributes
             throw new RuntimeException("BPMN element " + bpmnElementId + ": Could not parse attribute " +
                     CAMUNDA_ATTRIBUTE_CONDITION_ARG2 +
                     ". Must be a JSON path expression, JSON String, Boolean or Number constant.");

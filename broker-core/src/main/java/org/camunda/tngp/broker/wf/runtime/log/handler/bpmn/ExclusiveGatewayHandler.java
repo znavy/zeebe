@@ -8,7 +8,6 @@ import org.camunda.tngp.bpmn.graph.JsonScalarReader;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.broker.log.LogWriters;
 import org.camunda.tngp.broker.services.JsonConfiguration;
-import org.camunda.tngp.broker.taskqueue.request.handler.LockableTaskFinder;
 import org.camunda.tngp.broker.wf.runtime.data.JsonDocument;
 import org.camunda.tngp.broker.wf.runtime.data.JsonPathResult;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnBranchEventReader;
@@ -21,6 +20,7 @@ import org.camunda.tngp.graph.bpmn.JsonType;
 import org.camunda.tngp.hashindex.Long2LongHashIndex;
 import org.camunda.tngp.log.LogReader;
 import org.camunda.tngp.log.idgenerator.IdGenerator;
+import org.camunda.tngp.util.buffer.BufferUtil;
 
 public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
 {
@@ -176,7 +176,7 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
                     comparisonFulfilled = !LOWER_THAN_OPERATOR.apply(arg1Value, arg2Value);
                     break;
                 case LOWER_THAN:
-                    comparisonFulfilled = GREATER_THAN_OPERATOR.apply(arg1Value, arg2Value);
+                    comparisonFulfilled = LOWER_THAN_OPERATOR.apply(arg1Value, arg2Value);
                     break;
                 case LOWER_THAN_OR_EQUAL:
                     comparisonFulfilled = !GREATER_THAN_OPERATOR.apply(arg1Value, arg2Value);
@@ -249,7 +249,7 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
             }
             else if (o1.isString() && o2.isString())
             {
-                return LockableTaskFinder.taskTypeEqual(o1.asEncodedString(), o2.asEncodedString());
+                return BufferUtil.contentsEqual(o1.asEncodedString(), o2.asEncodedString());
             }
             else
             {

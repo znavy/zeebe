@@ -1,10 +1,9 @@
 package org.camunda.tngp.bpmn.graph.transformer.element;
 
-import java.nio.charset.StandardCharsets;
-
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.graph.bpmn.JsonType;
+import org.camunda.tngp.util.buffer.BufferUtil;
 
 public class JsonPropertyWriter
 {
@@ -32,7 +31,7 @@ public class JsonPropertyWriter
 
     public JsonPropertyWriter value(String scalar)
     {
-        wrapString(scalar, propertyBuffer);
+        BufferUtil.wrapString(scalar, propertyBuffer);
         this.jsonType = JsonType.STRING;
         return this;
     }
@@ -53,7 +52,7 @@ public class JsonPropertyWriter
 
     public JsonPropertyWriter jsonPathExpression(String expression)
     {
-        wrapString(expression, propertyBuffer);
+        BufferUtil.wrapString(expression, propertyBuffer);
         this.jsonType = JsonType.EXPRESSION;
         return this;
     }
@@ -72,14 +71,6 @@ public class JsonPropertyWriter
     {
         jsonType = JsonType.NULL_VAL;
         propertyBuffer.wrap(0, 0);
-    }
-
-    // TODO: move to util and consolidate with other occurrences
-    protected void wrapString(String argument, UnsafeBuffer buffer)
-    {
-        final byte[] bytes = argument.getBytes(StandardCharsets.UTF_8);
-        buffer.wrap(bytes);
-
     }
 
 }

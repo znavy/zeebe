@@ -1,6 +1,5 @@
 package org.camunda.tngp.broker.taskqueue.request.handler;
 
-import org.agrona.DirectBuffer;
 import org.agrona.collections.LongHashSet;
 import org.camunda.tngp.broker.log.LogEntryHandler;
 import org.camunda.tngp.broker.log.LogEntryHeaderReader;
@@ -64,29 +63,6 @@ public class LockableTaskFinder implements LogEntryHandler<LogEntryHeaderReader>
     public long getLockableTaskPosition()
     {
         return lockableTaskPosition;
-    }
-
-    // TODO: move to util as general buffer content equality function
-    public static boolean taskTypeEqual(
-            DirectBuffer actualTaskType,
-            DirectBuffer taskTypeToPoll)
-    {
-
-        if (taskTypeToPoll.capacity() == actualTaskType.capacity())
-        {
-            boolean taskTypeEqual = true;
-
-            for (int i = 0; i < taskTypeToPoll.capacity() && taskTypeEqual; i++)
-            {
-                taskTypeEqual &= taskTypeToPoll.getByte(i) == actualTaskType.getByte(i);
-            }
-
-            return taskTypeEqual;
-        }
-        else
-        {
-            return false;
-        }
     }
 
     @Override
