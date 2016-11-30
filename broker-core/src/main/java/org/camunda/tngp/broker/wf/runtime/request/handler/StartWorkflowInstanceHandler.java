@@ -7,11 +7,13 @@ import org.camunda.tngp.broker.transport.worker.spi.BrokerRequestHandler;
 import org.camunda.tngp.broker.wf.WfErrors;
 import org.camunda.tngp.broker.wf.runtime.StartWorkflowInstanceRequestReader;
 import org.camunda.tngp.broker.wf.runtime.WfRuntimeContext;
+import org.camunda.tngp.broker.wf.runtime.data.JsonValidationResult;
+import org.camunda.tngp.broker.wf.runtime.data.JsonValidator;
 import org.camunda.tngp.broker.wf.runtime.log.WorkflowInstanceRequestWriter;
 import org.camunda.tngp.protocol.error.ErrorWriter;
+import org.camunda.tngp.protocol.log.ProcessInstanceRequestType;
 import org.camunda.tngp.protocol.wf.Constants;
 import org.camunda.tngp.protocol.wf.StartWorkflowInstanceDecoder;
-import org.camunda.tngp.protocol.log.ProcessInstanceRequestType;
 import org.camunda.tngp.transport.requestresponse.server.DeferredResponse;
 
 public class StartWorkflowInstanceHandler implements BrokerRequestHandler<WfRuntimeContext>
@@ -57,7 +59,15 @@ public class StartWorkflowInstanceHandler implements BrokerRequestHandler<WfRunt
 
         final LogWriter logWriter = context.getLogWriter();
 
-        // TODO: validate payload is actually JSON
+        if (payload.capacity() > 0)
+        {
+            final JsonValidator jsonValidator = context.getJsonValidator();
+            final JsonValidationResult validationResult = jsonValidator.validate(payload, 0, payload.capacity());
+            if (!validationResult.isValid())
+            {
+                writeError("Invalid JSON payload: " + validationResult.getErrorMessage(), response);
+            }
+        }
 
         logRequestWriter.type(ProcessInstanceRequestType.NEW)
             .wfDefinitionId(wfDefinitionId)

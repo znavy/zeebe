@@ -1,10 +1,15 @@
 package org.camunda.tngp.broker.wf;
 
-import static org.camunda.tngp.broker.system.SystemServiceNames.*;
-import static org.camunda.tngp.broker.transport.TransportServiceNames.*;
-import static org.camunda.tngp.broker.transport.worker.WorkerServiceNames.*;
-import static org.camunda.tngp.broker.wf.runtime.WfRuntimeServiceNames.*;
-import static org.camunda.tngp.broker.taskqueue.TaskQueueServiceNames.*;
+import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
+import static org.camunda.tngp.broker.taskqueue.TaskQueueServiceNames.TASK_QUEUE_CONTEXT_SERVICE_GROUP_NAME;
+import static org.camunda.tngp.broker.transport.TransportServiceNames.CLIENT_API_SOCKET_BINDING_NAME;
+import static org.camunda.tngp.broker.transport.TransportServiceNames.TRANSPORT_SEND_BUFFER;
+import static org.camunda.tngp.broker.transport.TransportServiceNames.serverSocketBindingReceiveBufferName;
+import static org.camunda.tngp.broker.transport.worker.WorkerServiceNames.workerContextServiceName;
+import static org.camunda.tngp.broker.transport.worker.WorkerServiceNames.workerResponsePoolServiceName;
+import static org.camunda.tngp.broker.transport.worker.WorkerServiceNames.workerServiceName;
+import static org.camunda.tngp.broker.wf.runtime.WfRuntimeServiceNames.WF_RUNTIME_CONTEXT_GROUP_NAME;
+import static org.camunda.tngp.broker.wf.runtime.WfRuntimeServiceNames.WF_RUNTIME_MANAGER_NAME;
 
 import org.camunda.tngp.broker.services.DeferredResponsePoolService;
 import org.camunda.tngp.broker.system.Component;

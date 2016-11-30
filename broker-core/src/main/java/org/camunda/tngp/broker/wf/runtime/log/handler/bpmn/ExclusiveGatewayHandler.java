@@ -7,11 +7,9 @@ import org.camunda.tngp.bpmn.graph.JsonPropertyReader;
 import org.camunda.tngp.bpmn.graph.JsonScalarReader;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.broker.log.LogWriters;
-import org.camunda.tngp.broker.taskqueue.request.handler.LockableTaskFinder;
-import org.camunda.tngp.broker.wf.runtime.data.JacksonJsonDocument;
+import org.camunda.tngp.broker.services.JsonConfiguration;
 import org.camunda.tngp.broker.wf.runtime.data.JsonDocument;
 import org.camunda.tngp.broker.wf.runtime.data.JsonPathResult;
-import org.camunda.tngp.broker.wf.runtime.data.TngpJsonPath;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnBranchEventReader;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnFlowElementEventReader;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnFlowElementEventWriter;
@@ -22,11 +20,12 @@ import org.camunda.tngp.graph.bpmn.JsonType;
 import org.camunda.tngp.hashindex.Long2LongHashIndex;
 import org.camunda.tngp.log.LogReader;
 import org.camunda.tngp.log.idgenerator.IdGenerator;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.camunda.tngp.util.buffer.BufferUtil;
 
 public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
 {
+
+    public static final int NO_FLOW_ID = -1; // note: this assumes flow element IDs are positive!
 
     protected static final BooleanBiFunction<JsonScalarReader> EQUAL_OPERATOR = new EqualOperator();
     protected static final BooleanBiFunction<JsonScalarReader> GREATER_THAN_OPERATOR = new GreaterThanOperator();
@@ -39,12 +38,13 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
     protected final Long2LongHashIndex eventIndex;
     protected final LogReader logReader;
 
-    protected JsonDocument jsonDocument = new JacksonJsonDocument(new ObjectMapper(), TngpJsonPath.getConfiguration(), 2);
+    protected final JsonDocument jsonDocument;
 
-    public ExclusiveGatewayHandler(LogReader logReader, Long2LongHashIndex eventIndex)
+    public ExclusiveGatewayHandler(LogReader logReader, Long2LongHashIndex eventIndex, JsonConfiguration jsonConfiguration)
     {
         this.eventIndex = eventIndex;
         this.logReader = logReader;
+        this.jsonDocument = jsonConfiguration.buildJsonDocument(2);
     }
 
     @Override
@@ -58,42 +58,66 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
             IdGenerator idGenerator)
     {
         flowElementVisitor.init(process);
+
+        final int flowToTake = determineActivatedFlow(gatewayEvent);
+
+        if (flowToTake == NO_FLOW_ID)
+        {
+            System.err.println("Could not take any of the outgoing sequence flows. Workflow instance " + gatewayEvent.wfInstanceId() + " is stuck and won't continue execution");
+        }
+        else
+        {
+            flowElementVisitor.moveToNode(flowToTake);
+            takeSequenceFlow(gatewayEvent, flowElementVisitor, logWriters);
+        }
+
+        return 0;
+    }
+
+    protected int determineActivatedFlow(BpmnFlowElementEventReader gatewayEvent)
+    {
         final int gatewayId = gatewayEvent.flowElementId();
         flowElementVisitor.moveToNode(gatewayId);
 
         final int outgoingSequenceFlowsCount = flowElementVisitor.outgoingSequenceFlowsCount();
         initJsonDocument(gatewayEvent.bpmnBranchKey());
 
-        boolean flowTaken = false;
         int sequenceFlowIndex = 0;
+        int defaultFlowId = NO_FLOW_ID;
+        int flowToTake = NO_FLOW_ID;
 
-        while (sequenceFlowIndex < outgoingSequenceFlowsCount && !flowTaken)
+        while (sequenceFlowIndex < outgoingSequenceFlowsCount && flowToTake == NO_FLOW_ID)
         {
             flowElementVisitor.moveToNode(gatewayId);
             flowElementVisitor.traverseEdge(BpmnEdgeTypes.NODE_OUTGOING_SEQUENCE_FLOWS, sequenceFlowIndex);
 
-            final Boolean conditionResult = evaluateCondition(
-                    jsonDocument,
-                    flowElementVisitor.conditionArg1(),
-                    flowElementVisitor.conditionOperator(),
-                    flowElementVisitor.conditionArg2());
-
-            if (conditionResult == Boolean.TRUE)
+            if (flowElementVisitor.isDefaultFlow())
             {
-                takeSequenceFlow(gatewayEvent, flowElementVisitor, logWriters);
-                flowTaken = true;
+                defaultFlowId = flowElementVisitor.nodeId();
+            }
+            else
+            {
+                final Boolean conditionResult = evaluateCondition(
+                        jsonDocument,
+                        flowElementVisitor.conditionArg1(),
+                        flowElementVisitor.conditionOperator(),
+                        flowElementVisitor.conditionArg2());
+
+                if (conditionResult == Boolean.TRUE)
+                {
+                    flowToTake = flowElementVisitor.nodeId();
+                }
             }
 
             sequenceFlowIndex++;
         }
 
-        if (!flowTaken)
+        if (flowToTake == NO_FLOW_ID)
         {
-            System.err.println("Could not take any of the outgoing sequence flows. Workflow instance " + gatewayEvent.wfInstanceId() + " is stuck and won't continue execution");
+            flowToTake = defaultFlowId;
         }
 
-
-        return 0;
+        return flowToTake;
     }
 
     protected void takeSequenceFlow(BpmnFlowElementEventReader gatewayEvent, FlowElementVisitor sequenceFlow, LogWriters logWriters)
@@ -152,7 +176,7 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
                     comparisonFulfilled = !LOWER_THAN_OPERATOR.apply(arg1Value, arg2Value);
                     break;
                 case LOWER_THAN:
-                    comparisonFulfilled = GREATER_THAN_OPERATOR.apply(arg1Value, arg2Value);
+                    comparisonFulfilled = LOWER_THAN_OPERATOR.apply(arg1Value, arg2Value);
                     break;
                 case LOWER_THAN_OR_EQUAL:
                     comparisonFulfilled = !GREATER_THAN_OPERATOR.apply(arg1Value, arg2Value);
@@ -225,7 +249,7 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
             }
             else if (o1.isString() && o2.isString())
             {
-                return LockableTaskFinder.taskTypeEqual(o1.asEncodedString(), o2.asEncodedString());
+                return BufferUtil.contentsEqual(o1.asEncodedString(), o2.asEncodedString());
             }
             else
             {
