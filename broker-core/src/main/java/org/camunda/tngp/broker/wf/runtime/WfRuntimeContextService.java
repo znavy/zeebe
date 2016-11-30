@@ -105,6 +105,7 @@ public class WfRuntimeContextService implements Service<WfRuntimeContext>
             flowElementEventHandler.addAspectHandler(endProcessHandler);
             flowElementEventHandler.addAspectHandler(new ExclusiveGatewayHandler(new BufferedLogReader(log), indexManager.getIndex(), jsonConfiguration));
             flowElementEventHandler.addAspectHandler(new ActivateGatewayHandler());
+            flowElementEventHandler.addAspectHandler(takeOutgoingFlowsHandler);
             wfRuntimeConsumer.addHandler(Templates.FLOW_ELEMENT_EVENT, flowElementEventHandler);
 
             wfRuntimeConsumer.addHandler(Templates.WF_INSTANCE_REQUEST, new WorkflowInstanceRequestHandler(wfDefinitionCache, idGenerator));

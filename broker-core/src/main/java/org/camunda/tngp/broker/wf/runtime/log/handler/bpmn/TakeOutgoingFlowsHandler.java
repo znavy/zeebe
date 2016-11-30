@@ -6,13 +6,14 @@ import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.broker.log.LogEntryHandler;
 import org.camunda.tngp.broker.log.LogWriters;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnActivityEventReader;
+import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnFlowElementEventReader;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnFlowElementEventWriter;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnProcessEventReader;
 import org.camunda.tngp.graph.bpmn.BpmnAspect;
 import org.camunda.tngp.graph.bpmn.ExecutionEventType;
 import org.camunda.tngp.log.idgenerator.IdGenerator;
 
-public class TakeOutgoingFlowsHandler implements BpmnActivityInstanceAspectHandler, BpmnProcessAspectHandler
+public class TakeOutgoingFlowsHandler implements BpmnActivityInstanceAspectHandler, BpmnProcessAspectHandler, BpmnFlowElementAspectHandler
 {
     public static final String DEBUG_LOGGING_ENABLED_PROP_NAME = "camunda.debug.logging.enabled";
     public static final boolean DEBUG_LOGGING_ENABLED = Boolean.getBoolean(DEBUG_LOGGING_ENABLED_PROP_NAME);
@@ -54,6 +55,22 @@ public class TakeOutgoingFlowsHandler implements BpmnActivityInstanceAspectHandl
                 activityEventReader.wfInstanceId(),
                 flowElementVisitor,
                 activityEventReader.bpmnBranchKey(),
+                idGenerator,
+                logWriters);
+    }
+
+    @Override
+    public int handle(BpmnFlowElementEventReader flowElementEventReader, ProcessGraph process, LogWriters logWriters,
+            IdGenerator idGenerator)
+    {
+        flowElementVisitor.init(process).moveToNode(flowElementEventReader.flowElementId());
+        flowElementVisitor.traverseEdge(BpmnEdgeTypes.NODE_OUTGOING_SEQUENCE_FLOWS);
+
+        return writeSequenceFlowEvent(
+                flowElementEventReader.wfDefinitionId(),
+                flowElementEventReader.wfInstanceId(),
+                flowElementVisitor,
+                flowElementEventReader.bpmnBranchKey(),
                 idGenerator,
                 logWriters);
     }

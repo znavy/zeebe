@@ -20,4 +20,6 @@ public class ValidationCodes
     public static final int SEQUENCE_FLOW_MISSING_CONDITION_ATTRIBUTE = 403;
     public static final int SEQUENCE_FLOW_INVALID_CONDITION_ATTRIBUTE = 404;
 
+    public static final int EXCLUSIVE_GW_INVALID_FLOWS = 501;
+
 }

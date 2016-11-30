@@ -20,6 +20,18 @@ public class ExclusiveGatewayHandler implements BpmnAspectHandler<ExclusiveGatew
         {
             aspectsForElement.put(ExecutionEventType.GW_ACTIVATED, BpmnAspect.END_PROCESS);
         }
+        else if (outgoingFlows.size() == 1)
+        {
+            final SequenceFlow flow = outgoingFlows.iterator().next();
+            if (flow.getConditionExpression() != null)
+            {
+                aspectsForElement.put(ExecutionEventType.GW_ACTIVATED, BpmnAspect.EXCLUSIVE_SPLIT);
+            }
+            else
+            {
+                aspectsForElement.put(ExecutionEventType.GW_ACTIVATED, BpmnAspect.TAKE_OUTGOING_FLOWS);
+            }
+        }
         else
         {
             aspectsForElement.put(ExecutionEventType.GW_ACTIVATED, BpmnAspect.EXCLUSIVE_SPLIT);

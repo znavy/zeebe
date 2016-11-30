@@ -51,56 +51,60 @@ public class SequenceFlowValidator implements ModelElementValidator<SequenceFlow
         }
         else
         {
-            validateNonDefaultFlow(element, validationResultCollector);
+            final ConditionExpression conditionExpression = element.getConditionExpression();
+
+            if (conditionExpression != null)
+            {
+                validateConditionExpression(conditionExpression, validationResultCollector);
+            }
+            else
+            {
+                if (gateway.getOutgoing().size() > 1)
+                {
+                    validationResultCollector.addError(ValidationCodes.SEQUENCE_FLOW_MISSING_CONDITION,
+                            "With more than one outgoing sequence flow leaving gateway " + gateway.getId() +
+                            ", a condition expression is required");
+                }
+            }
         }
 
     }
 
-    private void validateNonDefaultFlow(SequenceFlow element, ValidationResultCollector validationResultCollector)
+    private void validateConditionExpression(ConditionExpression conditionExpression, ValidationResultCollector validationResultCollector)
     {
-        final ConditionExpression conditionExpression = element.getConditionExpression();
-
-        if (conditionExpression == null)
+        final String arg1 = conditionExpression.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG1);
+        if (validateConditionExpressionAttributeNotNull(
+                SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG1,
+                arg1,
+                validationResultCollector))
         {
-            validationResultCollector.addError(ValidationCodes.SEQUENCE_FLOW_MISSING_CONDITION,
-                    "Sequence flow leaving exclusive gateway must have conditionExpression child element");
-        }
-        else
-        {
-            final String arg1 = conditionExpression.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG1);
-            if (validateConditionExpressionAttributeNotNull(
-                    SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG1,
+            validateConditionArgument(SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG1,
                     arg1,
-                    validationResultCollector))
-            {
-                validateConditionArgument(SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG1,
-                        arg1,
-                        validationResultCollector);
-            }
+                    validationResultCollector);
+        }
 
-            final String arg2 = conditionExpression.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG2);
-            if (validateConditionExpressionAttributeNotNull(
-                    SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG2,
+        final String arg2 = conditionExpression.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG2);
+        if (validateConditionExpressionAttributeNotNull(
+                SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG2,
+                arg2,
+                validationResultCollector))
+        {
+            validateConditionArgument(SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG2,
                     arg2,
-                    validationResultCollector))
-            {
-                validateConditionArgument(SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_ARG2,
-                        arg2,
-                        validationResultCollector);
-            }
+                    validationResultCollector);
+        }
 
-            final String operator = conditionExpression.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_OPERATOR);
-            if (validateConditionExpressionAttributeNotNull(
-                    SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_OPERATOR,
-                    operator,
-                    validationResultCollector))
+        final String operator = conditionExpression.getAttributeValueNs(BpmnModelConstants.CAMUNDA_NS, SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_OPERATOR);
+        if (validateConditionExpressionAttributeNotNull(
+                SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_OPERATOR,
+                operator,
+                validationResultCollector))
+        {
+            if (!isValidComparisonOperator(operator))
             {
-                if (!isValidComparisonOperator(operator))
-                {
-                    validationResultCollector.addError(
-                            ValidationCodes.SEQUENCE_FLOW_INVALID_CONDITION_ATTRIBUTE,
-                            "Condition expression attribute " + SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_OPERATOR + " has invalid value.");
-                }
+                validationResultCollector.addError(
+                        ValidationCodes.SEQUENCE_FLOW_INVALID_CONDITION_ATTRIBUTE,
+                        "Condition expression attribute " + SequenceFlowTransformer.CAMUNDA_ATTRIBUTE_CONDITION_OPERATOR + " has invalid value.");
             }
         }
     }

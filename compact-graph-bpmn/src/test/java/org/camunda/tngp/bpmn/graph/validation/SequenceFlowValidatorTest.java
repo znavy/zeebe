@@ -115,8 +115,32 @@ public class SequenceFlowValidatorTest
         final ValidationResults results = modelInstance.validate(validators);
 
         // then
-        assertThat(results.getErrorCount()).isEqualTo(1);
+        assertThat(results.getErrorCount()).isEqualTo(0);
+    }
+
+    @Test
+    public void shouldValidateMultipleNoConditionFlowsLeavingGateway()
+    {
+        // given
+        final BpmnModelInstance modelInstance =
+                Bpmn
+                    .createExecutableProcess()
+                    .startEvent()
+                    .exclusiveGateway()
+                    .sequenceFlowId("flow1")
+                    .endEvent()
+                    .moveToLastGateway()
+                    .sequenceFlowId("flow2")
+                    .endEvent()
+                    .done();
+
+        // if
+        final ValidationResults results = modelInstance.validate(validators);
+
+        // then
+        assertThat(results.getErrorCount()).isEqualTo(2);
         assertThat(results).element("flow1").hasError(ValidationCodes.SEQUENCE_FLOW_MISSING_CONDITION);
+        assertThat(results).element("flow2").hasError(ValidationCodes.SEQUENCE_FLOW_MISSING_CONDITION);
     }
 
     @Test

@@ -26,6 +26,7 @@ public class ExclusiveGatewayTest
 {
     public static final String TASK_TYPE1 = "foo";
     public static final String TASK_TYPE2 = "bar";
+    public static final String TASK_TYPE3 = "baz";
 
     public static final BpmnModelInstance EXCLUSIVE_GATEWAY_PROCESS = wrap(Bpmn.createExecutableProcess("anId")
             .startEvent()
@@ -40,6 +41,23 @@ public class ExclusiveGatewayTest
             .done())
         .taskAttributes("serviceTask1", TASK_TYPE1, 0)
         .taskAttributes("serviceTask2", TASK_TYPE2, 0);
+
+    public static final BpmnModelInstance SPLIT_JOIN_PROCESS = wrap(Bpmn.createExecutableProcess("anId")
+            .startEvent()
+            .exclusiveGateway("split")
+            .sequenceFlowId("flow1")
+            .serviceTask("serviceTask1")
+            .exclusiveGateway("join")
+            .serviceTask("serviceTask3")
+            .endEvent()
+            .moveToNode("split")
+            .sequenceFlowId("flow2")
+            .serviceTask("serviceTask2")
+            .connectTo("join")
+            .done())
+        .taskAttributes("serviceTask1", TASK_TYPE1, 0)
+        .taskAttributes("serviceTask2", TASK_TYPE2, 0)
+        .taskAttributes("serviceTask3", TASK_TYPE3, 0);
 
     public EmbeddedBrokerRule brokerRule = new EmbeddedBrokerRule();
 
@@ -147,6 +165,42 @@ public class ExclusiveGatewayTest
 
         final Task task = taskHandler.handledTasks.get(0);
         assertThat(task.getType()).isEqualTo(TASK_TYPE2);
+    }
+
+    @Test
+    public void testSplitJoin()
+    {
+        // given
+        final TngpClient client = clientRule.getClient();
+        final WorkflowsClient workflowService = client.workflows();
+
+        final WorkflowDefinition workflow = clientRule.deployProcess(
+            wrapCopy(SPLIT_JOIN_PROCESS)
+                .conditionExpression("flow1", "true", "EQUAL", "true")
+                .conditionExpression("flow2", "true", "EQUAL", "false"));
+
+        final RecordingTaskHandler taskHandler = new RecordingTaskHandler();
+
+        subscribeToTasks(TASK_TYPE1, taskHandler);
+        subscribeToTasks(TASK_TYPE2, taskHandler);
+        subscribeToTasks(TASK_TYPE3, taskHandler);
+
+        // when
+        workflowService
+            .start()
+            .workflowDefinitionId(workflow.getId())
+            .payload("{}")
+            .execute();
+
+        // then
+        TestUtil.waitUntil(() -> taskHandler.handledTasks.size() == 2);
+
+        assertThat(taskHandler.handledTasks).hasSize(2);
+
+        final Task task1 = taskHandler.handledTasks.get(0);
+        assertThat(task1.getType()).isEqualTo(TASK_TYPE1);
+        final Task task2 = taskHandler.handledTasks.get(1);
+        assertThat(task2.getType()).isEqualTo(TASK_TYPE3);
     }
 
     protected void subscribeToTasks(String taskType, TaskHandler taskHandler)
