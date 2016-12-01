@@ -12,18 +12,11 @@
     <relativePath>../parent</relativePath>
   </parent>
 
-  <properties>
-    <project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
-    <nexus.snapshot.repository>https://app.camunda.com/nexus/content/repositories/camunda-tngp-snapshots/</nexus.snapshot.repository>
-    <nexus.release.repository>https://app.camunda.com/nexus/content/repositories/camunda-tngp/</nexus.release.repository>
-  </properties>
-
   <dependencies>
 
     <dependency>
       <groupId>org.camunda.tngp</groupId>
       <artifactId>compact-graph</artifactId>
-      <version>0.1.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
