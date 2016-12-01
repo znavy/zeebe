@@ -114,7 +114,7 @@ mavenJob(jobName)
                 {
                     mavenInstallation mavenVersion
                     providedSettings mavenSettings
-                    goals 'release:prepare release:perform -B'
+                    goals 'release:prepare release:perform -B -DskipTests'
                     properties releaseProperties
                     localRepository LocalRepositoryLocation.LOCAL_TO_WORKSPACE
                 }
