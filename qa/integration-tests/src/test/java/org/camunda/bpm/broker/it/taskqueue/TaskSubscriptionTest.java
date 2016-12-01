@@ -274,7 +274,7 @@ public class TaskSubscriptionTest
             .taskPrefetchSize(2)
             .open();
 
-        TestUtil.waitUntil(() -> handler.handledTasks.size() == numTasks);
+        TestUtil.waitUntil(() -> handler.handledTasks.size() == numTasks, Duration.ofSeconds(5L));
 
         // then
         assertThat(handler.handledTasks).hasSize(numTasks);

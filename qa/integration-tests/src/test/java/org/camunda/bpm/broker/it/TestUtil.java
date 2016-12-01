@@ -2,6 +2,7 @@ package org.camunda.bpm.broker.it;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
@@ -11,7 +12,8 @@ import org.agrona.LangUtil;
 public class TestUtil
 {
 
-    public static final int MAX_RETRIES = 20;
+    public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(2L);
+    public static final int DEFAULT_RETRIES = 20;
 
     public static <T> Invocation<T> doRepeatedly(Callable<T> callable)
     {
@@ -23,6 +25,12 @@ public class TestUtil
         doRepeatedly(() -> null).until((r) -> condition.getAsBoolean());
     }
 
+
+    public static void waitUntil(final BooleanSupplier condition, Duration timeout)
+    {
+        doRepeatedly(() -> null).until((r) -> condition.getAsBoolean(), timeout);
+    }
+
     public static class Invocation<T>
     {
         protected Callable<T> callable;
@@ -32,14 +40,25 @@ public class TestUtil
             this.callable = callable;
         }
 
+
         public T until(Function<T, Boolean> resultCondition)
         {
             return until(resultCondition, (e) -> false);
         }
 
+        public T until(Function<T, Boolean> resultCondition, Duration timeout)
+        {
+            return until(resultCondition, (e) -> false, timeout);
+        }
+
         public T until(final Function<T, Boolean> resultCondition, Function<Exception, Boolean> exceptionCondition)
         {
-            final T result = whileConditionHolds((t) -> !resultCondition.apply(t), (e) -> !exceptionCondition.apply(e));
+            return until((t) -> resultCondition.apply(t), (e) -> exceptionCondition.apply(e), DEFAULT_TIMEOUT);
+        }
+
+        public T until(final Function<T, Boolean> resultCondition, Function<Exception, Boolean> exceptionCondition, Duration timeout)
+        {
+            final T result = whileConditionHolds((t) -> !resultCondition.apply(t), (e) -> !exceptionCondition.apply(e), DEFAULT_RETRIES, timeout);
 
             assertThat(resultCondition.apply(result)).isTrue();
 
@@ -48,12 +67,17 @@ public class TestUtil
 
         public T whileConditionHolds(Function<T, Boolean> resultCondition)
         {
-            return whileConditionHolds(resultCondition, (e) -> true);
+            return whileConditionHolds(resultCondition, (e) -> true, DEFAULT_RETRIES, DEFAULT_TIMEOUT);
         }
 
-        public T whileConditionHolds(Function<T, Boolean> resultCondition, Function<Exception, Boolean> exceptionCondition)
+        public T whileConditionHolds(
+                Function<T, Boolean> resultCondition,
+                Function<Exception, Boolean> exceptionCondition,
+                int retries,
+                Duration timeout)
         {
             int numTries = 0;
+            final long timeoutPerRetry = timeout.toMillis() / retries;
 
             T result;
 
@@ -65,7 +89,7 @@ public class TestUtil
                 {
                     if (numTries > 0)
                     {
-                        Thread.sleep(100L);
+                        Thread.sleep(timeoutPerRetry);
                     }
 
                     result = callable.call();
@@ -80,7 +104,7 @@ public class TestUtil
 
                 numTries++;
             }
-            while (numTries < MAX_RETRIES && resultCondition.apply(result));
+            while (numTries < retries && resultCondition.apply(result));
 
             return result;
         }
