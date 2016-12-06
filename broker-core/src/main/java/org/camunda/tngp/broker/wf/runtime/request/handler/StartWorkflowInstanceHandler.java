@@ -66,6 +66,7 @@ public class StartWorkflowInstanceHandler implements BrokerRequestHandler<WfRunt
             if (!validationResult.isValid())
             {
                 writeError("Invalid JSON payload: " + validationResult.getErrorMessage(), response);
+                return 0;
             }
         }
 
