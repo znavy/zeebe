@@ -28,8 +28,8 @@ public class FlowElementDescriptorWriter implements BufferWriter
     protected UnsafeBuffer stringIdBuffer = new UnsafeBuffer(0, 0);
     protected UnsafeBuffer taskTypeBuffer = new UnsafeBuffer(0, 0);
 
-    protected JsonPropertyWriter arg1Writer = new JsonPropertyWriter();
-    protected JsonPropertyWriter arg2Writer = new JsonPropertyWriter();
+    protected MsgPackPropertyWriter arg1Writer = new MsgPackPropertyWriter();
+    protected MsgPackPropertyWriter arg2Writer = new MsgPackPropertyWriter();
 
     protected Map<ExecutionEventType, BpmnAspect> bpmnAspects;
 
@@ -100,12 +100,12 @@ public class FlowElementDescriptorWriter implements BufferWriter
         return this;
     }
 
-    public JsonPropertyWriter conditionArg1()
+    public MsgPackPropertyWriter conditionArg1()
     {
         return arg1Writer;
     }
 
-    public JsonPropertyWriter conditionArg2()
+    public MsgPackPropertyWriter conditionArg2()
     {
         return arg2Writer;
     }
@@ -143,8 +143,8 @@ public class FlowElementDescriptorWriter implements BufferWriter
         bodyEncoder.wrap(buffer, offset)
             .type(flowElementType)
             .taskQueueId(taskQueueId)
-            .conditionArg1Type(arg1Writer.jsonType())
-            .conditionArg2Type(arg2Writer.jsonType())
+            .conditionArg1Type(arg1Writer.type())
+            .conditionArg2Type(arg2Writer.type())
             .conditionOperator(conditionOperator)
             .isDefault(isDefault ? (byte) 1 : (byte) 0);
 

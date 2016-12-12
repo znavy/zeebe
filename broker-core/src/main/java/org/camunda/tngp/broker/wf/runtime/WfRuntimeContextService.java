@@ -7,7 +7,6 @@ import org.camunda.tngp.broker.log.LogWriter;
 import org.camunda.tngp.broker.log.LogWritersImpl;
 import org.camunda.tngp.broker.log.Templates;
 import org.camunda.tngp.broker.services.HashIndexManager;
-import org.camunda.tngp.broker.services.JsonConfiguration;
 import org.camunda.tngp.broker.wf.runtime.log.handler.ActivityRequestHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.WfDefinitionRequestHandler;
 import org.camunda.tngp.broker.wf.runtime.log.handler.WorkflowInstanceRequestHandler;
@@ -46,8 +45,6 @@ public class WfRuntimeContextService implements Service<WfRuntimeContext>
     protected final Injector<HashIndexManager<Bytes2LongHashIndex>> wfDefinitionKeyIndexInjector = new Injector<>();
     protected final Injector<HashIndexManager<Long2LongHashIndex>> wfDefinitionIdIndexInjector = new Injector<>();
 
-    protected final Injector<JsonConfiguration> jsonConfigurationInjector = new Injector<>();
-
     protected final WfRuntimeContext wfRuntimeContext;
 
     protected Injector<DeferredResponsePool> responsePoolInjector = new Injector<>();
@@ -67,13 +64,11 @@ public class WfRuntimeContextService implements Service<WfRuntimeContext>
 
             final Log log = logInjector.getValue();
             final HashIndexManager<Long2LongHashIndex> indexManager = workflowEventIndexInjector.getValue();
-            final JsonConfiguration jsonConfiguration = jsonConfigurationInjector.getValue();
 
             final LogWriter logWriter = new LogWriter(log);
 
             wfRuntimeContext.setLogWriter(logWriter);
             wfRuntimeContext.setLog(log);
-            wfRuntimeContext.setJsonValidator(jsonConfiguration.buildJsonValidator());
 
             final Templates templates = Templates.wfRuntimeLogTemplates();
             final LogConsumer wfRuntimeConsumer = new LogConsumer(
@@ -103,7 +98,7 @@ public class WfRuntimeContextService implements Service<WfRuntimeContext>
             flowElementEventHandler.addAspectHandler(new CreateActivityInstanceHandler(new BufferedLogReader(log), indexManager.getIndex()));
             flowElementEventHandler.addAspectHandler(new TriggerNoneEventHandler());
             flowElementEventHandler.addAspectHandler(endProcessHandler);
-            flowElementEventHandler.addAspectHandler(new ExclusiveGatewayHandler(new BufferedLogReader(log), indexManager.getIndex(), jsonConfiguration));
+            flowElementEventHandler.addAspectHandler(new ExclusiveGatewayHandler(new BufferedLogReader(log), indexManager.getIndex()));
             flowElementEventHandler.addAspectHandler(new ActivateGatewayHandler());
             flowElementEventHandler.addAspectHandler(takeOutgoingFlowsHandler);
             wfRuntimeConsumer.addHandler(Templates.FLOW_ELEMENT_EVENT, flowElementEventHandler);
@@ -181,11 +176,6 @@ public class WfRuntimeContextService implements Service<WfRuntimeContext>
     public Injector<HashIndexManager<Bytes2LongHashIndex>> getWfDefinitionKeyIndexInjector()
     {
         return wfDefinitionKeyIndexInjector;
-    }
-
-    public Injector<JsonConfiguration> getJsonConfigurationInjector()
-    {
-        return jsonConfigurationInjector;
     }
 
 }

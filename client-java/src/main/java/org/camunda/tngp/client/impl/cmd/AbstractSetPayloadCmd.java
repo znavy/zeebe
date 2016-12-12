@@ -18,12 +18,6 @@ public abstract class AbstractSetPayloadCmd<R, C extends ClientCommand<R>>
     }
 
     @Override
-    public C payload(String payload)
-    {
-        return payload(payload.getBytes(CHARSET));
-    }
-
-    @Override
     public C payload(byte[] payload)
     {
         return payload(payload, 0, payload.length);

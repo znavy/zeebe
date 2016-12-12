@@ -7,7 +7,6 @@ import org.camunda.tngp.broker.log.LogWriter;
 import org.camunda.tngp.broker.log.LogWritersImpl;
 import org.camunda.tngp.broker.log.Templates;
 import org.camunda.tngp.broker.services.HashIndexManager;
-import org.camunda.tngp.broker.services.JsonConfiguration;
 import org.camunda.tngp.broker.taskqueue.log.handler.TaskInstanceHandler;
 import org.camunda.tngp.broker.taskqueue.log.handler.TaskInstanceRequestHandler;
 import org.camunda.tngp.broker.taskqueue.log.idx.LockedTasksIndexWriter;
@@ -38,8 +37,6 @@ public class TaskQueueContextService implements Service<TaskQueueContext>
     protected final Injector<DataFramePool> dataFramePoolInjector = new Injector<>();
     protected final Injector<Transport> transportInjector = new Injector<>();
 
-    protected final Injector<JsonConfiguration> jsonConfigurationInjector = new Injector<>();
-
     protected final TaskQueueContext taskQueueContext;
 
     public TaskQueueContextService(String taskQueueName, int taskQueueId)
@@ -64,9 +61,6 @@ public class TaskQueueContextService implements Service<TaskQueueContext>
 
             final LogWriter logWriter = new LogWriter(log);
             taskQueueContext.setLogWriter(logWriter);
-
-            final JsonConfiguration jsonConfiguration = jsonConfigurationInjector.getValue();
-            taskQueueContext.setJsonValidator(jsonConfiguration.buildJsonValidator());
 
             final Templates templates = Templates.taskQueueLogTemplates();
             final LogConsumer taskProcessor = new LogConsumer(
@@ -161,10 +155,5 @@ public class TaskQueueContextService implements Service<TaskQueueContext>
     public Injector<Transport> getTransportInjector()
     {
         return transportInjector;
-    }
-
-    public Injector<JsonConfiguration> getJsonConfigurationInjector()
-    {
-        return jsonConfigurationInjector;
     }
 }

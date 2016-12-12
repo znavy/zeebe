@@ -10,7 +10,6 @@ import org.camunda.tngp.broker.system.threads.ThreadingComponent;
 import org.camunda.tngp.broker.taskqueue.TaskQueueComponent;
 import org.camunda.tngp.broker.transport.TransportComponent;
 import org.camunda.tngp.broker.wf.WfComponent;
-import org.camunda.tngp.broker.wf.runtime.data.JsonComponent;
 
 public class Broker implements AutoCloseable
 {
@@ -34,7 +33,6 @@ public class Broker implements AutoCloseable
         brokerContext.addComponent(new ThreadingComponent());
         brokerContext.addComponent(new TransportComponent());
         brokerContext.addComponent(new LogComponent());
-        brokerContext.addComponent(new JsonComponent());
         brokerContext.addComponent(new TaskQueueComponent());
         brokerContext.addComponent(new WfComponent());
         brokerContext.addComponent(new EventComponent());

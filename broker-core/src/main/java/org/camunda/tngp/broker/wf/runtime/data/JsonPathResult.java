@@ -1,11 +1,13 @@
 package org.camunda.tngp.broker.wf.runtime.data;
 
-import org.camunda.tngp.bpmn.graph.JsonScalarReader;
+import org.camunda.tngp.bpmn.graph.MsgPackScalarReader;
 
-public interface JsonPathResult extends JsonScalarReader
+public interface JsonPathResult extends MsgPackScalarReader
 {
 
     boolean hasResolved();
+
+    boolean hasSingleResult();
 
     boolean isArray();
 

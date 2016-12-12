@@ -2,10 +2,10 @@ package org.camunda.tngp.broker.wf.runtime.data;
 
 import org.agrona.DirectBuffer;
 
-public interface JsonDocument
+public interface MsgPackDocument
 {
 
-    boolean wrap(DirectBuffer buffer, int offset, int length);
+    void wrap(DirectBuffer buffer, int offset, int length);
 
     JsonPathResult jsonPath(DirectBuffer jsonPathBuffer, int offset, int length);
 }

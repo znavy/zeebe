@@ -12,7 +12,7 @@ import org.camunda.tngp.graph.bpmn.ConditionOperator;
 public class SequenceFlowValidator implements ModelElementValidator<SequenceFlow>
 {
 
-    protected JsonPathValidator jsonPathValidator = new JaywayJsonPathValidator();
+    protected JsonPathValidator jsonPathValidator = new JsonPathValidatorImpl();
 
     @Override
     public Class<SequenceFlow> getElementType()
@@ -149,10 +149,11 @@ public class SequenceFlowValidator implements ModelElementValidator<SequenceFlow
     protected void validateConditionArgument(String attributeName, String attributeValue,
             ValidationResultCollector validationResultCollector)
     {
-        if (!(SequenceFlowTransformer.isJsonBoolean(attributeValue) ||
-                SequenceFlowTransformer.isJsonNull(attributeValue) ||
-                SequenceFlowTransformer.isJsonNumber(attributeValue) ||
-                SequenceFlowTransformer.isJsonString(attributeValue)))
+        if (!(SequenceFlowTransformer.isBoolean(attributeValue) ||
+                SequenceFlowTransformer.isNull(attributeValue) ||
+                SequenceFlowTransformer.isInteger(attributeValue) ||
+                SequenceFlowTransformer.isFloat(attributeValue) ||
+                SequenceFlowTransformer.isString(attributeValue)))
         {
             if (SequenceFlowTransformer.isJsonPathExpression(attributeValue))
             {
@@ -168,7 +169,7 @@ public class SequenceFlowValidator implements ModelElementValidator<SequenceFlow
             {
                 validationResultCollector.addError(ValidationCodes.SEQUENCE_FLOW_INVALID_CONDITION_ATTRIBUTE,
                         "Condition expression attribute " + attributeName + " has invalid value. " +
-                        "Must be a Json path expression or a JSON String/Number/Boolean/Null literal.");
+                        "Must be a Json path expression or a MsgPack String/Float/Integer/Boolean/null literal.");
             }
         }
 

@@ -10,8 +10,9 @@ import org.camunda.tngp.broker.taskqueue.TaskInstanceWriter;
 import org.camunda.tngp.broker.taskqueue.TaskQueueContext;
 import org.camunda.tngp.broker.taskqueue.log.TaskInstanceRequestWriter;
 import org.camunda.tngp.broker.transport.worker.spi.BrokerRequestHandler;
-import org.camunda.tngp.broker.wf.runtime.data.JsonValidationResult;
-import org.camunda.tngp.broker.wf.runtime.data.JsonValidator;
+import org.camunda.tngp.broker.wf.runtime.data.MsgPackValidationResult;
+import org.camunda.tngp.broker.wf.runtime.data.MsgPackValidator;
+import org.camunda.tngp.broker.wf.runtime.data.MsgPackValidatorImpl;
 import org.camunda.tngp.log.BufferedLogReader;
 import org.camunda.tngp.log.LogReader;
 import org.camunda.tngp.protocol.error.ErrorWriter;
@@ -31,6 +32,7 @@ public class CompleteTaskHandler implements BrokerRequestHandler<TaskQueueContex
     protected ErrorWriter errorWriter = new ErrorWriter();
 
     protected TaskInstanceRequestWriter logRequestWriter = new TaskInstanceRequestWriter();
+    protected MsgPackValidator msgPackValidator = new MsgPackValidatorImpl();
 
     protected static final int READ_BUFFER_SIZE = 1024 * 1024;
     protected LogReader logReader = new BufferedLogReader();
@@ -63,8 +65,7 @@ public class CompleteTaskHandler implements BrokerRequestHandler<TaskQueueContex
 
         if (payload.capacity() > 0)
         {
-            final JsonValidator jsonValidator = ctx.getJsonValidator();
-            final JsonValidationResult validationResult = jsonValidator.validate(payload, 0, payload.capacity());
+            final MsgPackValidationResult validationResult = msgPackValidator.validate(payload, 0, payload.capacity());
             if (!validationResult.isValid())
             {
                 writeError(response, "Invalid JSON payload: " + validationResult.getErrorMessage());

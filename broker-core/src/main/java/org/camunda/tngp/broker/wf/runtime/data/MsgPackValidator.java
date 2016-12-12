@@ -5,8 +5,8 @@ import org.agrona.DirectBuffer;
 /**
  * Implementations may not be thread-safe.
  */
-public interface JsonValidator
+public interface MsgPackValidator
 {
 
-    JsonValidationResult validate(DirectBuffer buffer, int offset, int length);
+    MsgPackValidationResult validate(DirectBuffer buffer, int offset, int length);
 }

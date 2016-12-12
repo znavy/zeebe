@@ -52,7 +52,6 @@ public class TaskSubscriptionTest
 
         final Long taskId = taskService.create()
             .taskQueueId(0)
-            .payload("foo")
             .taskType("bar")
             .execute();
 

@@ -1,8 +1,13 @@
 package org.camunda.tngp.broker.taskqueue;
 
-import static org.camunda.tngp.broker.log.LogServiceNames.*;
-import static org.camunda.tngp.broker.taskqueue.TaskQueueServiceNames.*;
-import static org.camunda.tngp.broker.transport.worker.WorkerServiceNames.*;
+import static org.camunda.tngp.broker.log.LogServiceNames.logServiceName;
+import static org.camunda.tngp.broker.taskqueue.TaskQueueServiceNames.TASK_QUEUE_CONTEXT_SERVICE_GROUP_NAME;
+import static org.camunda.tngp.broker.taskqueue.TaskQueueServiceNames.taskQueueContextServiceName;
+import static org.camunda.tngp.broker.taskqueue.TaskQueueServiceNames.taskQueueIdGeneratorName;
+import static org.camunda.tngp.broker.taskqueue.TaskQueueServiceNames.taskQueueLockedTasksIndexServiceName;
+import static org.camunda.tngp.broker.taskqueue.TaskQueueServiceNames.taskQueueTaskTypePositionIndex;
+import static org.camunda.tngp.broker.transport.worker.WorkerServiceNames.workerDataFramePoolServiceName;
+import static org.camunda.tngp.broker.transport.worker.WorkerServiceNames.workerResponsePoolServiceName;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,7 +22,6 @@ import org.camunda.tngp.broker.system.ConfigurationManager;
 import org.camunda.tngp.broker.taskqueue.cfg.TaskQueueCfg;
 import org.camunda.tngp.broker.transport.TransportServiceNames;
 import org.camunda.tngp.broker.wf.runtime.WfRuntimeContext;
-import org.camunda.tngp.broker.wf.runtime.data.JsonComponent;
 import org.camunda.tngp.hashindex.Bytes2LongHashIndex;
 import org.camunda.tngp.hashindex.Long2LongHashIndex;
 import org.camunda.tngp.log.Log;
@@ -111,7 +115,6 @@ public class TaskQueueManagerService extends AbstractResourceContextProvider<Tas
             .dependency(workerResponsePoolServiceName(TaskQueueComponent.WORKER_NAME), taskQueueContextService.getResponsePoolServiceInjector())
             .dependency(workerDataFramePoolServiceName(TaskQueueComponent.WORKER_NAME), taskQueueContextService.getDataFramePoolInjector())
             .dependency(TransportServiceNames.TRANSPORT, taskQueueContextService.getTransportInjector())
-            .dependency(JsonComponent.JSON_SERVICE_NAME, taskQueueContextService.getJsonConfigurationInjector())
             .install();
     }
 

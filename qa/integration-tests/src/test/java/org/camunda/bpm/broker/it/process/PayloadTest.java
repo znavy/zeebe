@@ -3,13 +3,14 @@ package org.camunda.bpm.broker.it.process;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.agrona.DirectBuffer;
 import org.camunda.bpm.broker.it.ClientRule;
 import org.camunda.bpm.broker.it.EmbeddedBrokerRule;
 import org.camunda.bpm.broker.it.TestUtil;
+import org.camunda.tngp.broker.test.util.MsgPackUtil;
 import org.camunda.tngp.client.AsyncTasksClient;
 import org.camunda.tngp.client.TngpClient;
 import org.camunda.tngp.client.WorkflowsClient;
@@ -23,6 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -46,7 +48,7 @@ public class PayloadTest
     @Before
     public void setUp()
     {
-        objectMapper = new ObjectMapper();
+        objectMapper = new ObjectMapper(new MessagePackFactory());
     }
 
     @Test
@@ -61,10 +63,17 @@ public class PayloadTest
             .bpmnModelInstance(ProcessModels.TWO_TASKS_PROCESS)
             .execute();
 
+        final DirectBuffer payloadBuffer = MsgPackUtil.encodeMsgPack((p) ->
+        {
+            p.packMapHeader(1);
+            p.packString("key");
+            p.packString("val");
+        });
+
         workflowsClient
             .start()
             .workflowDefinitionId(workflowDefinition.getId())
-            .payload("{\"key\":\"val\"}")
+            .payload(payloadBuffer, 0, payloadBuffer.capacity())
             .execute();
 
         // when
@@ -95,12 +104,20 @@ public class PayloadTest
 
         assertThat(taskHandler.payloads).hasSize(2);
 
-        assertThat(taskHandler.payloads.get(0)).isEqualTo("{\"key\":\"val\"}");
-        assertThat(taskHandler.payloads.get(1)).isEqualTo("{\"key\":\"newVal\"}");
+
+        final DirectBuffer expectedUpdatedPayloadBuffer = MsgPackUtil.encodeMsgPack((p) ->
+        {
+            p.packMapHeader(1);
+            p.packString("key");
+            p.packString("newVal");
+        });
+
+        assertThat(taskHandler.payloads.get(0)).containsExactly(toBytes(payloadBuffer));
+        assertThat(taskHandler.payloads.get(1)).containsExactly(toBytes(expectedUpdatedPayloadBuffer));
     }
 
     @Test
-    public void shouldRejectInvalidJson()
+    public void shouldRejectInvalidMsgPack()
     {
      // given
         final TngpClient client = clientRule.getClient();
@@ -112,20 +129,20 @@ public class PayloadTest
 
         // then
         exception.expect(BrokerRequestException.class);
-        exception.expectMessage("Invalid JSON payload");
+        exception.expectMessage("Invalid msgpack payload. Error at position 0: Unrecognized token format");
 
         // when
         workflowsClient
             .start()
             .workflowDefinitionId(workflowDefinition.getId())
-            .payload("this is not json")
+            .payload(new byte[]{ (byte) 0xc7 }) // ext8 header that is currently not supported by us
             .execute();
     }
 
     public static final class PayloadRecordingHandler implements TaskHandler
     {
 
-        protected List<String> payloads = new ArrayList<>();
+        protected List<byte[]> payloads = new ArrayList<>();
 
         @Override
         public void handle(Task task)
@@ -142,9 +159,16 @@ public class PayloadTest
             }
 
 
-            payloads.add(new String(bytes, StandardCharsets.UTF_8));
+            payloads.add(bytes);
         }
 
+    }
+
+    protected static byte[] toBytes(DirectBuffer buffer)
+    {
+        final byte[] result = new byte[buffer.capacity()];
+        buffer.getBytes(0, result);
+        return result;
     }
 
 }

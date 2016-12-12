@@ -72,7 +72,6 @@ public class PollEventsTest
         client.tasks().create()
             .taskQueueId(0)
             .taskType("test")
-            .payload("foo")
             .execute();
 
         final EventsBatch eventsBatch = client.events().poll()
@@ -98,14 +97,12 @@ public class PollEventsTest
         final Long taskId1 = client.tasks().create()
             .taskQueueId(0)
             .taskType("test")
-            .payload("foo")
             .execute();
 
         final Long taskId2 = client.tasks().create()
-                .taskQueueId(0)
-                .taskType("test")
-                .payload("bar")
-                .execute();
+            .taskQueueId(0)
+            .taskType("test")
+            .execute();
 
         final EventsBatch eventsBatch = client.events().poll()
             .startPosition(INITIAL_LOG_POSITION)
@@ -134,13 +131,11 @@ public class PollEventsTest
         client.tasks().create()
             .taskQueueId(0)
             .taskType("test")
-            .payload("foo")
             .execute();
 
         final Long taskId2 = client.tasks().create()
                 .taskQueueId(0)
                 .taskType("test")
-                .payload("bar")
                 .execute();
 
         EventsBatch eventsBatch = client.events().poll()
@@ -174,14 +169,12 @@ public class PollEventsTest
         client.tasks().create()
             .taskQueueId(0)
             .taskType("test")
-            .payload("foo")
             .execute();
 
         client.tasks().create()
-                .taskQueueId(0)
-                .taskType("test")
-                .payload("bar")
-                .execute();
+            .taskQueueId(0)
+            .taskType("test")
+            .execute();
 
         final EventsBatch eventsBatch = client.events().poll()
             .startPosition(INITIAL_LOG_POSITION)
@@ -200,14 +193,12 @@ public class PollEventsTest
         client.tasks().create()
             .taskQueueId(0)
             .taskType("test")
-            .payload("foo")
             .execute();
 
         final Long taskId2 = client.tasks().create()
-                .taskQueueId(0)
-                .taskType("test")
-                .payload("bar")
-                .execute();
+            .taskQueueId(0)
+            .taskType("test")
+            .execute();
 
         final EventsBatch eventsBatch = client.events().poll()
             .startPosition(INITIAL_LOG_POSITION + 1)

@@ -55,7 +55,6 @@ public class TaskQueueTest
 
         final Long taskId = taskService.create()
             .taskQueueId(0)
-            .payload("foo")
             .taskType("bar")
             .execute();
 
@@ -92,7 +91,6 @@ public class TaskQueueTest
 
         final Long taskId = taskService.create()
             .taskQueueId(0)
-            .payload("foo")
             .taskType("bar")
             .execute();
 
@@ -116,7 +114,6 @@ public class TaskQueueTest
 
         final Long taskId = taskClient.create()
             .taskQueueId(0)
-            .payload("foo")
             .taskType("bar")
             .execute();
 
@@ -178,11 +175,10 @@ public class TaskQueueTest
 
         System.out.println("Creating task");
 
-        final String payloadString = "{\"foo\":\"bar\"}";
-        final byte[] payloadBytes = payloadString.getBytes(StandardCharsets.UTF_8);
+        final byte[] payloadBytes = "{\"foo\":\"bar\"}".getBytes(StandardCharsets.UTF_8);
         final Long taskId = taskService.create()
             .taskQueueId(0)
-            .payload(payloadString)
+            .payload(payloadBytes)
             .taskType("bar")
             .execute();
 

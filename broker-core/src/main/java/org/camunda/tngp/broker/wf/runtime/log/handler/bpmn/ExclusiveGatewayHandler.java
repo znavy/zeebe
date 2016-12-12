@@ -3,20 +3,20 @@ package org.camunda.tngp.broker.wf.runtime.log.handler.bpmn;
 import org.agrona.DirectBuffer;
 import org.camunda.tngp.bpmn.graph.BpmnEdgeTypes;
 import org.camunda.tngp.bpmn.graph.FlowElementVisitor;
-import org.camunda.tngp.bpmn.graph.JsonPropertyReader;
-import org.camunda.tngp.bpmn.graph.JsonScalarReader;
+import org.camunda.tngp.bpmn.graph.MsgPackPropertyReader;
+import org.camunda.tngp.bpmn.graph.MsgPackScalarReader;
 import org.camunda.tngp.bpmn.graph.ProcessGraph;
 import org.camunda.tngp.broker.log.LogWriters;
-import org.camunda.tngp.broker.services.JsonConfiguration;
-import org.camunda.tngp.broker.wf.runtime.data.JsonDocument;
 import org.camunda.tngp.broker.wf.runtime.data.JsonPathResult;
+import org.camunda.tngp.broker.wf.runtime.data.MsgPackDocument;
+import org.camunda.tngp.broker.wf.runtime.data.MsgPackDocumentImpl;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnBranchEventReader;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnFlowElementEventReader;
 import org.camunda.tngp.broker.wf.runtime.log.bpmn.BpmnFlowElementEventWriter;
 import org.camunda.tngp.graph.bpmn.BpmnAspect;
 import org.camunda.tngp.graph.bpmn.ConditionOperator;
 import org.camunda.tngp.graph.bpmn.ExecutionEventType;
-import org.camunda.tngp.graph.bpmn.JsonType;
+import org.camunda.tngp.graph.bpmn.MsgPackType;
 import org.camunda.tngp.hashindex.Long2LongHashIndex;
 import org.camunda.tngp.log.LogReader;
 import org.camunda.tngp.log.idgenerator.IdGenerator;
@@ -27,9 +27,9 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
 
     public static final int NO_FLOW_ID = -1; // note: this assumes flow element IDs are positive!
 
-    protected static final BooleanBiFunction<JsonScalarReader> EQUAL_OPERATOR = new EqualOperator();
-    protected static final BooleanBiFunction<JsonScalarReader> GREATER_THAN_OPERATOR = new GreaterThanOperator();
-    protected static final BooleanBiFunction<JsonScalarReader> LOWER_THAN_OPERATOR = new LowerThanOperator();
+    protected static final BooleanBiFunction<MsgPackScalarReader> EQUAL_OPERATOR = new EqualOperator();
+    protected static final BooleanBiFunction<MsgPackScalarReader> GREATER_THAN_OPERATOR = new GreaterThanOperator();
+    protected static final BooleanBiFunction<MsgPackScalarReader> LOWER_THAN_OPERATOR = new LowerThanOperator();
 
     protected BpmnFlowElementEventWriter eventWriter = new BpmnFlowElementEventWriter();
     protected final FlowElementVisitor flowElementVisitor = new FlowElementVisitor();
@@ -38,13 +38,13 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
     protected final Long2LongHashIndex eventIndex;
     protected final LogReader logReader;
 
-    protected final JsonDocument jsonDocument;
+    protected final MsgPackDocument jsonDocument;
 
-    public ExclusiveGatewayHandler(LogReader logReader, Long2LongHashIndex eventIndex, JsonConfiguration jsonConfiguration)
+    public ExclusiveGatewayHandler(LogReader logReader, Long2LongHashIndex eventIndex)
     {
         this.eventIndex = eventIndex;
         this.logReader = logReader;
-        this.jsonDocument = jsonConfiguration.buildJsonDocument(2);
+        this.jsonDocument = new MsgPackDocumentImpl(2);
     }
 
     @Override
@@ -149,10 +149,10 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
     /**
      * @return true if condition is valid and evaluates to true, false if condition is valid and evaluates to false, null if condition is not valid
      */
-    protected Boolean evaluateCondition(JsonDocument json, JsonPropertyReader arg1, ConditionOperator comparisonOperator, JsonPropertyReader arg2)
+    protected Boolean evaluateCondition(MsgPackDocument json, MsgPackPropertyReader arg1, ConditionOperator comparisonOperator, MsgPackPropertyReader arg2)
     {
-        final JsonScalarReader arg1Value = resolveToScalar(json, arg1);
-        final JsonScalarReader arg2Value = resolveToScalar(json, arg2);
+        final MsgPackScalarReader arg1Value = resolveToScalar(json, arg1);
+        final MsgPackScalarReader arg2Value = resolveToScalar(json, arg2);
 
         if (arg1Value == null || arg2Value == null)
         {
@@ -199,21 +199,21 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
 
     }
 
-    protected JsonScalarReader resolveToScalar(JsonDocument json, JsonPropertyReader jsonProperty)
+    protected MsgPackScalarReader resolveToScalar(MsgPackDocument document, MsgPackPropertyReader msgPackProperty)
     {
-        if (jsonProperty.type() == JsonType.EXPRESSION)
+        if (msgPackProperty.type() == MsgPackType.EXPRESSION)
         {
-            return resolveJsonPathToScalar(json, jsonProperty.valueExpression());
+            return resolveJsonPathToScalar(document, msgPackProperty.valueExpression());
         }
         else
         {
-            return jsonProperty;
+            return msgPackProperty;
         }
     }
 
-    protected JsonScalarReader resolveJsonPathToScalar(JsonDocument json, DirectBuffer jsonPathExpression)
+    protected MsgPackScalarReader resolveJsonPathToScalar(MsgPackDocument document, DirectBuffer jsonPathExpression)
     {
-        final JsonPathResult jsonPathResult = json.jsonPath(jsonPathExpression, 0, jsonPathExpression.capacity());
+        final JsonPathResult jsonPathResult = document.jsonPath(jsonPathExpression, 0, jsonPathExpression.capacity());
         if (jsonPathResult.hasResolved())
         {
             if (jsonPathResult.isArray() || jsonPathResult.isObject())
@@ -233,19 +233,23 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
         }
     }
 
-    protected static class EqualOperator implements BooleanBiFunction<JsonScalarReader>
+    protected static class EqualOperator implements BooleanBiFunction<MsgPackScalarReader>
     {
 
         @Override
-        public boolean apply(JsonScalarReader o1, JsonScalarReader o2)
+        public boolean apply(MsgPackScalarReader o1, MsgPackScalarReader o2)
         {
             if (o1.isBoolean() && o2.isBoolean())
             {
                 return o1.asBoolean() == o2.asBoolean();
             }
-            else if (o1.isNumber() && o2.isNumber())
+            else if (o1.isInteger() && o2.isInteger())
             {
-                return o1.asNumber() == o2.asNumber();
+                return o1.asInteger() == o2.asInteger();
+            }
+            else if (o1.isFloat() && o2.isFloat())
+            {
+                return o1.asFloat() == o2.asFloat();
             }
             else if (o1.isString() && o2.isString())
             {
@@ -253,30 +257,32 @@ public class ExclusiveGatewayHandler implements BpmnFlowElementAspectHandler
             }
             else
             {
-                return o1.isNull() && o2.isNull();
+                return o1.isNil() && o2.isNil();
             }
         }
     }
 
-    protected static class GreaterThanOperator implements BooleanBiFunction<JsonScalarReader>
+    protected static class GreaterThanOperator implements BooleanBiFunction<MsgPackScalarReader>
     {
         @Override
-        public boolean apply(JsonScalarReader arg1, JsonScalarReader arg2)
+        public boolean apply(MsgPackScalarReader arg1, MsgPackScalarReader arg2)
         {
             // TODO: could also lexicographically compare strings, but that may not be trivial based
             //   on the encoded byte arrays
-            return arg1.isNumber() && arg2.isNumber() && arg1.asNumber() > arg2.asNumber();
+            return (arg1.isInteger() && arg2.isInteger() && arg1.asInteger() > arg2.asInteger()) ||
+                    (arg1.isFloat() && arg2.isFloat() && arg1.asFloat() > arg2.asFloat());
         }
     }
 
-    protected static class LowerThanOperator implements BooleanBiFunction<JsonScalarReader>
+    protected static class LowerThanOperator implements BooleanBiFunction<MsgPackScalarReader>
     {
         @Override
-        public boolean apply(JsonScalarReader arg1, JsonScalarReader arg2)
+        public boolean apply(MsgPackScalarReader arg1, MsgPackScalarReader arg2)
         {
             // TODO: could also lexicographically compare strings, but that may not be trivial based
             //   on the encoded byte arrays
-            return arg1.isNumber() && arg2.isNumber() && arg1.asNumber() < arg2.asNumber();
+            return (arg1.isInteger() && arg2.isInteger() && arg1.asInteger() < arg2.asInteger()) ||
+                    (arg1.isFloat() && arg2.isFloat() && arg1.asFloat() < arg2.asFloat());
         }
     }
 

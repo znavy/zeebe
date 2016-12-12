@@ -27,8 +27,8 @@ public class FlowElementVisitor extends NodeVisitor
     protected final UnsafeBuffer stringIdBuffer = new UnsafeBuffer(0, 0);
     protected final UnsafeBuffer taskTypeBuffer = new UnsafeBuffer(0, 0);
 
-    protected final JsonPropertyReader conditionArg1Reader = new JsonPropertyReader();
-    protected final JsonPropertyReader conditionArg2Reader = new JsonPropertyReader();
+    protected final MsgPackPropertyReader conditionArg1Reader = new MsgPackPropertyReader();
+    protected final MsgPackPropertyReader conditionArg2Reader = new MsgPackPropertyReader();
 
     public FlowElementVisitor init(ProcessGraph graph)
     {
@@ -209,11 +209,11 @@ public class FlowElementVisitor extends NodeVisitor
         return descriptorDecoder.taskQueueId();
     }
 
-    public JsonPropertyReader conditionArg1()
+    public MsgPackPropertyReader conditionArg1()
     {
         return conditionArg1Reader;
     }
-    public JsonPropertyReader conditionArg2()
+    public MsgPackPropertyReader conditionArg2()
     {
         return conditionArg2Reader;
     }

@@ -1,6 +1,6 @@
 package org.camunda.tngp.broker.wf.runtime.data;
 
-public interface JsonValidationResult
+public interface MsgPackValidationResult
 {
 
     boolean isValid();
