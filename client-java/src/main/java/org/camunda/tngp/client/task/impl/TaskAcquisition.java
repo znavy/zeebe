@@ -6,6 +6,7 @@ import java.util.function.Consumer;
 import org.agrona.concurrent.Agent;
 import org.camunda.tngp.client.impl.TngpClientImpl;
 import org.camunda.tngp.client.impl.cmd.CreateTaskSubscriptionCmdImpl;
+import org.camunda.tngp.client.impl.data.DocumentConverter;
 import org.camunda.tngp.client.task.impl.TaskDataFrameCollector.SubscribedTaskHandler;
 import org.camunda.tngp.protocol.taskqueue.SubscribedTaskReader;
 
@@ -17,14 +18,18 @@ public class TaskAcquisition implements Agent, Consumer<AcquisitionCmd>, Subscri
     protected final TaskSubscriptions taskSubscriptions;
     protected CommandQueue<AcquisitionCmd> cmdQueue;
     protected TaskDataFrameCollector taskCollector;
+    protected DocumentConverter documentConverter;
 
-    public TaskAcquisition(TngpClientImpl client, TaskSubscriptions subscriptions, TaskDataFrameCollector taskCollector)
+    public TaskAcquisition(TngpClientImpl client,
+            TaskSubscriptions subscriptions,
+            TaskDataFrameCollector taskCollector)
     {
         this.client = client;
         this.taskSubscriptions = subscriptions;
         this.cmdQueue = new DeferredCommandQueue<>(this);
         this.taskCollector = taskCollector;
         this.taskCollector.setTaskHandler(this);
+        this.documentConverter = client.getDocumentConverter();
     }
 
     @Override
@@ -144,7 +149,8 @@ public class TaskAcquisition implements Agent, Consumer<AcquisitionCmd>, Subscri
             final TaskImpl task = new TaskImpl(
                     client,
                     taskReader,
-                    subscription);
+                    subscription,
+                    documentConverter);
 
             subscription.addTask(task);
         }

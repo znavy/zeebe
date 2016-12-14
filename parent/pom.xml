@@ -123,13 +123,13 @@
       
       <dependency>
         <groupId>org.msgpack</groupId>
-        <artifactId>msgpack-core</artifactId>
+        <artifactId>jackson-dataformat-msgpack</artifactId>
         <version>${version.msgpack}</version>
-        <scope>test</scope>
       </dependency>
+      
       <dependency>
         <groupId>org.msgpack</groupId>
-        <artifactId>jackson-dataformat-msgpack</artifactId>
+        <artifactId>msgpack-core</artifactId>
         <version>${version.msgpack}</version>
         <scope>test</scope>
       </dependency>

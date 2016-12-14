@@ -5,6 +5,7 @@ import static org.camunda.tngp.broker.test.util.BufferAssert.assertThatBuffer;
 
 import java.nio.charset.StandardCharsets;
 
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.client.impl.cmd.taskqueue.CompleteTaskRequestWriter;
 import org.camunda.tngp.protocol.taskqueue.CompleteTaskDecoder;
 import org.camunda.tngp.protocol.taskqueue.MessageHeaderDecoder;
@@ -13,8 +14,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.MockitoAnnotations;
-
-import org.agrona.concurrent.UnsafeBuffer;
 
 public class CompleteTaskInstanceRequestWriterTest
 {

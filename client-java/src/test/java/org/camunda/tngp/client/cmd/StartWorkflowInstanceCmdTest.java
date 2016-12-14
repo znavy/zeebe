@@ -6,10 +6,12 @@ import static org.mockito.Mockito.verify;
 import java.nio.charset.StandardCharsets;
 
 import org.camunda.tngp.client.impl.ClientCmdExecutor;
+import org.camunda.tngp.client.impl.data.JacksonDocumentConverter;
 import org.camunda.tngp.client.impl.cmd.ClientResponseHandler;
 import org.camunda.tngp.client.impl.cmd.StartWorkflowInstanceCmdImpl;
 import org.camunda.tngp.client.impl.cmd.StartWorkflowInstanceResponseHandler;
 import org.camunda.tngp.client.impl.cmd.wf.start.StartWorkflowInstanceRequestWriter;
+import org.camunda.tngp.client.impl.data.DocumentConverter;
 import org.camunda.tngp.util.buffer.BufferWriter;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,6 +27,8 @@ public class StartWorkflowInstanceCmdTest
     @Mock
     protected ClientCmdExecutor commandExecutor;
 
+    protected DocumentConverter documentConverter = JacksonDocumentConverter.newDefaultConverter();
+
     protected static final byte[] WORKFLOW_KEY_BYTES = "bar".getBytes(StandardCharsets.UTF_8);
 
     @Before
@@ -37,7 +41,7 @@ public class StartWorkflowInstanceCmdTest
     public void shouldSetWorkflowId()
     {
         // given
-        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor);
+        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor, documentConverter);
         command.setRequestWriter(requestWriter);
         final StartWorkflowInstanceCmd apiCommand = command;
 
@@ -52,7 +56,7 @@ public class StartWorkflowInstanceCmdTest
     public void shouldSetWorkflowKeyAsBytes()
     {
         // given
-        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor);
+        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor, documentConverter);
         command.setRequestWriter(requestWriter);
         final StartWorkflowInstanceCmd apiCommand = command;
 
@@ -67,7 +71,7 @@ public class StartWorkflowInstanceCmdTest
     public void shouldSetWorkflowKeyAsString()
     {
         // given
-        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor);
+        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor, documentConverter);
         command.setRequestWriter(requestWriter);
         final StartWorkflowInstanceCmd apiCommand = command;
 
@@ -82,7 +86,7 @@ public class StartWorkflowInstanceCmdTest
     public void testRequestWriter()
     {
         // given
-        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor);
+        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor, documentConverter);
 
         // when
         final BufferWriter requestWriter = command.getRequestWriter();
@@ -95,7 +99,7 @@ public class StartWorkflowInstanceCmdTest
     public void testResponseHandlers()
     {
         // given
-        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor);
+        final StartWorkflowInstanceCmdImpl command = new StartWorkflowInstanceCmdImpl(commandExecutor, documentConverter);
 
         // when
         final ClientResponseHandler<WorkflowInstance> responseHandler = command.getResponseHandler();

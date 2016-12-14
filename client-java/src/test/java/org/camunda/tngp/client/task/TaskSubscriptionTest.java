@@ -17,6 +17,7 @@ import java.time.Instant;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.broker.test.util.FluentMock;
 import org.camunda.tngp.client.cmd.CompleteAsyncTaskCmd;
+import org.camunda.tngp.client.impl.data.JacksonDocumentConverter;
 import org.camunda.tngp.client.impl.TngpClientImpl;
 import org.camunda.tngp.client.impl.cmd.CloseTaskSubscriptionCmdImpl;
 import org.camunda.tngp.client.impl.cmd.CreateTaskSubscriptionCmdImpl;
@@ -74,6 +75,7 @@ public class TaskSubscriptionTest
         when(client.closeBrokerTaskSubscription()).thenReturn(closeSubscriptionCmd);
         when(client.complete()).thenReturn(completeCmd);
         when(client.provideSubscriptionCredits()).thenReturn(provideCreditsCmd);
+        when(client.getDocumentConverter()).thenReturn(JacksonDocumentConverter.newDefaultConverter());
     }
 
     @Test

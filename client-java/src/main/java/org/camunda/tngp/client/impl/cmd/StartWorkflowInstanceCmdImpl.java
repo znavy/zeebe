@@ -4,6 +4,7 @@ import org.camunda.tngp.client.cmd.StartWorkflowInstanceCmd;
 import org.camunda.tngp.client.cmd.WorkflowInstance;
 import org.camunda.tngp.client.impl.ClientCmdExecutor;
 import org.camunda.tngp.client.impl.cmd.wf.start.StartWorkflowInstanceRequestWriter;
+import org.camunda.tngp.client.impl.data.DocumentConverter;
 import org.camunda.tngp.util.buffer.PayloadRequestWriter;
 
 public class StartWorkflowInstanceCmdImpl extends AbstractSetPayloadCmd<WorkflowInstance, StartWorkflowInstanceCmd>
@@ -11,9 +12,9 @@ public class StartWorkflowInstanceCmdImpl extends AbstractSetPayloadCmd<Workflow
 {
     protected StartWorkflowInstanceRequestWriter requestWriter = new StartWorkflowInstanceRequestWriter();
 
-    public StartWorkflowInstanceCmdImpl(final ClientCmdExecutor clientCmdExecutor)
+    public StartWorkflowInstanceCmdImpl(final ClientCmdExecutor clientCmdExecutor, DocumentConverter documentConverter)
     {
-        super(clientCmdExecutor, new StartWorkflowInstanceResponseHandler());
+        super(clientCmdExecutor, new StartWorkflowInstanceResponseHandler(), documentConverter);
     }
 
     @Override

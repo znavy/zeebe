@@ -4,14 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.client.impl.cmd.taskqueue.PollAndLockRequestWriter;
 import org.camunda.tngp.protocol.taskqueue.MessageHeaderDecoder;
 import org.camunda.tngp.protocol.taskqueue.PollAndLockTasksDecoder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import org.agrona.concurrent.UnsafeBuffer;
 
 public class PollAndLockRequestWriterTest
 {

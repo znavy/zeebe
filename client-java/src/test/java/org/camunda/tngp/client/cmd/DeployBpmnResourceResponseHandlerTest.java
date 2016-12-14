@@ -5,11 +5,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.agrona.DirectBuffer;
 import org.camunda.tngp.client.impl.cmd.wf.deploy.DeployBpmnResourceAckResponseHandler;
 import org.camunda.tngp.protocol.wf.DeployBpmnResourceAckResponseReader;
 import org.junit.Test;
-
-import org.agrona.DirectBuffer;
 
 public class DeployBpmnResourceResponseHandlerTest
 {

@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import org.agrona.DirectBuffer;
 import org.camunda.tngp.client.cmd.LockedTask;
+import org.camunda.tngp.client.impl.data.DocumentConverter;
 import org.camunda.tngp.client.task.Payload;
 import org.camunda.tngp.client.task.impl.PayloadImpl;
 
@@ -12,7 +13,12 @@ public class LockedTaskImpl implements LockedTask
     protected long id;
     protected Long workflowInstanceId;
     protected Instant lockTime;
-    protected PayloadImpl payload = new PayloadImpl();
+    protected PayloadImpl payload;
+
+    public LockedTaskImpl(DocumentConverter documentConverter)
+    {
+        payload = new PayloadImpl(documentConverter);
+    }
 
     public void setId(long taskId)
     {
@@ -57,6 +63,11 @@ public class LockedTaskImpl implements LockedTask
 
     public void setPayload(DirectBuffer buffer, int offset, int length)
     {
-        this.payload.wrap(buffer, offset, length);
+        final boolean payloadWrapped = this.payload.wrap(buffer, offset, length);
+
+        if (!payloadWrapped)
+        {
+            throw new RuntimeException("Could not process payload");
+        }
     }
 }

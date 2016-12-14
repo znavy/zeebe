@@ -2,13 +2,12 @@ package org.camunda.tngp.client.cmd;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.client.impl.cmd.TaskAckResponseHandler;
 import org.camunda.tngp.protocol.taskqueue.MessageHeaderEncoder;
 import org.camunda.tngp.protocol.taskqueue.SingleTaskAckEncoder;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.agrona.concurrent.UnsafeBuffer;
 
 public class SingleTaskAckResponseReaderTest
 {

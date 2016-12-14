@@ -6,6 +6,7 @@ import java.time.Instant;
 import org.agrona.DirectBuffer;
 import org.camunda.tngp.client.AsyncTasksClient;
 import org.camunda.tngp.client.cmd.CompleteAsyncTaskCmd;
+import org.camunda.tngp.client.impl.data.DocumentConverter;
 import org.camunda.tngp.client.task.Payload;
 import org.camunda.tngp.client.task.Task;
 import org.camunda.tngp.protocol.taskqueue.SubscribedTaskReader;
@@ -20,7 +21,7 @@ public class TaskImpl implements Task
     protected final String type;
     protected final Instant lockExpirationTime;
     protected final int taskQueueId;
-    protected final PayloadImpl payload = new PayloadImpl();
+    protected final PayloadImpl payload;
 
     protected int state;
     protected static final int STATE_LOCKED = 0;
@@ -30,7 +31,8 @@ public class TaskImpl implements Task
     public TaskImpl(
             AsyncTasksClient tasksClient,
             SubscribedTaskReader taskReader,
-            TaskSubscriptionImpl subscription)
+            TaskSubscriptionImpl subscription,
+            DocumentConverter documentConverter)
     {
         this.tasksClient = tasksClient;
         this.id = taskReader.taskId();
@@ -40,8 +42,14 @@ public class TaskImpl implements Task
         this.taskQueueId = subscription.getTaskQueueId();
         this.state = STATE_LOCKED;
 
+        this.payload = new PayloadImpl(documentConverter);
         final DirectBuffer payloadBuffer = taskReader.payload();
-        payload.wrap(payloadBuffer, 0, payloadBuffer.capacity());
+
+        final boolean payloadWrapped = payload.wrap(payloadBuffer, 0, payloadBuffer.capacity());
+        if (!payloadWrapped)
+        {
+            throw new RuntimeException("Could not handle payload");
+        }
     }
 
     @Override

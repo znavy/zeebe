@@ -31,6 +31,8 @@ import org.camunda.tngp.client.impl.cmd.PollAndLockTasksCmdImpl;
 import org.camunda.tngp.client.impl.cmd.ProvideSubscriptionCreditsCmdImpl;
 import org.camunda.tngp.client.impl.cmd.StartWorkflowInstanceCmdImpl;
 import org.camunda.tngp.client.impl.cmd.wf.deploy.DeployBpmnResourceCmdImpl;
+import org.camunda.tngp.client.impl.data.DocumentConverter;
+import org.camunda.tngp.client.impl.data.JacksonDocumentConverter;
 import org.camunda.tngp.client.task.PollableTaskSubscriptionBuilder;
 import org.camunda.tngp.client.task.TaskSubscriptionBuilder;
 import org.camunda.tngp.client.task.impl.TaskSubscriptionManager;
@@ -64,6 +66,7 @@ public class TngpClientImpl implements TngpClient, AsyncTasksClient, WorkflowsCl
     protected TaskSubscriptionManager taskSubscriptionManager;
 
     protected final EventsClient eventsClient;
+    protected DocumentConverter documentConverter;
 
     public TngpClientImpl(Properties properties)
     {
@@ -111,11 +114,14 @@ public class TngpClientImpl implements TngpClient, AsyncTasksClient, WorkflowsCl
 
         cmdExecutor = new ClientCmdExecutor(connectionPool, dataFramePool, channelResolver);
 
+        documentConverter = JacksonDocumentConverter.newDefaultConverter();
+
         final int numExecutionThreads = Integer.parseInt(properties.getProperty(CLIENT_TASK_EXECUTION_THREADS));
         final Boolean autoCompleteTasks = Boolean.parseBoolean(properties.getProperty(CLIENT_TASK_EXECUTION_AUTOCOMPLETE));
         taskSubscriptionManager = new TaskSubscriptionManager(this, numExecutionThreads, autoCompleteTasks, dataFrameReceiveBuffer.openSubscription("task-acquisition"));
 
         eventsClient = new TngpEventsClientImpl(cmdExecutor);
+
     }
 
     public void connect()
@@ -194,6 +200,11 @@ public class TngpClientImpl implements TngpClient, AsyncTasksClient, WorkflowsCl
         return dataFramePool;
     }
 
+    public DocumentConverter getDocumentConverter()
+    {
+        return documentConverter;
+    }
+
     @Override
     public AsyncTasksClient tasks()
     {
@@ -215,13 +226,13 @@ public class TngpClientImpl implements TngpClient, AsyncTasksClient, WorkflowsCl
     @Override
     public CreateAsyncTaskCmd create()
     {
-        return new CreateTaskCmdImpl(cmdExecutor);
+        return new CreateTaskCmdImpl(cmdExecutor, documentConverter);
     }
 
     @Override
     public PollAndLockAsyncTasksCmd pollAndLock()
     {
-        return new PollAndLockTasksCmdImpl(cmdExecutor);
+        return new PollAndLockTasksCmdImpl(cmdExecutor, documentConverter);
     }
 
     public CreateTaskSubscriptionCmdImpl brokerTaskSubscription()
@@ -242,7 +253,7 @@ public class TngpClientImpl implements TngpClient, AsyncTasksClient, WorkflowsCl
     @Override
     public CompleteAsyncTaskCmd complete()
     {
-        return new CompleteTaskCmdImpl(cmdExecutor);
+        return new CompleteTaskCmdImpl(cmdExecutor, documentConverter);
     }
 
     @Override
@@ -254,7 +265,7 @@ public class TngpClientImpl implements TngpClient, AsyncTasksClient, WorkflowsCl
     @Override
     public StartWorkflowInstanceCmd start()
     {
-        return new StartWorkflowInstanceCmdImpl(cmdExecutor);
+        return new StartWorkflowInstanceCmdImpl(cmdExecutor, documentConverter);
     }
 
     @Override

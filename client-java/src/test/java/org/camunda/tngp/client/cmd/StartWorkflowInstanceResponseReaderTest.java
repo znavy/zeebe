@@ -2,13 +2,12 @@ package org.camunda.tngp.client.cmd;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.camunda.tngp.protocol.wf.StartWorkflowInstanceResponseReader;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.protocol.wf.MessageHeaderEncoder;
 import org.camunda.tngp.protocol.wf.StartWorkflowInstanceResponseEncoder;
+import org.camunda.tngp.protocol.wf.StartWorkflowInstanceResponseReader;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.agrona.concurrent.UnsafeBuffer;
 
 public class StartWorkflowInstanceResponseReaderTest
 {

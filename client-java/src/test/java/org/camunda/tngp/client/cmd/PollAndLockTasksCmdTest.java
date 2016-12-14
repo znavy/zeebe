@@ -1,6 +1,7 @@
 package org.camunda.tngp.client.cmd;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.nio.charset.StandardCharsets;
@@ -10,6 +11,7 @@ import org.camunda.tngp.client.impl.cmd.ClientResponseHandler;
 import org.camunda.tngp.client.impl.cmd.PollAndLockResponseHandler;
 import org.camunda.tngp.client.impl.cmd.PollAndLockTasksCmdImpl;
 import org.camunda.tngp.client.impl.cmd.taskqueue.PollAndLockRequestWriter;
+import org.camunda.tngp.client.impl.data.DocumentConverter;
 import org.camunda.tngp.util.buffer.BufferWriter;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,7 +40,7 @@ public class PollAndLockTasksCmdTest
     public void shouldSetProperties()
     {
         // given
-        final PollAndLockTasksCmdImpl command = new PollAndLockTasksCmdImpl(commandExecutor);
+        final PollAndLockTasksCmdImpl command = new PollAndLockTasksCmdImpl(commandExecutor, mock(DocumentConverter.class));
         command.setRequestWriter(requestWriter);
         final PollAndLockAsyncTasksCmd apiCommand = command;
 
@@ -61,7 +63,7 @@ public class PollAndLockTasksCmdTest
     public void testRequestWriter()
     {
         // given
-        final PollAndLockTasksCmdImpl command = new PollAndLockTasksCmdImpl(commandExecutor);
+        final PollAndLockTasksCmdImpl command = new PollAndLockTasksCmdImpl(commandExecutor, mock(DocumentConverter.class));
 
         // when
         final BufferWriter requestWriter = command.getRequestWriter();
@@ -74,7 +76,7 @@ public class PollAndLockTasksCmdTest
     public void testResponseHandlers()
     {
         // given
-        final PollAndLockTasksCmdImpl command = new PollAndLockTasksCmdImpl(commandExecutor);
+        final PollAndLockTasksCmdImpl command = new PollAndLockTasksCmdImpl(commandExecutor, mock(DocumentConverter.class));
 
         // when
         final ClientResponseHandler<LockedTasksBatch> responseHandler = command.getResponseHandler();

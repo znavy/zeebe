@@ -1,15 +1,20 @@
 package org.camunda.tngp.client.cmd;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.camunda.tngp.broker.test.util.BufferMatcher.hasBytes;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 
 import java.nio.charset.StandardCharsets;
 
 import org.camunda.tngp.client.impl.ClientCmdExecutor;
+import org.camunda.tngp.client.impl.data.JacksonDocumentConverter;
 import org.camunda.tngp.client.impl.cmd.ClientResponseHandler;
 import org.camunda.tngp.client.impl.cmd.CompleteTaskCmdImpl;
 import org.camunda.tngp.client.impl.cmd.TaskAckResponseHandler;
 import org.camunda.tngp.client.impl.cmd.taskqueue.CompleteTaskRequestWriter;
+import org.camunda.tngp.client.impl.data.DocumentConverter;
 import org.camunda.tngp.util.buffer.BufferWriter;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +29,10 @@ public class CompleteTaskInstanceCmdTest
     @Mock
     protected ClientCmdExecutor commandExecutor;
 
-    protected static final byte[] PAYLOAD = "bar".getBytes(StandardCharsets.UTF_8);
+    protected static final byte[] JSON_PAYLOAD = "{}".getBytes(StandardCharsets.UTF_8);
+    protected static final byte[] MSG_PACK_PAYLOAD = new byte[] { (byte) 0x80 }; // FIXMAP with 0 elements
+
+    protected DocumentConverter documentConverter = JacksonDocumentConverter.newDefaultConverter();
 
     @Before
     public void setUp()
@@ -36,27 +44,40 @@ public class CompleteTaskInstanceCmdTest
     public void shouldSetProperties()
     {
         // given
-        final CompleteTaskCmdImpl command = new CompleteTaskCmdImpl(commandExecutor);
+        final CompleteTaskCmdImpl command = new CompleteTaskCmdImpl(commandExecutor, documentConverter);
         command.setRequestWriter(requestWriter);
         final CompleteAsyncTaskCmd apiCommand = command;
 
         // when
         apiCommand.taskId(1234L);
         apiCommand.taskQueueId(1234);
-        apiCommand.payload(PAYLOAD);
 
         // then
         verify(requestWriter).taskId(1234L);
         verify(requestWriter).resourceId(1234);
-        verify(requestWriter).payload(PAYLOAD, 0, PAYLOAD.length);
 
+    }
+
+    @Test
+    public void shouldConvertPayload()
+    {
+        // given
+        final CompleteTaskCmdImpl command = new CompleteTaskCmdImpl(commandExecutor, documentConverter);
+        command.setRequestWriter(requestWriter);
+        final CompleteAsyncTaskCmd apiCommand = command;
+
+        // when
+        apiCommand.payload(JSON_PAYLOAD);
+
+        // then
+        verify(requestWriter).payload(argThat(hasBytes(MSG_PACK_PAYLOAD)), eq(0), eq(MSG_PACK_PAYLOAD.length));
     }
 
     @Test
     public void testRequestWriter()
     {
         // given
-        final CompleteTaskCmdImpl command = new CompleteTaskCmdImpl(commandExecutor);
+        final CompleteTaskCmdImpl command = new CompleteTaskCmdImpl(commandExecutor, documentConverter);
 
         // when
         final BufferWriter requestWriter = command.getRequestWriter();
@@ -69,7 +90,7 @@ public class CompleteTaskInstanceCmdTest
     public void testResponseHandlers()
     {
         // given
-        final CompleteTaskCmdImpl command = new CompleteTaskCmdImpl(commandExecutor);
+        final CompleteTaskCmdImpl command = new CompleteTaskCmdImpl(commandExecutor, documentConverter);
 
         // when
         final ClientResponseHandler<Long> responseHandler = command.getResponseHandler();

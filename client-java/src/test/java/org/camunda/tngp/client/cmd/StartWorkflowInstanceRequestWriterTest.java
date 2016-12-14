@@ -2,6 +2,8 @@ package org.camunda.tngp.client.cmd;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.client.impl.cmd.wf.start.StartWorkflowInstanceRequestWriter;
 import org.camunda.tngp.protocol.wf.MessageHeaderDecoder;
 import org.camunda.tngp.protocol.wf.MessageHeaderEncoder;
@@ -9,9 +11,6 @@ import org.camunda.tngp.protocol.wf.StartWorkflowInstanceDecoder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.UnsafeBuffer;
 
 public class StartWorkflowInstanceRequestWriterTest
 {

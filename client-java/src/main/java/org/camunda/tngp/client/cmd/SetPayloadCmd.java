@@ -8,6 +8,8 @@ import org.camunda.tngp.client.ClientCommand;
 public interface SetPayloadCmd<R, C extends ClientCommand<R>> extends ClientCommand<R>
 {
 
+    C payload(String payload);
+
     C payload(byte[] payload);
 
     C payload(byte[] payload, int offset, int length);

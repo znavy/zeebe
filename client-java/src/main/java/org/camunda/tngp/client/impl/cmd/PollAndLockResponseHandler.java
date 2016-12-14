@@ -5,6 +5,7 @@ import java.util.Iterator;
 
 import org.agrona.DirectBuffer;
 import org.camunda.tngp.client.cmd.LockedTasksBatch;
+import org.camunda.tngp.client.impl.data.DocumentConverter;
 import org.camunda.tngp.protocol.taskqueue.LockedTaskBatchDecoder;
 import org.camunda.tngp.protocol.taskqueue.LockedTaskBatchDecoder.TasksDecoder;
 import org.camunda.tngp.protocol.taskqueue.LockedTaskDecoder;
@@ -14,6 +15,13 @@ public class PollAndLockResponseHandler implements ClientResponseHandler<LockedT
 {
     protected final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     protected final LockedTaskBatchDecoder responseDecoder = new LockedTaskBatchDecoder();
+
+    protected DocumentConverter documentConverter;
+
+    public PollAndLockResponseHandler(DocumentConverter documentConverter)
+    {
+        this.documentConverter = documentConverter;
+    }
 
     @Override
     public int getResponseSchemaId()
@@ -45,7 +53,7 @@ public class PollAndLockResponseHandler implements ClientResponseHandler<LockedT
             final LockedTaskDecoder taskDecoder = tasksDecoder.task();
 
 
-            final LockedTaskImpl lockedTask = new LockedTaskImpl();
+            final LockedTaskImpl lockedTask = new LockedTaskImpl(documentConverter);
             lockedTask.setLockTime(Instant.ofEpochMilli(taskDecoder.lockTime()));
 
             lockedTask.setId(taskDecoder.id());

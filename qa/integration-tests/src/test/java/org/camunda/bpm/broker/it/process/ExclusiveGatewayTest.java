@@ -8,13 +8,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.agrona.DirectBuffer;
 import org.camunda.bpm.broker.it.ClientRule;
 import org.camunda.bpm.broker.it.EmbeddedBrokerRule;
 import org.camunda.bpm.broker.it.TestUtil;
 import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
-import org.camunda.tngp.broker.test.util.MsgPackUtil;
 import org.camunda.tngp.client.TngpClient;
 import org.camunda.tngp.client.WorkflowsClient;
 import org.camunda.tngp.client.cmd.WorkflowDefinition;
@@ -87,18 +85,11 @@ public class ExclusiveGatewayTest
         subscribeToTasks(TASK_TYPE1, taskHandler);
         subscribeToTasks(TASK_TYPE2, taskHandler);
 
-        final DirectBuffer payloadBuffer = MsgPackUtil.encodeMsgPack((p) ->
-        {
-            p.packMapHeader(1);
-            p.packString("key");
-            p.packInt(1);
-        });
-
         // when
         workflowService
             .start()
             .workflowDefinitionId(workflow.getId())
-            .payload(payloadBuffer, 0, payloadBuffer.capacity())
+            .payload("{\"key\": 1}")
             .execute();
 
         // then
@@ -127,20 +118,11 @@ public class ExclusiveGatewayTest
         subscribeToTasks(TASK_TYPE1, taskHandler);
         subscribeToTasks(TASK_TYPE2, taskHandler);
 
-        final DirectBuffer payloadBuffer = MsgPackUtil.encodeMsgPack((p) ->
-        {
-            p.packMapHeader(2);
-            p.packString("price");
-            p.packInt(2000);
-            p.packString("maximum");
-            p.packInt(10000);
-        });
-
         // when
         workflowService
             .start()
             .workflowDefinitionId(workflow.getId())
-            .payload(payloadBuffer, 0, payloadBuffer.capacity())
+            .payload("{\"price\": 2000, \"maximum\": 10000}")
             .execute();
 
         // then
