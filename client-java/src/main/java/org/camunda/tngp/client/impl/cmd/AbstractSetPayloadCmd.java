@@ -1,12 +1,12 @@
 package org.camunda.tngp.client.impl.cmd;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.io.DirectBufferInputStream;
-import org.agrona.io.DirectBufferOutputStream;
 import org.camunda.tngp.client.ClientCommand;
 import org.camunda.tngp.client.cmd.SetPayloadCmd;
 import org.camunda.tngp.client.impl.ClientCmdExecutor;
@@ -18,10 +18,6 @@ public abstract class AbstractSetPayloadCmd<R, C extends ClientCommand<R>>
     extends AbstractCmdImpl<R> implements SetPayloadCmd<R, C>
 {
     protected DocumentConverter documentConverter;
-
-    protected DirectBufferOutputStream outStream = new DirectBufferOutputStream();
-    protected UnsafeBuffer outBuffer = new UnsafeBuffer(0, 0);
-    protected byte[] outBytes = new byte[1024 * 1024]; // TODO: make configurable
 
     protected DirectBufferInputStream inStream = new DirectBufferInputStream();
     protected UnsafeBuffer inBuffer = new UnsafeBuffer(0, 0);
@@ -64,8 +60,7 @@ public abstract class AbstractSetPayloadCmd<R, C extends ClientCommand<R>>
         else
         {
             inStream.wrap(inBuffer);
-            outBuffer.wrap(outBytes);
-            outStream.wrap(outBuffer);
+            final ByteArrayOutputStream outStream = new ByteArrayOutputStream(1024);
 
             try
             {
@@ -75,8 +70,8 @@ public abstract class AbstractSetPayloadCmd<R, C extends ClientCommand<R>>
             {
                 throw new RuntimeException("Payload is not valid JSON", e);
             }
-            outBuffer.wrap(outBytes, 0, outStream.position());
-            getRequestWriter().payload(outBuffer, 0, outBuffer.capacity());
+            final byte[] output = outStream.toByteArray();
+            getRequestWriter().payload(output, 0, output.length);
         }
 
     }

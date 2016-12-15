@@ -1,11 +1,11 @@
 package org.camunda.tngp.client.task.impl;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.io.DirectBufferInputStream;
-import org.agrona.io.DirectBufferOutputStream;
 import org.camunda.tngp.client.impl.data.DocumentConverter;
 import org.camunda.tngp.client.task.Payload;
 
@@ -14,9 +14,7 @@ public class PayloadImpl implements Payload
 
     protected DocumentConverter documentConverter;
 
-    protected final byte[] jsonPayload = new byte[1024 * 1024]; // TODO: size
     protected final UnsafeBuffer jsonBuffer = new UnsafeBuffer(0, 0);
-    protected final DirectBufferOutputStream jsonOutputStream = new DirectBufferOutputStream();
 
     protected DirectBufferInputStream inputStream = new DirectBufferInputStream();
 
@@ -31,12 +29,11 @@ public class PayloadImpl implements Payload
         if (length > 0)
         {
             inputStream.wrap(msgPackBuffer, offset, length);
-            jsonBuffer.wrap(jsonPayload);
-            jsonOutputStream.wrap(jsonBuffer);
+            final ByteArrayOutputStream outStream = new ByteArrayOutputStream(1024);
 
             try
             {
-                documentConverter.convertToJson(inputStream, jsonOutputStream);
+                documentConverter.convertToJson(inputStream, outStream);
             }
             catch (Exception e)
             {
@@ -44,7 +41,8 @@ public class PayloadImpl implements Payload
                 return false;
             }
 
-            jsonBuffer.wrap(jsonPayload, 0, jsonOutputStream.position());
+            final byte[] json = outStream.toByteArray();
+            jsonBuffer.wrap(json, 0, json.length);
             return true;
         }
         else

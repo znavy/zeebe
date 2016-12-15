@@ -1,20 +1,18 @@
 package org.camunda.tngp.client.cmd;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.camunda.tngp.broker.test.util.BufferMatcher.hasBytes;
-import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
 
 import java.nio.charset.StandardCharsets;
 
 import org.camunda.tngp.client.impl.ClientCmdExecutor;
-import org.camunda.tngp.client.impl.data.JacksonDocumentConverter;
 import org.camunda.tngp.client.impl.cmd.ClientResponseHandler;
 import org.camunda.tngp.client.impl.cmd.CompleteTaskCmdImpl;
 import org.camunda.tngp.client.impl.cmd.TaskAckResponseHandler;
 import org.camunda.tngp.client.impl.cmd.taskqueue.CompleteTaskRequestWriter;
 import org.camunda.tngp.client.impl.data.DocumentConverter;
+import org.camunda.tngp.client.impl.data.JacksonDocumentConverter;
 import org.camunda.tngp.util.buffer.BufferWriter;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,7 +68,7 @@ public class CompleteTaskInstanceCmdTest
         apiCommand.payload(JSON_PAYLOAD);
 
         // then
-        verify(requestWriter).payload(argThat(hasBytes(MSG_PACK_PAYLOAD)), eq(0), eq(MSG_PACK_PAYLOAD.length));
+        verify(requestWriter).payload(eq(MSG_PACK_PAYLOAD), eq(0), eq(MSG_PACK_PAYLOAD.length));
     }
 
     @Test
