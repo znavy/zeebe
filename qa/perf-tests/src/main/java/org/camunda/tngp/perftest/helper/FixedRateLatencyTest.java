@@ -47,7 +47,10 @@ public abstract class FixedRateLatencyTest
         }
         finally
         {
-            client.close();
+            if (client != null)
+            {
+                client.close();
+            }
         }
 
     }
