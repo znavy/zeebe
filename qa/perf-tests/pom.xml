@@ -44,14 +44,6 @@
       <artifactId>HdrHistogram</artifactId>
       <version>2.1.9</version>
     </dependency>
-    
-        
-    <dependency>
-      <groupId>org.msgpack</groupId>
-      <artifactId>msgpack-core</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    
 
   </dependencies>
 
