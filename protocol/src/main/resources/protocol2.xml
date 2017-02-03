@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sbe:messageSchema xmlns:sbe="http://www.fixprotocol.org/ns/simple/RC3" package="org.camunda.tngp.protocol.clientapi2"
+  id="0" version="${protocol.version}1" semanticVersion="${project.version}" description="Tngp Protocol" byteOrder="littleEndian">
+  <types>
+    <composite name="messageHeader" description="Message identifiers and length of message root">
+      <type name="blockLength" primitiveType="uint16" />
+      <type name="templateId" primitiveType="uint16" />
+      <type name="schemaId" primitiveType="uint16" />
+      <type name="version" primitiveType="uint16" />
+    </composite>
+    <composite name="varDataEncoding">
+      <type name="length" primitiveType="uint16" />
+      <type name="varData" primitiveType="uint8" length="0" characterEncoding="UTF-8" />
+    </composite>
+    <composite name="groupSizeEncoding" description="Repeating group dimensions">
+      <type name="blockLength" primitiveType="uint16" />
+      <type name="numInGroup" primitiveType="uint8" semanticType="NumInGroup" />
+    </composite>
+
+    <enum name="errorCode" encodingType="uint8" semanticType="String" description="The error code of an error">
+      <validValue name="MESSAGE_NOT_SUPPORTED">0</validValue>
+      <validValue name="TOPIC_NOT_FOUND">1</validValue>
+      <validValue name="REQUEST_WRITE_FAILURE">2</validValue>
+      <validValue name="INVALID_CLIENT_VERSION">3</validValue>
+      <validValue name="NEW_ERROR_CODE">4</validValue>
+    </enum>
+
+  </types>
+
+  <!-- L1 General Messages 0 - 99 -->
+
+  <sbe:message name="ErrorResponse" id="0" description="Standard error response">
+    <field name="errorCode" id="1" type="errorCode" />
+    <data name="errorData" id="2" type="varDataEncoding" />
+    <data name="failedRequest" id="3" type="varDataEncoding" />
+  </sbe:message>
+
+  <sbe:message name="ControlMessageRequest" id="10">
+    <data name="data" id="1" type="varDataEncoding" />
+  </sbe:message>
+
+  <sbe:message name="ControlMessageResponse" id="11">
+    <data name="data" id="1" type="varDataEncoding" />
+  </sbe:message>
+
+  <sbe:message name="ExecuteCommandRequest" id="20">
+    <field name="topicId" id="1" type="uint32" />
+    <field name="longKey" id="2" type="uint64" />
+    <field name="newField" id="5" type="uint64" presence="optional" sinceVersion="${protocol.version}1" />
+    <group name="eventBehaviorMapping" id="7" dimensionType="groupSizeEncoding" presence="optional" sinceVersion="${protocol.version}1">
+      <field name="event" id="8" type="uint32" />
+      <field name="behavioralAspect" id="9" type="uint32" />
+    </group>
+    <data name="bytesKey" id="3" type="varDataEncoding" />
+    <data name="command" id="4" type="varDataEncoding" />
+    <data name="newDataField" id="6" type="varDataEncoding" sinceVersion="${protocol.version}1" /> 
+    <!-- SBE-Spec verbietet das:  presence="optional"  --> 
+  </sbe:message>
+
+  <sbe:message name="ExecuteCommandResponse" id="21">
+    <field name="topicId" id="1" type="uint32" />
+    <field name="longKey" id="2" type="uint64" />
+    <data name="bytesKey" id="3" type="varDataEncoding" />
+    <data name="event" id="4" type="varDataEncoding" />
+  </sbe:message>
+
+  <!-- L2 Control Messages 100 - 199 -->
+
+  <sbe:message name="CreateTaskSubscription" id="100">
+    <field name="consumerId" id="1" type="uint16" />
+    <field name="lockDuration" id="2" type="uint64" />
+    <field name="initialCredits" id="3" type="uint32" />
+    <data name="taskType" id="4" type="varDataEncoding" />
+  </sbe:message>
+
+  <sbe:message name="CloseTaskSubscription" id="101">
+    <field name="consumerId" id="1" type="uint16" />
+    <field name="subscriptionId" id="2" type="uint64" />
+  </sbe:message>
+
+  <sbe:message name="TaskSubscriptionAck" id="102">
+    <field name="id" id="1" type="uint64" />
+  </sbe:message>
+
+  <sbe:message name="ProvideSubscriptionCredits" id="103">
+    <field name="consumerId" id="1" type="uint16" />
+    <field name="subscriptionId" id="2" type="uint64" />
+    <field name="credits" id="2" type="uint32" />
+  </sbe:message>
+
+  <!-- L2 Common Messages 200 - 399 -->
+
+  <sbe:message name="BrokerEventMetadata" id="200" description="Descriptor for Event Metadata">
+    <field name="reqChannelId" id="1" type="uint32" />
+    <field name="reqConnectionId" id="2" type="uint64" />
+    <field name="reqRequestId" id="3" type="uint64" />
+    <field name="raftTermId" id="4" type="uint32" />
+    <field name="subscriptionId" id="5" type="uint64" />
+    <field name="protocolVersion" id="6" type="uint16" />
+  </sbe:message>
+
+</sbe:messageSchema>
