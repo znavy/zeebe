@@ -1,8 +1,5 @@
 package org.camunda.tngp.broker.logstreams;
 
-import static org.camunda.tngp.logstreams.log.LogStream.DEFAULT_PARTITION_ID;
-import static org.camunda.tngp.logstreams.log.LogStream.DEFAULT_TOPIC_NAME_BUFFER;
-
 import org.camunda.tngp.broker.logstreams.cfg.LogStreamsCfg;
 import org.camunda.tngp.broker.system.ConfigurationManager;
 import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
@@ -11,17 +8,16 @@ import org.camunda.tngp.servicecontainer.Service;
 import org.camunda.tngp.servicecontainer.ServiceStartContext;
 import org.camunda.tngp.servicecontainer.ServiceStopContext;
 
-public class LogStreamsManagerService implements Service<LogStreamsManager>
+public class LogStreamsFactoryService implements Service<LogStreamsFactory>
 {
-
     protected final Injector<AgentRunnerServices> agentRunnerInjector = new Injector<>();
 
     protected ServiceStartContext serviceContext;
     protected LogStreamsCfg logStreamsCfg;
 
-    protected LogStreamsManager service;
+    protected LogStreamsFactory service;
 
-    public LogStreamsManagerService(ConfigurationManager configurationManager)
+    public LogStreamsFactoryService(ConfigurationManager configurationManager)
     {
         logStreamsCfg = configurationManager.readEntry("logs", LogStreamsCfg.class);
     }
@@ -33,9 +29,7 @@ public class LogStreamsManagerService implements Service<LogStreamsManager>
 
         serviceContext.run(() ->
         {
-            service = new LogStreamsManager(logStreamsCfg, agentRunnerInjector.getValue());
-
-            service.createLogStream(DEFAULT_TOPIC_NAME_BUFFER, DEFAULT_PARTITION_ID);
+            service = new LogStreamsFactory(logStreamsCfg, agentRunnerInjector.getValue());
         });
     }
 
@@ -46,7 +40,7 @@ public class LogStreamsManagerService implements Service<LogStreamsManager>
     }
 
     @Override
-    public LogStreamsManager get()
+    public LogStreamsFactory get()
     {
         return service;
     }

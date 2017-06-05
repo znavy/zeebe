@@ -11,7 +11,7 @@ import static org.camunda.tngp.broker.clustering.ClusterServiceNames.RAFT_SERVIC
 import static org.camunda.tngp.broker.clustering.ClusterServiceNames.clientChannelManagerName;
 import static org.camunda.tngp.broker.clustering.ClusterServiceNames.subscriptionServiceName;
 import static org.camunda.tngp.broker.clustering.ClusterServiceNames.transportConnectionPoolName;
-import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.LOG_STREAMS_MANAGER_SERVICE;
+import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.LOG_STREAMS_FACTORY_SERVICE;
 import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
 import static org.camunda.tngp.broker.transport.TransportServiceNames.MANAGEMENT_SOCKET_BINDING_NAME;
 import static org.camunda.tngp.broker.transport.TransportServiceNames.TRANSPORT;
@@ -162,7 +162,7 @@ public class ClusterComponent implements Component
             .dependency(PEER_LIST_SERVICE, clusterManagementContextService.getPeerListInjector())
             .dependency(PEER_LOCAL_SERVICE, clusterManagementContextService.getLocalPeerInjector())
             .dependency(AGENT_RUNNER_SERVICE, clusterManagementContextService.getAgentRunnerInjector())
-            .dependency(LOG_STREAMS_MANAGER_SERVICE, clusterManagementContextService.getLogStreamsManagerInjector())
+            .dependency(LOG_STREAMS_FACTORY_SERVICE, clusterManagementContextService.getLogStreamsManagerInjector())
             .dependency(clientChannelManagerServiceName, clusterManagementContextService.getClientChannelManagerInjector())
             .dependency(transportConnectionPoolServiceName, clusterManagementContextService.getTransportConnectionPoolInjector())
             .dependency(subscriptionServiceName, clusterManagementContextService.getSubscriptionInjector())

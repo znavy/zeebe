@@ -1,20 +1,12 @@
 package org.camunda.tngp.broker.clustering.management;
 
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.PEER_LOCAL_SERVICE;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.RAFT_SERVICE_GROUP;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.clientChannelManagerName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.raftContextServiceName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.raftServiceName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.subscriptionServiceName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.transportConnectionPoolName;
-import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
-import static org.camunda.tngp.broker.transport.TransportServiceNames.REPLICATION_SOCKET_BINDING_NAME;
-import static org.camunda.tngp.broker.transport.TransportServiceNames.TRANSPORT;
-import static org.camunda.tngp.broker.transport.TransportServiceNames.TRANSPORT_SEND_BUFFER;
-import static org.camunda.tngp.broker.transport.TransportServiceNames.serverSocketBindingReceiveBufferName;
+import static org.camunda.tngp.broker.clustering.ClusterServiceNames.*;
+import static org.camunda.tngp.broker.system.SystemServiceNames.*;
+import static org.camunda.tngp.broker.transport.TransportServiceNames.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,12 +17,15 @@ import java.util.function.Consumer;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.broker.clustering.channel.ClientChannelManagerService;
 import org.camunda.tngp.broker.clustering.gossip.data.Peer;
 import org.camunda.tngp.broker.clustering.management.config.ClusterManagementConfig;
 import org.camunda.tngp.broker.clustering.management.handler.ClusterManagerFragmentHandler;
 import org.camunda.tngp.broker.clustering.management.message.InvitationRequest;
 import org.camunda.tngp.broker.clustering.management.message.InvitationResponse;
+import org.camunda.tngp.broker.clustering.management.topics.SystemTopics;
+import org.camunda.tngp.broker.clustering.management.topics.TopicDefinition;
 import org.camunda.tngp.broker.clustering.raft.Member;
 import org.camunda.tngp.broker.clustering.raft.MetaStore;
 import org.camunda.tngp.broker.clustering.raft.Raft;
@@ -41,7 +36,7 @@ import org.camunda.tngp.broker.clustering.service.SubscriptionService;
 import org.camunda.tngp.broker.clustering.service.TransportConnectionPoolService;
 import org.camunda.tngp.broker.clustering.util.MessageWriter;
 import org.camunda.tngp.broker.clustering.util.RequestResponseController;
-import org.camunda.tngp.broker.logstreams.LogStreamsManager;
+import org.camunda.tngp.broker.logstreams.LogStreamsFactory;
 import org.camunda.tngp.dispatcher.FragmentHandler;
 import org.camunda.tngp.dispatcher.Subscription;
 import org.camunda.tngp.logstreams.impl.log.fs.FsLogStorage;
@@ -93,6 +88,22 @@ public class ClusterManager implements Agent
 
     public void open()
     {
+        initMetaDirectory();
+
+        final File[] metaFiles = getMetaFiles();
+
+        if (metaFiles != null && metaFiles.length > 0)
+        {
+            resumeRafts(metaFiles);
+        }
+        else if (context.getPeers().sizeVolatile() == 1)
+        {
+            bootstrapSystemTopics();
+        }
+    }
+
+    private void initMetaDirectory()
+    {
         String metaDirectory = config.directory;
 
         if (metaDirectory == null || metaDirectory.isEmpty())
@@ -109,10 +120,11 @@ public class ClusterManager implements Agent
         }
 
         config.directory = metaDirectory;
+    }
 
-        final LogStreamsManager logStreamManager = context.getLogStreamsManager();
-
-        final File dir = new File(metaDirectory);
+    private File[] getMetaFiles()
+    {
+        final File dir = new File(config.directory);
 
         if (!dir.exists())
         {
@@ -127,32 +139,43 @@ public class ClusterManager implements Agent
             }
         }
 
-        final File[] metaFiles = dir.listFiles();
+        return dir.listFiles();
+    }
 
-        if (metaFiles != null && metaFiles.length > 0)
+    protected void resumeRafts(File[] metaFiles)
+    {
+        final LogStreamsFactory logStreamsFactory = context.getLogStreamsFactory();
+
+        for (int i = 0; i < metaFiles.length; i++)
         {
-            for (int i = 0; i < metaFiles.length; i++)
-            {
-                final File file = metaFiles[i];
-                final MetaStore meta = new MetaStore(file.getAbsolutePath());
+            final File file = metaFiles[i];
+            final MetaStore meta = new MetaStore(file.getAbsolutePath());
 
-                final int partitionId = meta.loadPartitionId();
-                final DirectBuffer topicName = meta.loadTopicName();
+            final int partitionId = meta.loadPartitionId();
+            final DirectBuffer topicName = meta.loadTopicName();
+            final String directory = meta.loadLogDirectory();
 
-                LogStream logStream = logStreamManager.getLogStream(topicName, partitionId);
+            final LogStream logStream = logStreamsFactory.openLogStream(topicName, partitionId, directory);
 
-                if (logStream == null)
-                {
-                    final String directory = meta.loadLogDirectory();
-                    logStream = logStreamManager.createLogStream(topicName, partitionId, directory);
-                }
-
-                createRaft(logStream, meta, Collections.emptyList(), false);
-            }
+            createRaft(logStream, meta, Collections.emptyList(), false);
         }
-        else if (context.getPeers().sizeVolatile() == 1)
+    }
+
+    protected void bootstrapSystemTopics()
+    {
+        createTopic(SystemTopics.DEFAULT_TOPIC);
+        createTopic(SystemTopics.ZB_TOPICS_MANAGEMENT);
+    }
+
+    private void createTopic(TopicDefinition topicDef)
+    {
+        final LogStreamsFactory logStreamsFactory = context.getLogStreamsFactory();
+        final DirectBuffer name = new UnsafeBuffer(topicDef.getName().getBytes(StandardCharsets.UTF_8));
+
+        for (int i = 0; i < topicDef.getPartitionCount(); i++)
         {
-            logStreamManager.forEachLogStream(logStream -> createRaft(logStream, Collections.emptyList(), true));
+            final LogStream logStream = logStreamsFactory.createLogStream(name, i);
+            createRaft(logStream, Collections.emptyList(), true);
         }
     }
 
@@ -324,8 +347,8 @@ public class ClusterManager implements Agent
         final DirectBuffer topicName = invitationRequest.topicName();
         final int partitionId = invitationRequest.partitionId();
 
-        final LogStreamsManager logStreamManager = context.getLogStreamsManager();
-        final LogStream logStream = logStreamManager.createLogStream(topicName, partitionId);
+        final LogStreamsFactory logStreamFactory = context.getLogStreamsFactory();
+        final LogStream logStream = logStreamFactory.createLogStream(topicName, partitionId);
 
         createRaft(logStream, new ArrayList<>(invitationRequest.members()), false);
 

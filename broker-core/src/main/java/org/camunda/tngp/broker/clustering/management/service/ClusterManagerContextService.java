@@ -3,7 +3,7 @@ package org.camunda.tngp.broker.clustering.management.service;
 import org.camunda.tngp.broker.clustering.gossip.data.Peer;
 import org.camunda.tngp.broker.clustering.gossip.data.PeerList;
 import org.camunda.tngp.broker.clustering.management.ClusterManagerContext;
-import org.camunda.tngp.broker.logstreams.LogStreamsManager;
+import org.camunda.tngp.broker.logstreams.LogStreamsFactory;
 import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.dispatcher.Dispatcher;
 import org.camunda.tngp.dispatcher.Subscription;
@@ -23,7 +23,7 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
     private final Injector<PeerList> peerListInjector = new Injector<>();
     private final Injector<Peer> localPeerInjector = new Injector<>();
     private final Injector<AgentRunnerServices> agentRunnerInjector = new Injector<>();
-    private final Injector<LogStreamsManager> logStreamsManagerInjector = new Injector<>();
+    private final Injector<LogStreamsFactory> logStreamsManagerInjector = new Injector<>();
 
     private ClusterManagerContext context;
 
@@ -37,7 +37,7 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
         final PeerList peers = peerListInjector.getValue();
         final Peer localPeer = localPeerInjector.getValue();
         final AgentRunnerServices agentRunner = agentRunnerInjector.getValue();
-        final LogStreamsManager logStreamsManager = logStreamsManagerInjector.getValue();
+        final LogStreamsFactory logStreamsManager = logStreamsManagerInjector.getValue();
 
         context = new ClusterManagerContext();
         context.setAgentRunner(agentRunner);
@@ -47,7 +47,7 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
         context.setSubscription(subscription);
         context.setSendBuffer(sendBuffer);
         context.setPeers(peers);
-        context.setLogStreamsManager(logStreamsManager);
+        context.setLogStreamsFactory(logStreamsManager);
     }
 
     @Override
@@ -96,7 +96,7 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
         return agentRunnerInjector;
     }
 
-    public Injector<LogStreamsManager> getLogStreamsManagerInjector()
+    public Injector<LogStreamsFactory> getLogStreamsManagerInjector()
     {
         return logStreamsManagerInjector;
     }

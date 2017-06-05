@@ -2,7 +2,7 @@ package org.camunda.tngp.broker.clustering.management;
 
 import org.camunda.tngp.broker.clustering.gossip.data.Peer;
 import org.camunda.tngp.broker.clustering.gossip.data.PeerList;
-import org.camunda.tngp.broker.logstreams.LogStreamsManager;
+import org.camunda.tngp.broker.logstreams.LogStreamsFactory;
 import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.dispatcher.Dispatcher;
 import org.camunda.tngp.dispatcher.Subscription;
@@ -18,7 +18,7 @@ public class ClusterManagerContext
     private TransportConnectionPool connections;
     private Dispatcher sendBuffer;
     private PeerList peers;
-    private LogStreamsManager logStreamsManager;
+    private LogStreamsFactory logStreamsFactory;
 
     public AgentRunnerServices getAgentRunner()
     {
@@ -90,13 +90,13 @@ public class ClusterManagerContext
         this.peers = peers;
     }
 
-    public LogStreamsManager getLogStreamsManager()
+    public LogStreamsFactory getLogStreamsFactory()
     {
-        return logStreamsManager;
+        return logStreamsFactory;
     }
 
-    public void setLogStreamsManager(LogStreamsManager logStreamsManager)
+    public void setLogStreamsFactory(LogStreamsFactory logStreamsFactory)
     {
-        this.logStreamsManager = logStreamsManager;
+        this.logStreamsFactory = logStreamsFactory;
     }
 }

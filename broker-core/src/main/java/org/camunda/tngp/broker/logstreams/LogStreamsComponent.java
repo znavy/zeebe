@@ -1,6 +1,6 @@
 package org.camunda.tngp.broker.logstreams;
 
-import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.LOG_STREAMS_MANAGER_SERVICE;
+import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.LOG_STREAMS_FACTORY_SERVICE;
 import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.SNAPSHOT_STORAGE_SERVICE;
 import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
 
@@ -16,9 +16,9 @@ public class LogStreamsComponent implements Component
     @Override
     public void init(SystemContext context)
     {
-        final LogStreamsManagerService streamsManager = new LogStreamsManagerService(context.getConfigurationManager());
-        context.getServiceContainer().createService(LOG_STREAMS_MANAGER_SERVICE, streamsManager)
-            .dependency(AGENT_RUNNER_SERVICE, streamsManager.getAgentRunnerInjector())
+        final LogStreamsFactoryService streamsFactory = new LogStreamsFactoryService(context.getConfigurationManager());
+        context.getServiceContainer().createService(LOG_STREAMS_FACTORY_SERVICE, streamsFactory)
+            .dependency(AGENT_RUNNER_SERVICE, streamsFactory.getAgentRunnerInjector())
             .install();
 
         final SnapshotStorageService snapshotStorageService = new SnapshotStorageService(context.getConfigurationManager());
