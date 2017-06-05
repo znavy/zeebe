@@ -31,4 +31,6 @@ public class StreamProcessorIds
     public static final int WORKFLOW_INSTANCE_PROCESSOR_ID = 70;
 
     public static final int INCIDENT_PROCESSOR_ID = 80;
+
+    public static final int TOPIC_MANAGEMENT_PROCESSOR_ID = 90;
 }

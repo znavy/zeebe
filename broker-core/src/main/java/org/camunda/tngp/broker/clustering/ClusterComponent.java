@@ -1,17 +1,8 @@
 package org.camunda.tngp.broker.clustering;
 
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.CLUSTER_MANAGER_CONTEXT_SERVICE;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.CLUSTER_MANAGER_SERVICE;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.GOSSIP_CONTEXT_SERVICE;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.GOSSIP_PEER_SELECTOR_SERVICE;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.GOSSIP_SERVICE;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.PEER_LIST_SERVICE;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.PEER_LOCAL_SERVICE;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.RAFT_SERVICE_GROUP;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.clientChannelManagerName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.subscriptionServiceName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.transportConnectionPoolName;
+import static org.camunda.tngp.broker.clustering.ClusterServiceNames.*;
 import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.LOG_STREAMS_FACTORY_SERVICE;
+import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.LOG_STREAM_SERVICE_GROUP;
 import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
 import static org.camunda.tngp.broker.transport.TransportServiceNames.MANAGEMENT_SOCKET_BINDING_NAME;
 import static org.camunda.tngp.broker.transport.TransportServiceNames.TRANSPORT;
@@ -27,6 +18,7 @@ import org.camunda.tngp.broker.clustering.gossip.service.PeerListService;
 import org.camunda.tngp.broker.clustering.gossip.service.PeerSelectorService;
 import org.camunda.tngp.broker.clustering.management.service.ClusterManagerContextService;
 import org.camunda.tngp.broker.clustering.management.service.ClusterManagerService;
+import org.camunda.tngp.broker.clustering.management.topics.TopicsManagementStreamDecorator;
 import org.camunda.tngp.broker.clustering.service.SubscriptionService;
 import org.camunda.tngp.broker.clustering.service.TransportConnectionPoolService;
 import org.camunda.tngp.broker.system.Component;
@@ -173,6 +165,14 @@ public class ClusterComponent implements Component
             .dependency(CLUSTER_MANAGER_CONTEXT_SERVICE, clusterManagerService.getClusterManagementContextInjector())
             .dependency(AGENT_RUNNER_SERVICE, clusterManagerService.getAgentRunnerInjector())
             .groupReference(RAFT_SERVICE_GROUP, clusterManagerService.getRaftGroupReference())
+            .install();
+
+        final TopicsManagementStreamDecorator topicsManagementStreamDecorator = new TopicsManagementStreamDecorator(systemContext.getConfigurationManager());
+
+        serviceContainer.createService(TOPICS_MANAGEMENT_STREAM_DECORATOR, topicsManagementStreamDecorator)
+            .groupReference(LOG_STREAM_SERVICE_GROUP, topicsManagementStreamDecorator.getLogStreamsRef())
+            .dependency(TRANSPORT_SEND_BUFFER, topicsManagementStreamDecorator.getSendBufferInjector())
+            .dependency(CLUSTER_MANAGER_SERVICE, topicsManagementStreamDecorator.getClusterManagerInjector())
             .install();
     }
 

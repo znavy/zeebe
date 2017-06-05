@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
@@ -361,6 +362,37 @@ public class ClusterManager implements Agent
             .tryWriteMessage();
 
         return FragmentHandler.CONSUME_FRAGMENT_RESULT;
+    }
+
+    /**
+     * Creates a new partition for the given topic
+     *
+     */
+    public CompletableFuture<Void> createTopicPartition(DirectBuffer topicName, int partitionId)
+    {
+        final CompletableFuture<Void> createFuture = new CompletableFuture<>();
+
+        managementCmdQueue.add(() ->
+        {
+            // TODO: currently all partitions are created locally.Should better assign assign some random or round-robin peer
+            // to create the first partition.
+
+            try
+            {
+                final LogStreamsFactory logStreamsFactory = context.getLogStreamsFactory();
+                final LogStream logStream = logStreamsFactory.createLogStream(topicName, partitionId);
+
+                createRaft(logStream, Collections.emptyList(), true);
+
+                createFuture.complete(null);
+            }
+            catch (Exception e)
+            {
+                createFuture.completeExceptionally(e);
+            }
+        });
+
+        return createFuture;
     }
 
 }

@@ -7,9 +7,11 @@ import org.camunda.tngp.broker.clustering.gossip.data.PeerList;
 import org.camunda.tngp.broker.clustering.gossip.data.PeerSelector;
 import org.camunda.tngp.broker.clustering.management.ClusterManager;
 import org.camunda.tngp.broker.clustering.management.ClusterManagerContext;
+import org.camunda.tngp.broker.clustering.management.topics.TopicsManagementStreamDecorator;
 import org.camunda.tngp.broker.clustering.raft.Raft;
 import org.camunda.tngp.broker.clustering.raft.RaftContext;
 import org.camunda.tngp.dispatcher.Subscription;
+import org.camunda.tngp.logstreams.processor.StreamProcessorController;
 import org.camunda.tngp.servicecontainer.ServiceName;
 import org.camunda.tngp.transport.ChannelManager;
 import org.camunda.tngp.transport.requestresponse.client.TransportConnectionPool;
@@ -27,6 +29,8 @@ public class ClusterServiceNames
 
     public static final ServiceName<ClusterManager> CLUSTER_MANAGER_SERVICE = ServiceName.newServiceName("cluster.manager", ClusterManager.class);
     public static final ServiceName<ClusterManagerContext> CLUSTER_MANAGER_CONTEXT_SERVICE = ServiceName.newServiceName("cluster.manager.context", ClusterManagerContext.class);
+
+    public static final ServiceName<TopicsManagementStreamDecorator> TOPICS_MANAGEMENT_STREAM_DECORATOR = ServiceName.newServiceName("cluster.topics.managementstreamdecorator", TopicsManagementStreamDecorator.class);
 
     public static ServiceName<RaftContext> raftContextServiceName(final String name)
     {
@@ -53,4 +57,9 @@ public class ClusterServiceNames
         return ServiceName.newServiceName(String.format("cluster.%s.connection.pool", name), TransportConnectionPool.class);
     }
 
+    public static ServiceName<StreamProcessorController> topicsManagementStreamProcessorName(final String  name)
+    {
+        return ServiceName.newServiceName(String.format("cluster.%s.streamprocessor", name), StreamProcessorController.class);
+    }
 }
+
