@@ -58,7 +58,7 @@ public class Member
 
         this.raft = context.getRaft();
 
-        this.logStreamReader = new BufferedLogStreamReader(raft.stream(), true);
+        this.logStreamReader = new BufferedLogStreamReader(raft.logStream(), true);
         this.metadata = new BrokerEventMetadata();
 
         this.replicationController = new ReplicationController(context, this);
@@ -105,7 +105,7 @@ public class Member
             }
 
             final Raft raft = this.raft;
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
             final LogBlockIndex blockIndex = stream.getLogBlockIndex();
 
             long blockPosition = blockIndex.lookupBlockPosition(position);

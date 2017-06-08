@@ -226,7 +226,7 @@ public class Raft implements Agent
         return closeFuture;
     }
 
-    public LogStream stream()
+    public LogStream logStream()
     {
         return stream;
     }
@@ -406,7 +406,7 @@ public class Raft implements Agent
 
             if (configuredMembers.isEmpty())
             {
-                throw new IllegalStateException("cannot join empty cluster");
+                throw new IllegalStateException(String.format("Stream '%s' cannot join empty cluster", stream.getLogName()));
             }
 
             configure(new Configuration(0L, 0, configuredMembers));

@@ -68,7 +68,7 @@ public class RaftService implements Service<Raft>
         {
             final AgentRunnerServices agentRunnerService = agentRunnerInjector.getValue();
             agentRunnerService.raftAgentRunnerService().remove(raft);
-            raft.stream().closeAsync().whenComplete((v2, t) ->
+            raft.logStream().closeAsync().whenComplete((v2, t) ->
             {
                 closeFuture.complete(null);
             });

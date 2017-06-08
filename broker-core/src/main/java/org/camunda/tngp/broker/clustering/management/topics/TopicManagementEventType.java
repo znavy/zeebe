@@ -4,7 +4,13 @@ public enum TopicManagementEventType
 {
     CREATE,
     CREATING,
+    CREATED,
     FAILING,
+    FAILED,
     CREATE_REJECTED,
-    CREATED;
+
+    DELETE,
+    DELETING,
+    DELETED,
+    DELETE_REJECTED;
 }

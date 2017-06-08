@@ -199,7 +199,7 @@ public class AppendController
             final BufferWriter entry = context.entry;
             final LogStreamListener listener = context.listener;
 
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
             final LogStreamController logStreamController = stream.getLogStreamController();
 
             int workcount = 0;
@@ -231,7 +231,7 @@ public class AppendController
         public void onFailure(AppendContext context, Exception e)
         {
             final Raft raft = context.raft;
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
             final LogStreamController logStreamController = stream.getLogStreamController();
             final LogStreamListener listener = context.listener;
 
@@ -251,7 +251,7 @@ public class AppendController
         public int doWork(AppendContext context) throws Exception
         {
             final Raft raft = context.raft;
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
 
             final long entryPosition = context.entryPosition;
             final boolean waitForCommit = context.waitForCommit;
@@ -303,7 +303,7 @@ public class AppendController
         public void work(AppendContext context) throws Exception
         {
             final Raft raft = context.raft;
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
             final LogStreamController logStreamController = stream.getLogStreamController();
             final LogStreamListener listener = context.listener;
 

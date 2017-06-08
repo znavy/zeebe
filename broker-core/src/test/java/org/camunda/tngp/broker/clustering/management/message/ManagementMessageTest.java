@@ -18,7 +18,7 @@ public class ManagementMessageTest
     @Test
     public void testInvitationRequest()
     {
-        final InvitationRequest invitationRequest = new InvitationRequest()
+        final PartitionManagementRequest invitationRequest = new PartitionManagementRequest()
             .topicName(TOPIC_NAME)
             .partitionId(111)
             .term(222)
@@ -38,7 +38,7 @@ public class ManagementMessageTest
     @Test
     public void testInvitationResponse()
     {
-        final InvitationResponse invitationResponse = new InvitationResponse()
+        final PartitionResponse invitationResponse = new PartitionResponse()
             .term(111);
 
         assertEqualFieldsAfterWriteAndRead(invitationResponse,

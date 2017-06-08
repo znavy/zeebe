@@ -261,7 +261,7 @@ public class LeaderState extends ActiveState
     @Override
     public AppendResponse append(AppendRequest appendRequest)
     {
-        final LogStream logStream = raft.stream();
+        final LogStream logStream = raft.logStream();
         final int currentTerm = raft.term();
 
         final Member leader = appendRequest.leader();
@@ -621,7 +621,7 @@ public class LeaderState extends ActiveState
             final AgentRunnerServices agentRunner = raftContext.getAgentRunner();
             final AgentRunnerService conductorAgentRunner = agentRunner.conductorAgentRunnerService();
 
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
 
             int workcount = 0;
 
@@ -750,7 +750,7 @@ public class LeaderState extends ActiveState
             final Raft raft = raftContext.getRaft();
             final ServiceContainer serviceContainer = raftContext.getServiceContainer();
 
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
 
             final ServiceName<LogStream> serviceName = logStreamServiceName(stream.getLogName());
             final LogStreamService service = new LogStreamService(stream);
@@ -770,7 +770,7 @@ public class LeaderState extends ActiveState
         {
             final RaftContext raftContext = context.raftContext;
             final Raft raft = raftContext.getRaft();
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
 
             final ServiceContainer serviceContainer = raftContext.getServiceContainer();
             final ServiceName<LogStream> serviceName = logStreamServiceName(stream.getLogName());
@@ -810,7 +810,7 @@ public class LeaderState extends ActiveState
         {
             final RaftContext raftContext = context.raftContext;
             final Raft raft = raftContext.getRaft();
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
             if (completableFuture == null)
             {
                 completableFuture = stream.closeLogStreamController();
@@ -879,7 +879,7 @@ public class LeaderState extends ActiveState
         {
             final RaftContext raftContext = context.raftContext;
             final Raft raft = raftContext.getRaft();
-            final LogStream stream = raft.stream();
+            final LogStream stream = raft.logStream();
 
             final List<Member> members = raft.members();
             final Member self = raft.member();

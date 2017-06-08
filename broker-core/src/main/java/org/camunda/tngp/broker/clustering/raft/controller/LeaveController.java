@@ -167,7 +167,7 @@ public class LeaveController
             final Raft raft = context.raft;
             final RequestResponseController requestController = context.requestController;
 
-            final LogStream logStream = raft.stream();
+            final LogStream logStream = raft.logStream();
 
             final List<Member> members = raft.members();
             final Member self = raft.member();

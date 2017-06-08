@@ -9,9 +9,11 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.camunda.tngp.client.ClientProperties;
+import org.camunda.tngp.client.ManagementClient;
 import org.camunda.tngp.client.TngpClient;
 import org.camunda.tngp.client.WorkflowTopicClient;
 import org.camunda.tngp.client.event.impl.TopicClientImpl;
+import org.camunda.tngp.client.management.impl.ManagementClientImpl;
 import org.camunda.tngp.client.task.impl.subscription.SubscriptionManager;
 import org.camunda.tngp.transport.SocketAddress;
 import org.camunda.tngp.transport.requestresponse.client.TransportConnection;
@@ -102,6 +104,12 @@ public class TngpClientImpl implements TngpClient
         ensureNotNullOrEmpty("topic name", topicName);
         ensureGreaterThanOrEqual("partition id", partitionId, 0);
         return new TopicClientImpl(this, topicName, partitionId);
+    }
+
+    @Override
+    public ManagementClient management()
+    {
+        return new ManagementClientImpl(cmdExecutor, objectMapper);
     }
 
     @Override

@@ -35,6 +35,9 @@ public class TopicsManagementStreamProcessor implements StreamProcessor
     private final CreateProcessor createProcessor = new CreateProcessor();
     private final CreatingProcessor creatingProcessor = new CreatingProcessor();
     private final CreatedProcessor createdProcessor = new CreatedProcessor();
+    private final DeleteProcessor deleteProcessor = new DeleteProcessor();
+    private final DeletingProcessor deletingProcessor = new DeletingProcessor();
+    private final DeletedProcessor deletedProcessor = new DeletedProcessor();
 
     private long key;
 
@@ -84,6 +87,18 @@ public class TopicsManagementStreamProcessor implements StreamProcessor
                 processor = createdProcessor;
                 break;
 
+            case DELETE:
+                processor = deleteProcessor;
+                break;
+
+            case DELETING:
+                processor = deletingProcessor;
+                break;
+
+            case DELETED:
+                processor = deletedProcessor;
+                break;
+
             default:
                 break;
         }
@@ -93,7 +108,7 @@ public class TopicsManagementStreamProcessor implements StreamProcessor
 
     public static MetadataFilter eventFilter()
     {
-        return (m) -> m.getEventType() == EventType.TASK_EVENT;
+        return (m) -> m.getEventType() == EventType.TOPIC_MANAGEMENT_EVENT;
     }
 
     private class CreateProcessor implements EventProcessor
@@ -110,7 +125,7 @@ public class TopicsManagementStreamProcessor implements StreamProcessor
             else
             {
                 evt.setEventType(TopicManagementEventType.CREATING);
-                evt.setPartitionCreateIdx(0);
+                evt.setPartitionIdx(0);
             }
         }
 
@@ -166,7 +181,7 @@ public class TopicsManagementStreamProcessor implements StreamProcessor
         public void processEvent()
         {
             topicFuture = null;
-            partitionCreateIdx = evt.getPartitionCreateIdx();
+            partitionCreateIdx = evt.getPartitionIdx();
         }
 
         @Override
@@ -188,13 +203,11 @@ public class TopicsManagementStreamProcessor implements StreamProcessor
                     {
                         topicFuture.get();
 
+                        evt.setPartitionIdx(partitionCreateIdx + 1);
+
                         if (partitionCreateIdx == evt.getPartitionCount() - 1)
                         {
                             evt.setEventType(TopicManagementEventType.CREATED);
-                        }
-                        else
-                        {
-                            evt.setPartitionCreateIdx(partitionCreateIdx + 1);
                         }
                     }
                     catch (Exception e)
@@ -228,7 +241,6 @@ public class TopicsManagementStreamProcessor implements StreamProcessor
 
     public class CreatedProcessor implements EventProcessor
     {
-
         @Override
         public void processEvent()
         {
@@ -246,7 +258,149 @@ public class TopicsManagementStreamProcessor implements StreamProcessor
                 .key(key)
                 .tryWriteResponse();
         }
+    }
+
+    public class DeleteProcessor implements EventProcessor
+    {
+
+        @Override
+        public void processEvent()
+        {
+            final boolean isRejected = !topicNames.getObject().contains(evt.getTopicNameString());
+
+            if (isRejected)
+            {
+                evt.setEventType(TopicManagementEventType.DELETE_REJECTED);
+            }
+            else
+            {
+                evt.setEventType(TopicManagementEventType.DELETING);
+                evt.setPartitionIdx(0);
+            }
+        }
+
+
+        @Override
+        public long writeEvent(LogStreamWriter writer)
+        {
+            targetEventMetadata.reset();
+            targetEventMetadata.eventType(EventType.TOPIC_MANAGEMENT_EVENT)
+                .protocolVersion(Constants.PROTOCOL_VERSION)
+                .raftTermId(targetStream.getTerm())
+                .reqChannelId(sourceEventMetadata.getReqChannelId())
+                .reqConnectionId(sourceEventMetadata.getReqConnectionId())
+                .reqRequestId(sourceEventMetadata.getReqRequestId());
+
+            return writer.key(key)
+                .metadataWriter(targetEventMetadata)
+                .valueWriter(evt)
+                .tryWrite();
+        }
+
+        @Override
+        public boolean executeSideEffects()
+        {
+            boolean result = true;
+
+            if (evt.getEventType() == TopicManagementEventType.DELETE_REJECTED)
+            {
+                result = responseWriter
+                    .topicName(targetStream.getTopicName())
+                    .partitionId(targetStream.getPartitionId())
+                    .brokerEventMetadata(sourceEventMetadata)
+                    .eventWriter(evt)
+                    .key(key)
+                    .tryWriteResponse();
+            }
+
+            return result;
+        }
+    }
+
+    public class DeletingProcessor implements EventProcessor
+    {
+        CompletableFuture<Void> topicFuture;
+        int partitionRemoveIdx;
+
+        @Override
+        public void processEvent()
+        {
+            topicFuture = null;
+            partitionRemoveIdx = evt.getPartitionIdx();
+        }
+
+        @Override
+        public boolean executeSideEffects()
+        {
+            boolean result = false;
+
+            if (topicFuture == null)
+            {
+                topicFuture = clusterManager.removeTopicPartition(evt.getTopicName(), partitionRemoveIdx);
+            }
+            else
+            {
+                if (topicFuture.isDone())
+                {
+                    result = true;
+
+                    try
+                    {
+                        topicFuture.get();
+                        evt.setPartitionIdx(partitionRemoveIdx + 1);
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                    }
+
+                    if (evt.getPartitionIdx() == evt.getPartitionCount())
+                    {
+                        evt.setEventType(TopicManagementEventType.DELETED);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        @Override
+        public long writeEvent(LogStreamWriter writer)
+        {
+            targetEventMetadata.reset();
+            targetEventMetadata.eventType(EventType.TOPIC_MANAGEMENT_EVENT)
+                .protocolVersion(Constants.PROTOCOL_VERSION)
+                .raftTermId(targetStream.getTerm())
+                .reqChannelId(sourceEventMetadata.getReqChannelId())
+                .reqConnectionId(sourceEventMetadata.getReqConnectionId())
+                .reqRequestId(sourceEventMetadata.getReqRequestId());
+
+            return writer.key(key)
+                .metadataWriter(targetEventMetadata)
+                .valueWriter(evt)
+                .tryWrite();
+        }
 
     }
 
+    public class DeletedProcessor implements EventProcessor
+    {
+        @Override
+        public void processEvent()
+        {
+            // ignore
+        }
+
+        @Override
+        public boolean executeSideEffects()
+        {
+            return responseWriter
+                .topicName(targetStream.getTopicName())
+                .partitionId(targetStream.getPartitionId())
+                .brokerEventMetadata(sourceEventMetadata)
+                .eventWriter(evt)
+                .key(key)
+                .tryWriteResponse();
+        }
+    }
 }

@@ -168,7 +168,6 @@ public class ClusterComponent implements Component
             .install();
 
         final TopicsManagementStreamDecorator topicsManagementStreamDecorator = new TopicsManagementStreamDecorator(systemContext.getConfigurationManager());
-
         serviceContainer.createService(TOPICS_MANAGEMENT_STREAM_DECORATOR, topicsManagementStreamDecorator)
             .groupReference(LOG_STREAM_SERVICE_GROUP, topicsManagementStreamDecorator.getLogStreamsRef())
             .dependency(TRANSPORT_SEND_BUFFER, topicsManagementStreamDecorator.getSendBufferInjector())

@@ -309,7 +309,7 @@ public class RaftMessageHandler implements FragmentHandler
 
     protected boolean canHandleMessage(final DirectBuffer topicName, final int partitionId)
     {
-        final LogStream logStream = raft.stream();
+        final LogStream logStream = raft.logStream();
 
         return logStream.getTopicName().equals(topicName) && logStream.getPartitionId() == partitionId;
     }

@@ -271,7 +271,7 @@ public abstract class ActiveState extends InactiveState
         appendResponse.reset();
 
         final int term = raft.term();
-        final LogStream logStream = raft.stream();
+        final LogStream logStream = raft.logStream();
 
         return appendResponse
                 .topicName(logStream.getTopicName())

@@ -1,11 +1,7 @@
 package org.camunda.tngp.broker.clustering.management.message;
 
-import static org.camunda.tngp.clustering.management.InvitationRequestEncoder.partitionIdNullValue;
-import static org.camunda.tngp.clustering.management.InvitationRequestEncoder.termNullValue;
-import static org.camunda.tngp.clustering.management.InvitationRequestEncoder.topicNameHeaderLength;
-import static org.camunda.tngp.clustering.management.InvitationRequestEncoder.MembersEncoder.hostHeaderLength;
-import static org.camunda.tngp.clustering.management.InvitationRequestEncoder.MembersEncoder.sbeBlockLength;
-import static org.camunda.tngp.clustering.management.InvitationRequestEncoder.MembersEncoder.sbeHeaderSize;
+import static org.camunda.tngp.clustering.management.PartitionManagementRequestEncoder.*;
+import static org.camunda.tngp.clustering.management.PartitionManagementRequestEncoder.MembersEncoder.*;
 
 import java.util.Iterator;
 import java.util.List;
@@ -15,35 +11,48 @@ import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.broker.clustering.raft.Member;
-import org.camunda.tngp.clustering.management.InvitationRequestDecoder;
-import org.camunda.tngp.clustering.management.InvitationRequestDecoder.MembersDecoder;
-import org.camunda.tngp.clustering.management.InvitationRequestEncoder;
-import org.camunda.tngp.clustering.management.InvitationRequestEncoder.MembersEncoder;
 import org.camunda.tngp.clustering.management.MessageHeaderDecoder;
 import org.camunda.tngp.clustering.management.MessageHeaderEncoder;
+import org.camunda.tngp.clustering.management.PartitionManagementOpCode;
+import org.camunda.tngp.clustering.management.PartitionManagementRequestDecoder;
+import org.camunda.tngp.clustering.management.PartitionManagementRequestDecoder.MembersDecoder;
+import org.camunda.tngp.clustering.management.PartitionManagementRequestEncoder;
+import org.camunda.tngp.clustering.management.PartitionManagementRequestEncoder.MembersEncoder;
 import org.camunda.tngp.transport.SocketAddress;
 import org.camunda.tngp.util.buffer.BufferReader;
 import org.camunda.tngp.util.buffer.BufferWriter;
 
-public class InvitationRequest implements BufferWriter, BufferReader
+public class PartitionManagementRequest implements BufferWriter, BufferReader
 {
     protected final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    protected final InvitationRequestDecoder bodyDecoder = new InvitationRequestDecoder();
+    protected final PartitionManagementRequestDecoder bodyDecoder = new PartitionManagementRequestDecoder();
 
     protected final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    protected final InvitationRequestEncoder bodyEncoder = new InvitationRequestEncoder();
+    protected final PartitionManagementRequestEncoder bodyEncoder = new PartitionManagementRequestEncoder();
 
     protected DirectBuffer topicName = new UnsafeBuffer(0, 0);
     protected int partitionId = partitionIdNullValue();
     protected int term = termNullValue();
     protected List<Member> members = new CopyOnWriteArrayList<>();
+    protected PartitionManagementOpCode opCode;
+
+    public PartitionManagementOpCode opCode()
+    {
+        return opCode;
+    }
+
+    public PartitionManagementRequest opCode(PartitionManagementOpCode opCode)
+    {
+        this.opCode = opCode;
+        return this;
+    }
 
     public int partitionId()
     {
         return partitionId;
     }
 
-    public InvitationRequest partitionId(final int partitionId)
+    public PartitionManagementRequest partitionId(final int partitionId)
     {
         this.partitionId = partitionId;
         return this;
@@ -54,7 +63,7 @@ public class InvitationRequest implements BufferWriter, BufferReader
         return topicName;
     }
 
-    public InvitationRequest topicName(final DirectBuffer topicName)
+    public PartitionManagementRequest topicName(final DirectBuffer topicName)
     {
         this.topicName.wrap(topicName);
         return this;
@@ -65,7 +74,7 @@ public class InvitationRequest implements BufferWriter, BufferReader
         return term;
     }
 
-    public InvitationRequest term(final int term)
+    public PartitionManagementRequest term(final int term)
     {
         this.term = term;
         return this;
@@ -76,7 +85,7 @@ public class InvitationRequest implements BufferWriter, BufferReader
         return members;
     }
 
-    public InvitationRequest members(final List<Member> members)
+    public PartitionManagementRequest members(final List<Member> members)
     {
         this.members.clear();
         this.members.addAll(members);
@@ -123,6 +132,7 @@ public class InvitationRequest implements BufferWriter, BufferReader
         final int size = members.size();
 
         final MembersEncoder encoder = bodyEncoder.wrap(buffer, offset)
+            .opCode(opCode)
             .partitionId(partitionId)
             .term(term)
             .membersCount(size);
@@ -150,6 +160,7 @@ public class InvitationRequest implements BufferWriter, BufferReader
 
         bodyDecoder.wrap(buffer, offset, headerDecoder.blockLength(), headerDecoder.version());
 
+        opCode = bodyDecoder.opCode();
         partitionId = bodyDecoder.partitionId();
         term = bodyDecoder.term();
 
@@ -185,6 +196,7 @@ public class InvitationRequest implements BufferWriter, BufferReader
     public void reset()
     {
         topicName.wrap(0, 0);
+        opCode = PartitionManagementOpCode.NULL_VAL;
         partitionId = partitionIdNullValue();
         term = termNullValue();
         members.clear();

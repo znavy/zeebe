@@ -3,7 +3,8 @@
 # Global configuration --------------------------------
 
 [global]
-globalUseTemp = true
+useTempDirectory = true
+
 
 # Networking configuration ----------------------------
 
@@ -37,13 +38,3 @@ idleStrategy = "BACKOFF"
 
 [logs]
 defaultLogSegmentSize = 512
-
-# Topic Subscriptions ------------------------------------------
-
-[subscriptions]
-useTempSnapshotFile = true
-
-# Workflow Configuration ------------------------------------------
-[workflow]
-cacheSize = 1024
-maxPayloadSize = 4096

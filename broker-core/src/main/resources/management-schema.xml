@@ -22,23 +22,31 @@
             <type name="blockLength" primitiveType="uint16" />
             <type name="numInGroup" primitiveType="uint8" semanticType="NumInGroup" />
         </composite>
+        
+        <enum name="partitionManagementOpCode" encodingType="uint8" semanticType="String" description="The operation code for a partition management operation">
+            <validValue name="BOOTSTRAP">0</validValue>
+            <validValue name="INVITE">1</validValue>
+            <validValue name="DESTROY">2</validValue>
+        </enum>
 
     </types>
 
-    <sbe:message name="InvitationRequest" id="0">
-        <field name="partitionId" id="0" type="uint16"/>
-        <field name="term" id="1" type="uint16"/>
-        <field name="name" id="2" type="uint16"/>
+    <sbe:message name="PartitionManagementRequest" id="0">
+    	<field name="opCode" id="0" type="partitionManagementOpCode" />
+        <field name="partitionId" id="1" type="uint16"/>
+        <field name="term" id="2" type="uint16"/>
+        <field name="name" id="3" type="uint16"/>
         <!-- TODO: provide more details to raft -->
-        <group name="members" id="3" dimensionType="groupSizeEncoding">
-            <field name="port" id="4" type="uint16"/>
-            <data name="host" id="5" type="varDataEncoding"/>
+        <group name="members" id="4" dimensionType="groupSizeEncoding">
+            <field name="port" id="5" type="uint16"/>
+            <data name="host" id="6" type="varDataEncoding"/>
         </group>
-        <data name="topicName" id="6" type="varDataEncoding" />
+        <data name="topicName" id="7" type="varDataEncoding" />
     </sbe:message>
 
-    <sbe:message name="InvitationResponse" id="1">
+    <sbe:message name="PartitionManagementResponse" id="3">
         <field name="term" id="1" type="uint16"/>
+        <data name="errorMessage" id="2" type="varDataEncoding" />
     </sbe:message>
 
 </sbe:messageSchema>

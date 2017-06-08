@@ -11,13 +11,14 @@ public class TopicManagementEvent extends UnpackedObject
     private final EnumProperty<TopicManagementEventType> eventTypeProp = new EnumProperty<>("eventType", TopicManagementEventType.class);
     private final StringProperty topicNameProp = new StringProperty("topicName");
     private final IntegerProperty partitionCountProp = new IntegerProperty("partitionCount", 1);
-    private final IntegerProperty partitionCreateIdx = new IntegerProperty("partitionCreateIdx", 0);
+    private final IntegerProperty partitionIdxProp = new IntegerProperty("partitionIdx", 0);
 
     public TopicManagementEvent()
     {
         this.declareProperty(eventTypeProp)
             .declareProperty(topicNameProp)
-            .declareProperty(partitionCountProp);
+            .declareProperty(partitionCountProp)
+            .declareProperty(partitionIdxProp);
     }
 
     public TopicManagementEventType getEventType()
@@ -46,13 +47,13 @@ public class TopicManagementEvent extends UnpackedObject
         return partitionCountProp.getValue();
     }
 
-    public int getPartitionCreateIdx()
+    public int getPartitionIdx()
     {
-        return partitionCreateIdx.getValue();
+        return partitionIdxProp.getValue();
     }
 
-    public void setPartitionCreateIdx(int idx)
+    public void setPartitionIdx(int idx)
     {
-        partitionCreateIdx.setValue(idx);
+        partitionIdxProp.setValue(idx);
     }
 }

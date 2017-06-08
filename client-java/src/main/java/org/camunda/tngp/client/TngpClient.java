@@ -42,10 +42,18 @@ public interface TngpClient extends AutoCloseable
     TopicClient topic(String topicName, int partitionId);
 
     /**
+     * Provides access to management operations such as those for creating and dropping topics.
+     *
+     * @return the management client
+     */
+    ManagementClient management();
+
+    /**
      * Open {@link TransportConnection} for request / response style communication.
      */
     TransportConnection openConnection();
 
+    @Override
     void close();
 
     static TngpClient create(Properties properties)

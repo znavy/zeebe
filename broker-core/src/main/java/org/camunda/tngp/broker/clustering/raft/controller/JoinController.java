@@ -179,7 +179,7 @@ public class JoinController
             final Raft raft = context.raft;
             final RequestResponseController requestController = context.requestController;
 
-            final LogStream logStream = raft.stream();
+            final LogStream logStream = raft.logStream();
 
             final List<Member> members = context.members;
             final Member self = raft.member();

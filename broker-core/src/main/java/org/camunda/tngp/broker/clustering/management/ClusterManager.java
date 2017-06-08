@@ -22,9 +22,9 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.broker.clustering.channel.ClientChannelManagerService;
 import org.camunda.tngp.broker.clustering.gossip.data.Peer;
 import org.camunda.tngp.broker.clustering.management.config.ClusterManagementConfig;
-import org.camunda.tngp.broker.clustering.management.handler.ClusterManagerFragmentHandler;
-import org.camunda.tngp.broker.clustering.management.message.InvitationRequest;
-import org.camunda.tngp.broker.clustering.management.message.InvitationResponse;
+import org.camunda.tngp.broker.clustering.management.message.PartitionManagementRequest;
+import org.camunda.tngp.broker.clustering.management.message.PartitionManagementResponse;
+import org.camunda.tngp.broker.clustering.management.request.ClusterManagerRequestProcessor;
 import org.camunda.tngp.broker.clustering.management.topics.SystemTopics;
 import org.camunda.tngp.broker.clustering.management.topics.TopicDefinition;
 import org.camunda.tngp.broker.clustering.raft.Member;
@@ -35,6 +35,7 @@ import org.camunda.tngp.broker.clustering.raft.service.RaftContextService;
 import org.camunda.tngp.broker.clustering.raft.service.RaftService;
 import org.camunda.tngp.broker.clustering.service.SubscriptionService;
 import org.camunda.tngp.broker.clustering.service.TransportConnectionPoolService;
+import org.camunda.tngp.broker.clustering.util.AsyncRequestController;
 import org.camunda.tngp.broker.clustering.util.MessageWriter;
 import org.camunda.tngp.broker.clustering.util.RequestResponseController;
 import org.camunda.tngp.broker.logstreams.LogStreamsFactory;
@@ -60,10 +61,10 @@ public class ClusterManager implements Agent
 
     private final List<RequestResponseController> activeRequestController;
 
-    private final ClusterManagerFragmentHandler fragmentHandler;
+    private final AsyncRequestController requestController;
 
-    private final InvitationRequest invitationRequest;
-    private final InvitationResponse invitationResponse;
+    private final PartitionManagementRequest partitionManagementRequest;
+    private final PartitionManagementResponse partitionManagementResponse;
 
     private ClusterManagementConfig config;
 
@@ -78,11 +79,14 @@ public class ClusterManager implements Agent
         this.managementCmdQueue = new ManyToOneConcurrentArrayQueue<>(100);
         this.commandConsumer = (r) -> r.run();
         this.activeRequestController = new CopyOnWriteArrayList<>();
-        this.invitationRequest = new InvitationRequest();
 
-        this.fragmentHandler = new ClusterManagerFragmentHandler(this, context.getSubscription());
-        this.invitationResponse = new InvitationResponse();
+        this.partitionManagementRequest = new PartitionManagementRequest();
+        this.partitionManagementResponse = new PartitionManagementResponse();
+
         this.messageWriter = new MessageWriter(context.getSendBuffer());
+        this.requestController = new AsyncRequestController(context.getSubscription(),
+                context.getSendBuffer(),
+                new ClusterManagerRequestProcessor(this));
 
         context.getPeers().registerListener((p) -> addPeer(p));
     }
@@ -192,7 +196,7 @@ public class ClusterManager implements Agent
         int workcount = 0;
 
         workcount += managementCmdQueue.drain(commandConsumer);
-        workcount += fragmentHandler.doWork();
+        workcount += requestController.getStateMachineAgent().doWork();
 
         int i = 0;
         while (i < activeRequestController.size())
@@ -230,10 +234,8 @@ public class ClusterManager implements Agent
                 final Raft raft = rafts.get(i);
                 if (raft.needMembers())
                 {
-                    // TODO: if this should be garbage free, we have to limit
-                    // the number of concurrent invitations.
-                    final LogStream logStream = raft.stream();
-                    final InvitationRequest invitationRequest = new InvitationRequest()
+                    final LogStream logStream = raft.logStream();
+                    final PartitionManagementRequest invitationRequest = new PartitionManagementRequest()
                         .topicName(logStream.getTopicName())
                         .partitionId(logStream.getPartitionId())
                         .term(raft.term())
@@ -261,7 +263,7 @@ public class ClusterManager implements Agent
 
     public void removeRaft(final Raft raft)
     {
-        final LogStream logStream = raft.stream();
+        final LogStream logStream = raft.logStream();
         final DirectBuffer topicName = logStream.getTopicName();
         final int partitionId = logStream.getPartitionId();
 
@@ -270,7 +272,7 @@ public class ClusterManager implements Agent
             for (int i = 0; i < rafts.size(); i++)
             {
                 final Raft r = rafts.get(i);
-                final LogStream stream = r.stream();
+                final LogStream stream = r.logStream();
                 if (topicName.equals(stream.getTopicName()) && partitionId == stream.getPartitionId())
                 {
                     context.getLocalPeer().removeRaft(raft);
@@ -331,8 +333,8 @@ public class ClusterManager implements Agent
             .dependency(AGENT_RUNNER_SERVICE, raftContextService.getAgentRunnerInjector())
             .install();
 
-        final RaftService raftService = new RaftService(logStream, meta, new CopyOnWriteArrayList<>(members), bootstrap);
         final ServiceName<Raft> raftServiceName = raftServiceName(logName);
+        final RaftService raftService = new RaftService(logStream, meta, new CopyOnWriteArrayList<>(members), bootstrap);
         serviceContainer.createService(raftServiceName, raftService)
             .group(RAFT_SERVICE_GROUP)
             .dependency(AGENT_RUNNER_SERVICE, raftService.getAgentRunnerInjector())
@@ -340,25 +342,49 @@ public class ClusterManager implements Agent
             .install();
     }
 
-    public int onInvitationRequest(final DirectBuffer buffer, final int offset, final int length, final int channelId, final long connectionId, final long requestId)
+    public int onPartitionManagementRequest(
+            final DirectBuffer buffer,
+            final int offset,
+            final int length,
+            final int channelId,
+            final long connectionId,
+            final long requestId)
     {
-        invitationRequest.reset();
-        invitationRequest.wrap(buffer, offset, length);
+        partitionManagementRequest.reset();
+        partitionManagementRequest.wrap(buffer, offset, length);
 
-        final DirectBuffer topicName = invitationRequest.topicName();
-        final int partitionId = invitationRequest.partitionId();
+        final DirectBuffer topicName = partitionManagementRequest.topicName();
+        final int partitionId = partitionManagementRequest.partitionId();
 
-        final LogStreamsFactory logStreamFactory = context.getLogStreamsFactory();
-        final LogStream logStream = logStreamFactory.createLogStream(topicName, partitionId);
+        switch (partitionManagementRequest.opCode())
+        {
+            case INVITE:
+            {
+                final LogStreamsFactory logStreamFactory = context.getLogStreamsFactory();
+                final LogStream logStream = logStreamFactory.createLogStream(topicName, partitionId);
 
-        createRaft(logStream, new ArrayList<>(invitationRequest.members()), false);
+                createRaft(logStream, new ArrayList<>(partitionManagementRequest.members()), false);
+                break;
+            }
+            case BOOTSTRAP:
+            {
+                final LogStreamsFactory logStreamFactory = context.getLogStreamsFactory();
+                final LogStream logStream = logStreamFactory.createLogStream(topicName, partitionId);
 
-        invitationResponse.reset();
+                createRaft(logStream, Collections.emptyList(), true);
+                break;
+            }
+
+            default:
+                break;
+        }
+
+        partitionManagementResponse.reset();
         messageWriter.protocol(Protocols.REQUEST_RESPONSE)
             .channelId(channelId)
             .connectionId(connectionId)
             .requestId(requestId)
-            .message(invitationResponse)
+            .message(partitionManagementResponse)
             .tryWriteMessage();
 
         return FragmentHandler.CONSUME_FRAGMENT_RESULT;
@@ -390,6 +416,18 @@ public class ClusterManager implements Agent
             {
                 createFuture.completeExceptionally(e);
             }
+        });
+
+        return createFuture;
+    }
+
+    public CompletableFuture<Void> removeTopicPartition(DirectBuffer topicName, int partitionId)
+    {
+        final CompletableFuture<Void> createFuture = new CompletableFuture<>();
+
+        managementCmdQueue.add(() ->
+        {
+            createFuture.complete(null);
         });
 
         return createFuture;

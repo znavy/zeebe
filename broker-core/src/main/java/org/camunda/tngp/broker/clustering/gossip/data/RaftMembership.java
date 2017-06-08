@@ -35,7 +35,7 @@ public class RaftMembership
     {
         if (reference != null)
         {
-            return reference.stream().getPartitionId();
+            return reference.logStream().getPartitionId();
         }
         else
         {
@@ -107,7 +107,7 @@ public class RaftMembership
     {
         if (reference != null)
         {
-            return reference.stream().getTopicName();
+            return reference.logStream().getTopicName();
         }
         else
         {
@@ -149,7 +149,7 @@ public class RaftMembership
     {
         if (reference != null)
         {
-            return reference.stream().getTopicName().capacity();
+            return reference.logStream().getTopicName().capacity();
         }
         else
         {

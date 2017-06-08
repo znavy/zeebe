@@ -160,7 +160,7 @@ public class ReplicationController
         public void work(ReplicationContext context) throws Exception
         {
             final Raft raft = context.raft;
-            final LogStream logStream = raft.stream();
+            final LogStream logStream = raft.logStream();
             final int term = raft.term();
             final Member self = raft.member();
 

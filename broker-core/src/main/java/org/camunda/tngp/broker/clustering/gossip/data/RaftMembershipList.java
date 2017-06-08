@@ -14,7 +14,7 @@ import org.camunda.tngp.logstreams.log.LogStream;
 public class RaftMembershipList implements Iterable<RaftMembership>
 {
 
-    public static final int MAX_RAFT_MEMBERS = 20;
+    public static final int MAX_RAFT_MEMBERS = 1024;
 
     protected final RaftMembership[] elements = new RaftMembership[MAX_RAFT_MEMBERS];
     protected final RaftMembershipIterator iterator = new RaftMembershipIterator(this);
@@ -143,7 +143,7 @@ public class RaftMembershipList implements Iterable<RaftMembership>
 
     public RaftMembershipList remove(final Raft raft)
     {
-        final LogStream stream = raft.stream();
+        final LogStream stream = raft.logStream();
         final DirectBuffer topicName = stream.getTopicName();
         final int partitionId = stream.getPartitionId();
 

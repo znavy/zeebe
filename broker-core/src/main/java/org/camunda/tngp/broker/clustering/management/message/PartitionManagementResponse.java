@@ -1,23 +1,23 @@
 package org.camunda.tngp.broker.clustering.management.message;
 
-import static org.camunda.tngp.clustering.management.InvitationRequestEncoder.termNullValue;
+import static org.camunda.tngp.clustering.management.PartitionManagementResponseEncoder.termNullValue;
 
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
-import org.camunda.tngp.clustering.management.InvitationResponseDecoder;
-import org.camunda.tngp.clustering.management.InvitationResponseEncoder;
 import org.camunda.tngp.clustering.management.MessageHeaderDecoder;
 import org.camunda.tngp.clustering.management.MessageHeaderEncoder;
+import org.camunda.tngp.clustering.management.PartitionManagementResponseDecoder;
+import org.camunda.tngp.clustering.management.PartitionManagementResponseEncoder;
 import org.camunda.tngp.util.buffer.BufferReader;
 import org.camunda.tngp.util.buffer.BufferWriter;
 
-public class InvitationResponse implements BufferWriter, BufferReader
+public class PartitionManagementResponse implements BufferWriter, BufferReader
 {
     protected final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-    protected final InvitationResponseDecoder bodyDecoder = new InvitationResponseDecoder();
+    protected final PartitionManagementResponseDecoder bodyDecoder = new PartitionManagementResponseDecoder();
 
     protected final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    protected final InvitationResponseEncoder bodyEncoder = new InvitationResponseEncoder();
+    protected final PartitionManagementResponseEncoder bodyEncoder = new PartitionManagementResponseEncoder();
 
     protected int term = termNullValue();
 
@@ -26,7 +26,7 @@ public class InvitationResponse implements BufferWriter, BufferReader
         return term;
     }
 
-    public InvitationResponse term(final int term)
+    public PartitionManagementResponse term(final int term)
     {
         this.term = term;
         return this;

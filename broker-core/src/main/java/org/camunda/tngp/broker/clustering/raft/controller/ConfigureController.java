@@ -160,7 +160,7 @@ public class ConfigureController
             final int configEntryTerm = member.configEntryTerm();
             final long configEntryPosition = member.configEntryPosition();
 
-            final LogStream logStream = raft.stream();
+            final LogStream logStream = raft.logStream();
             final int term = raft.term();
             final Configuration configuration = raft.configuration();
 

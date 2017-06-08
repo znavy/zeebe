@@ -189,7 +189,7 @@ public class VoteController
             final Raft raft = raftContext.getRaft();
             final LogStreamState logStreamState = raftContext.getLogStreamState();
 
-            final LogStream logStream = raft.stream();
+            final LogStream logStream = raft.logStream();
 
             final Member self = raft.member();
 
