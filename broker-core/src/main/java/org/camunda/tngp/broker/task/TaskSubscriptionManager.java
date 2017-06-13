@@ -21,13 +21,8 @@ import static org.camunda.tngp.util.buffer.BufferUtil.bufferAsString;
 import static org.camunda.tngp.util.buffer.BufferUtil.cloneBuffer;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
@@ -35,7 +30,6 @@ import java.util.function.Function;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.concurrent.Agent;
 import org.camunda.tngp.broker.logstreams.processor.StreamProcessorService;
 import org.camunda.tngp.broker.task.processor.LockTaskStreamProcessor;
 import org.camunda.tngp.broker.task.processor.TaskSubscription;
@@ -46,8 +40,9 @@ import org.camunda.tngp.servicecontainer.ServiceName;
 import org.camunda.tngp.servicecontainer.ServiceStartContext;
 import org.camunda.tngp.util.DeferredCommandContext;
 import org.camunda.tngp.util.buffer.BufferUtil;
+import org.camunda.tngp.util.newagent.Task;
 
-public class TaskSubscriptionManager implements Agent
+public class TaskSubscriptionManager implements Task
 {
     protected static final String NAME = "taskqueue.subscription.manager";
     public static final int NUM_CONCURRENT_REQUESTS = 1_024;

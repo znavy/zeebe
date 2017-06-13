@@ -19,12 +19,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 import org.camunda.tngp.util.agent.AgentRunnerService;
+import org.camunda.tngp.util.newagent.Task;
 import org.camunda.tngp.util.time.ClockUtil;
 
-public class ScheduledExecutorImpl implements Agent, ScheduledExecutor
+public class ScheduledExecutorImpl implements Task, ScheduledExecutor
 {
     protected static final String NAME = "scheduled-executor";
 

@@ -1,29 +1,17 @@
 package org.camunda.tngp.broker.clustering.management;
 
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.PEER_LOCAL_SERVICE;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.RAFT_SERVICE_GROUP;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.clientChannelManagerName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.raftContextServiceName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.raftServiceName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.subscriptionServiceName;
-import static org.camunda.tngp.broker.clustering.ClusterServiceNames.transportConnectionPoolName;
+import static org.camunda.tngp.broker.clustering.ClusterServiceNames.*;
 import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
-import static org.camunda.tngp.broker.transport.TransportServiceNames.REPLICATION_SOCKET_BINDING_NAME;
-import static org.camunda.tngp.broker.transport.TransportServiceNames.TRANSPORT;
-import static org.camunda.tngp.broker.transport.TransportServiceNames.TRANSPORT_SEND_BUFFER;
-import static org.camunda.tngp.broker.transport.TransportServiceNames.serverSocketBindingReceiveBufferName;
+import static org.camunda.tngp.broker.transport.TransportServiceNames.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 import org.agrona.DirectBuffer;
-import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 import org.camunda.tngp.broker.clustering.channel.ClientChannelManagerService;
 import org.camunda.tngp.broker.clustering.gossip.data.Peer;
@@ -31,10 +19,7 @@ import org.camunda.tngp.broker.clustering.management.config.ClusterManagementCon
 import org.camunda.tngp.broker.clustering.management.handler.ClusterManagerFragmentHandler;
 import org.camunda.tngp.broker.clustering.management.message.InvitationRequest;
 import org.camunda.tngp.broker.clustering.management.message.InvitationResponse;
-import org.camunda.tngp.broker.clustering.raft.Member;
-import org.camunda.tngp.broker.clustering.raft.MetaStore;
-import org.camunda.tngp.broker.clustering.raft.Raft;
-import org.camunda.tngp.broker.clustering.raft.RaftContext;
+import org.camunda.tngp.broker.clustering.raft.*;
 import org.camunda.tngp.broker.clustering.raft.service.RaftContextService;
 import org.camunda.tngp.broker.clustering.raft.service.RaftService;
 import org.camunda.tngp.broker.clustering.service.SubscriptionService;
@@ -51,8 +36,9 @@ import org.camunda.tngp.servicecontainer.ServiceName;
 import org.camunda.tngp.transport.ChannelManager;
 import org.camunda.tngp.transport.protocol.Protocols;
 import org.camunda.tngp.transport.requestresponse.client.TransportConnectionPool;
+import org.camunda.tngp.util.newagent.Task;
 
-public class ClusterManager implements Agent
+public class ClusterManager implements Task
 {
     private final ClusterManagerContext context;
     private final ServiceContainer serviceContainer;

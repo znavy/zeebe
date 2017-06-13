@@ -14,18 +14,13 @@ package org.camunda.tngp.broker.workflow;
 
 import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.SNAPSHOT_STORAGE_SERVICE;
 import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.logStreamServiceName;
-import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.DEPLOYMENT_PROCESSOR_ID;
-import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.INCIDENT_PROCESSOR_ID;
-import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.WORKFLOW_INSTANCE_PROCESSOR_ID;
+import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.*;
 import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
-import static org.camunda.tngp.broker.workflow.WorkflowQueueServiceNames.deploymentStreamProcessorServiceName;
-import static org.camunda.tngp.broker.workflow.WorkflowQueueServiceNames.incidentStreamProcessorServiceName;
-import static org.camunda.tngp.broker.workflow.WorkflowQueueServiceNames.workflowInstanceStreamProcessorServiceName;
+import static org.camunda.tngp.broker.workflow.WorkflowQueueServiceNames.*;
 
 import java.io.File;
 import java.nio.channels.FileChannel;
 
-import org.agrona.concurrent.Agent;
 import org.camunda.tngp.broker.incident.IncidentStreamProcessorErrorHandler;
 import org.camunda.tngp.broker.incident.processor.IncidentStreamProcessor;
 import org.camunda.tngp.broker.logstreams.cfg.StreamProcessorCfg;
@@ -41,11 +36,10 @@ import org.camunda.tngp.hashindex.store.IndexStore;
 import org.camunda.tngp.logstreams.log.LogStream;
 import org.camunda.tngp.logstreams.processor.StreamProcessorController;
 import org.camunda.tngp.servicecontainer.*;
-import org.camunda.tngp.util.DeferredCommandContext;
-import org.camunda.tngp.util.EnsureUtil;
-import org.camunda.tngp.util.FileUtil;
+import org.camunda.tngp.util.*;
+import org.camunda.tngp.util.newagent.Task;
 
-public class WorkflowQueueManagerService implements Service<WorkflowQueueManager>, WorkflowQueueManager, Agent
+public class WorkflowQueueManagerService implements Service<WorkflowQueueManager>, WorkflowQueueManager, Task
 {
     protected static final String NAME = "workflow.queue.manager";
 

@@ -1,16 +1,17 @@
 package org.camunda.tngp.broker.clustering.gossip;
 
-import static org.camunda.tngp.clustering.gossip.PeerState.*;
+import static org.camunda.tngp.clustering.gossip.PeerState.ALIVE;
+import static org.camunda.tngp.clustering.gossip.PeerState.SUSPECT;
 
 import org.agrona.DirectBuffer;
-import org.agrona.concurrent.Agent;
 import org.camunda.tngp.broker.clustering.gossip.data.Peer;
 import org.camunda.tngp.broker.clustering.gossip.data.PeerList;
 import org.camunda.tngp.broker.clustering.gossip.data.PeerListIterator;
 import org.camunda.tngp.broker.clustering.gossip.handler.GossipFragmentHandler;
 import org.camunda.tngp.broker.clustering.gossip.protocol.GossipController;
+import org.camunda.tngp.util.newagent.Task;
 
-public class Gossip implements Agent
+public class Gossip implements Task
 {
     private final Peer peer;
     private final PeerList peers;

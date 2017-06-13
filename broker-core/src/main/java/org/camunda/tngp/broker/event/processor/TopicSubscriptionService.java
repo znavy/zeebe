@@ -6,41 +6,29 @@ import static org.camunda.tngp.util.buffer.BufferUtil.bufferAsString;
 
 import java.io.File;
 import java.nio.channels.FileChannel;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2ObjectHashMap;
-import org.agrona.concurrent.Agent;
 import org.camunda.tngp.broker.event.TopicSubscriptionServiceNames;
-import org.camunda.tngp.broker.logstreams.processor.MetadataFilter;
-import org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds;
-import org.camunda.tngp.broker.logstreams.processor.StreamProcessorService;
+import org.camunda.tngp.broker.logstreams.processor.*;
 import org.camunda.tngp.broker.system.ConfigurationManager;
 import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
-import org.camunda.tngp.broker.transport.clientapi.CommandResponseWriter;
-import org.camunda.tngp.broker.transport.clientapi.ErrorResponseWriter;
-import org.camunda.tngp.broker.transport.clientapi.SingleMessageWriter;
-import org.camunda.tngp.broker.transport.clientapi.SubscribedEventWriter;
+import org.camunda.tngp.broker.transport.clientapi.*;
 import org.camunda.tngp.dispatcher.Dispatcher;
 import org.camunda.tngp.hashindex.store.FileChannelIndexStore;
 import org.camunda.tngp.hashindex.store.IndexStore;
 import org.camunda.tngp.logstreams.log.LogStream;
 import org.camunda.tngp.logstreams.processor.StreamProcessor;
 import org.camunda.tngp.logstreams.processor.StreamProcessorController;
-import org.camunda.tngp.servicecontainer.Injector;
-import org.camunda.tngp.servicecontainer.Service;
-import org.camunda.tngp.servicecontainer.ServiceGroupReference;
-import org.camunda.tngp.servicecontainer.ServiceName;
-import org.camunda.tngp.servicecontainer.ServiceStartContext;
-import org.camunda.tngp.servicecontainer.ServiceStopContext;
+import org.camunda.tngp.servicecontainer.*;
 import org.camunda.tngp.util.DeferredCommandContext;
 import org.camunda.tngp.util.FileUtil;
 import org.camunda.tngp.util.agent.AgentRunnerService;
+import org.camunda.tngp.util.newagent.Task;
 
-public class TopicSubscriptionService implements Service<TopicSubscriptionService>, Agent
+public class TopicSubscriptionService implements Service<TopicSubscriptionService>, Task
 {
     protected final Injector<AgentRunnerServices> agentRunnerServicesInjector = new Injector<>();
     protected final Injector<Dispatcher> sendBufferInjector = new Injector<>();

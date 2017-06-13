@@ -1,9 +1,9 @@
 package org.camunda.tngp.client.task.impl.subscription;
 
-import org.agrona.concurrent.Agent;
 import org.camunda.tngp.client.event.impl.EventSubscription;
+import org.camunda.tngp.util.newagent.Task;
 
-public class SubscriptionExecutor implements Agent
+public class SubscriptionExecutor implements Task
 {
     public static final String ROLE_NAME = "subscription-executor";
 

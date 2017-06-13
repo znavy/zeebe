@@ -3,15 +3,13 @@ package org.camunda.tngp.client.event.impl;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
-import org.agrona.concurrent.Agent;
 import org.camunda.tngp.client.impl.Loggers;
-import org.camunda.tngp.client.task.impl.subscription.EventSubscriptionCreationResult;
-import org.camunda.tngp.client.task.impl.subscription.EventSubscriptions;
-import org.camunda.tngp.client.task.impl.subscription.SubscribedEventHandler;
+import org.camunda.tngp.client.task.impl.subscription.*;
 import org.camunda.tngp.util.DeferredCommandContext;
+import org.camunda.tngp.util.newagent.Task;
 import org.slf4j.Logger;
 
-public class EventAcquisition<T extends EventSubscription<T>> implements SubscribedEventHandler, Agent
+public class EventAcquisition<T extends EventSubscription<T>> implements SubscribedEventHandler, Task
 {
 
     protected static final Logger LOGGER = Loggers.SUBSCRIPTION_LOGGER;

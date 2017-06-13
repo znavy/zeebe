@@ -17,15 +17,12 @@ import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.logStream
 import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.TASK_EXPIRE_LOCK_STREAM_PROCESSOR_ID;
 import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.TASK_QUEUE_STREAM_PROCESSOR_ID;
 import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
-import static org.camunda.tngp.broker.task.TaskQueueServiceNames.TASK_QUEUE_STREAM_PROCESSOR_SERVICE_GROUP_NAME;
-import static org.camunda.tngp.broker.task.TaskQueueServiceNames.taskQueueExpireLockStreamProcessorServiceName;
-import static org.camunda.tngp.broker.task.TaskQueueServiceNames.taskQueueInstanceStreamProcessorServiceName;
+import static org.camunda.tngp.broker.task.TaskQueueServiceNames.*;
 
 import java.io.File;
 import java.nio.channels.FileChannel;
 import java.time.Duration;
 
-import org.agrona.concurrent.Agent;
 import org.camunda.tngp.broker.logstreams.cfg.StreamProcessorCfg;
 import org.camunda.tngp.broker.logstreams.processor.StreamProcessorService;
 import org.camunda.tngp.broker.system.ConfigurationManager;
@@ -34,24 +31,18 @@ import org.camunda.tngp.broker.system.executor.ScheduledExecutor;
 import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.broker.task.processor.TaskExpireLockStreamProcessor;
 import org.camunda.tngp.broker.task.processor.TaskInstanceStreamProcessor;
-import org.camunda.tngp.broker.transport.clientapi.CommandResponseWriter;
-import org.camunda.tngp.broker.transport.clientapi.SingleMessageWriter;
-import org.camunda.tngp.broker.transport.clientapi.SubscribedEventWriter;
+import org.camunda.tngp.broker.transport.clientapi.*;
 import org.camunda.tngp.dispatcher.Dispatcher;
 import org.camunda.tngp.hashindex.store.FileChannelIndexStore;
 import org.camunda.tngp.hashindex.store.IndexStore;
 import org.camunda.tngp.logstreams.log.LogStream;
 import org.camunda.tngp.logstreams.processor.StreamProcessorController;
-import org.camunda.tngp.servicecontainer.Injector;
-import org.camunda.tngp.servicecontainer.Service;
-import org.camunda.tngp.servicecontainer.ServiceGroupReference;
-import org.camunda.tngp.servicecontainer.ServiceName;
-import org.camunda.tngp.servicecontainer.ServiceStartContext;
-import org.camunda.tngp.servicecontainer.ServiceStopContext;
+import org.camunda.tngp.servicecontainer.*;
 import org.camunda.tngp.util.DeferredCommandContext;
 import org.camunda.tngp.util.FileUtil;
+import org.camunda.tngp.util.newagent.Task;
 
-public class TaskQueueManagerService implements Service<TaskQueueManager>, TaskQueueManager, Agent
+public class TaskQueueManagerService implements Service<TaskQueueManager>, TaskQueueManager, Task
 {
     protected static final String NAME = "task.queue.manager";
 
