@@ -65,8 +65,7 @@ public class IncidentStreamProcessorTest
         logStream = LogStreams
                 .createFsLogStream(wrapString("test-topic"), 0)
                 .logRootPath(rootPath)
-                .agentRunnerService(agentRunnerService)
-                .writeBufferAgentRunnerService(agentRunnerService)
+                .taskScheduler(agentRunnerService)
                 .deleteOnClose(true)
                 .build();
 
@@ -78,7 +77,7 @@ public class IncidentStreamProcessorTest
                 .sourceStream(logStream)
                 .targetStream(logStream)
                 .snapshotStorage(snapshotStorage)
-                .agentRunnerService(agentRunnerService)
+                .taskScheduler(agentRunnerService)
                 .build();
 
         streamProcessorController.openAsync();

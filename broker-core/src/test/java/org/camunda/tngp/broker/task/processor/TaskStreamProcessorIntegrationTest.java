@@ -110,8 +110,7 @@ public class TaskStreamProcessorIntegrationTest
 
         logStream = LogStreams.createFsLogStream(TOPIC_NAME, PARTITION_ID)
             .logRootPath(rootPath)
-            .agentRunnerService(agentRunnerService)
-            .writeBufferAgentRunnerService(agentRunnerService)
+            .taskScheduler(agentRunnerService)
             .deleteOnClose(true)
             .build();
 
