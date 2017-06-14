@@ -1,21 +1,27 @@
 package org.camunda.tngp.broker.event.processor;
 
 import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.SNAPSHOT_STORAGE_SERVICE;
-import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
+import static org.camunda.tngp.broker.system.SystemServiceNames.TASK_SCHEDULER_SERVICE;
 import static org.camunda.tngp.util.buffer.BufferUtil.bufferAsString;
 
 import java.io.File;
 import java.nio.channels.FileChannel;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.camunda.tngp.broker.event.TopicSubscriptionServiceNames;
-import org.camunda.tngp.broker.logstreams.processor.*;
+import org.camunda.tngp.broker.logstreams.processor.MetadataFilter;
+import org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds;
+import org.camunda.tngp.broker.logstreams.processor.StreamProcessorService;
 import org.camunda.tngp.broker.system.ConfigurationManager;
-import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
-import org.camunda.tngp.broker.transport.clientapi.*;
+import org.camunda.tngp.broker.transport.clientapi.CommandResponseWriter;
+import org.camunda.tngp.broker.transport.clientapi.ErrorResponseWriter;
+import org.camunda.tngp.broker.transport.clientapi.SingleMessageWriter;
+import org.camunda.tngp.broker.transport.clientapi.SubscribedEventWriter;
 import org.camunda.tngp.dispatcher.Dispatcher;
 import org.camunda.tngp.hashindex.store.FileChannelIndexStore;
 import org.camunda.tngp.hashindex.store.IndexStore;
@@ -25,18 +31,21 @@ import org.camunda.tngp.logstreams.processor.StreamProcessorController;
 import org.camunda.tngp.servicecontainer.*;
 import org.camunda.tngp.util.DeferredCommandContext;
 import org.camunda.tngp.util.FileUtil;
-import org.camunda.tngp.util.agent.AgentRunnerService;
+import org.camunda.tngp.util.newagent.ScheduledTask;
 import org.camunda.tngp.util.newagent.Task;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 
 public class TopicSubscriptionService implements Service<TopicSubscriptionService>, Task
 {
-    protected final Injector<AgentRunnerServices> agentRunnerServicesInjector = new Injector<>();
+    protected final Injector<TaskScheduler> taskSchedulerInjector = new Injector<>();
     protected final Injector<Dispatcher> sendBufferInjector = new Injector<>();
     protected final SubscriptionCfg config;
 
-    protected AgentRunnerService agentRunnerService;
+    protected TaskScheduler taskScheduler;
     protected ServiceStartContext serviceContext;
     protected Map<DirectBuffer, Int2ObjectHashMap<TopicSubscriptionManagementProcessor>> managersByLog = new HashMap<>();
+
+    protected ScheduledTask scheduledTask;
 
     protected DeferredCommandContext asyncContext;
     protected IndexStore indexStore;
@@ -59,9 +68,9 @@ public class TopicSubscriptionService implements Service<TopicSubscriptionServic
         return this;
     }
 
-    public Injector<AgentRunnerServices> getAgentRunnerServicesInjector()
+    public Injector<TaskScheduler> getTaskSchedulerInjector()
     {
-        return agentRunnerServicesInjector;
+        return taskSchedulerInjector;
     }
 
     public Injector<Dispatcher> getSendBufferInjector()
@@ -77,17 +86,20 @@ public class TopicSubscriptionService implements Service<TopicSubscriptionServic
     @Override
     public void start(ServiceStartContext startContext)
     {
-        agentRunnerService = agentRunnerServicesInjector.getValue().conductorAgentRunnerService();
+        taskScheduler = taskSchedulerInjector.getValue();
         asyncContext = new DeferredCommandContext();
         this.serviceContext = startContext;
 
-        agentRunnerService.run(this);
+        scheduledTask = taskScheduler.submitTask(this);
     }
 
     @Override
     public void stop(ServiceStopContext stopContext)
     {
-        agentRunnerService.remove(this);
+        scheduledTask.remove();
+
+        indexStore.flush();
+        indexStore.close();
     }
 
     public void onStreamAdded(ServiceName<LogStream> logStreamServiceName, LogStream logStream)
@@ -151,7 +163,7 @@ public class TopicSubscriptionService implements Service<TopicSubscriptionServic
             .dependency(logStreamName, streamProcessorService.getSourceStreamInjector())
             .dependency(logStreamName, streamProcessorService.getTargetStreamInjector())
             .dependency(SNAPSHOT_STORAGE_SERVICE, streamProcessorService.getSnapshotStorageInjector())
-            .dependency(AGENT_RUNNER_SERVICE, streamProcessorService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, streamProcessorService.getTaskSchedulerInjector())
             .install();
     }
 
@@ -234,12 +246,5 @@ public class TopicSubscriptionService implements Service<TopicSubscriptionServic
         }
 
         return null;
-    }
-
-    @Override
-    public void onClose()
-    {
-        indexStore.flush();
-        indexStore.close();
     }
 }

@@ -2,12 +2,12 @@ package org.camunda.tngp.broker.system;
 
 import org.camunda.tngp.broker.services.Counters;
 import org.camunda.tngp.broker.system.executor.ScheduledExecutor;
-import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.servicecontainer.ServiceName;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 
 public class SystemServiceNames
 {
-    public static final ServiceName<AgentRunnerServices> AGENT_RUNNER_SERVICE = ServiceName.newServiceName("broker.agentrunner", AgentRunnerServices.class);
+    public static final ServiceName<TaskScheduler> TASK_SCHEDULER_SERVICE = ServiceName.newServiceName("broker.task.scheduler", TaskScheduler.class);
 
     public static final ServiceName<Counters> COUNTERS_MANAGER_SERVICE = ServiceName.newServiceName("broker.countersManager", Counters.class);
 

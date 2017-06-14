@@ -7,26 +7,26 @@ import org.camunda.tngp.broker.clustering.raft.Member;
 import org.camunda.tngp.broker.clustering.raft.MetaStore;
 import org.camunda.tngp.broker.clustering.raft.Raft;
 import org.camunda.tngp.broker.clustering.raft.RaftContext;
-import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.logstreams.log.LogStream;
 import org.camunda.tngp.servicecontainer.Injector;
 import org.camunda.tngp.servicecontainer.Service;
 import org.camunda.tngp.servicecontainer.ServiceStartContext;
 import org.camunda.tngp.servicecontainer.ServiceStopContext;
+import org.camunda.tngp.util.newagent.ScheduledTask;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 
 public class RaftService implements Service<Raft>
 {
     private final LogStream logStream;
     private final List<Member> members;
 
-    private Injector<AgentRunnerServices> agentRunnerInjector = new Injector<>();
+    private Injector<TaskScheduler> taskSchedulerInjector = new Injector<>();
     private Injector<RaftContext> raftContextInjector = new Injector<>();
 
     private Raft raft;
     private MetaStore meta;
     private boolean bootstrap;
-
-    private CompletableFuture<Void> closeLogFuture;
+    private ScheduledTask scheduledRaft;
 
     public RaftService(final LogStream logStream, final MetaStore meta, final List<Member> members, boolean bootstrap)
     {
@@ -41,7 +41,7 @@ public class RaftService implements Service<Raft>
     {
         ctx.run(() ->
         {
-            final AgentRunnerServices agentRunnerServices = agentRunnerInjector.getValue();
+            final TaskScheduler taskScheduler = taskSchedulerInjector.getValue();
             final RaftContext raftContext = raftContextInjector.getValue();
 
             raft = new Raft(raftContext, logStream, meta);
@@ -55,19 +55,19 @@ public class RaftService implements Service<Raft>
                 raft.join(members);
             }
 
-            agentRunnerServices.raftAgentRunnerService().run(raft);
+            scheduledRaft = taskScheduler.submitTask(raft);
         });
     }
 
     @Override
     public void stop(ServiceStopContext ctx)
     {
-        final CompletableFuture<Void> closeFuture = new CompletableFuture<Void>();
+        final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
 
         raft.closeAsync().thenAccept((v) ->
         {
-            final AgentRunnerServices agentRunnerService = agentRunnerInjector.getValue();
-            agentRunnerService.raftAgentRunnerService().remove(raft);
+            scheduledRaft.remove();
+
             raft.stream().closeAsync().whenComplete((v2, t) ->
             {
                 closeFuture.complete(null);
@@ -84,9 +84,9 @@ public class RaftService implements Service<Raft>
         return raft;
     }
 
-    public Injector<AgentRunnerServices> getAgentRunnerInjector()
+    public Injector<TaskScheduler> getTaskSchedulerInjector()
     {
-        return agentRunnerInjector;
+        return taskSchedulerInjector;
     }
 
     public Injector<RaftContext> getRaftContextInjector()

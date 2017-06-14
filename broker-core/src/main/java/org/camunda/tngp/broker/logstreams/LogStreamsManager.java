@@ -13,22 +13,22 @@ import java.util.function.Consumer;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.camunda.tngp.broker.logstreams.cfg.LogStreamsCfg;
-import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.logstreams.LogStreams;
 import org.camunda.tngp.logstreams.fs.FsLogStreamBuilder;
 import org.camunda.tngp.logstreams.log.LogStream;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 
 
 public class LogStreamsManager
 {
     protected LogStreamsCfg logStreamsCfg;
-    protected AgentRunnerServices agentRunner;
+    protected TaskScheduler taskScheduler;
     protected Map<DirectBuffer, Int2ObjectHashMap<LogStream>> logStreams;
 
-    public LogStreamsManager(final LogStreamsCfg logStreamsCfg, final AgentRunnerServices agentRunner)
+    public LogStreamsManager(final LogStreamsCfg logStreamsCfg, final TaskScheduler taskScheduler)
     {
         this.logStreamsCfg = logStreamsCfg;
-        this.agentRunner = agentRunner;
+        this.taskScheduler = taskScheduler;
         this.logStreams = new HashMap<>();
     }
 
@@ -83,7 +83,7 @@ public class LogStreamsManager
         final LogStream logStream = logStreamBuilder
             .deleteOnClose(deleteOnExit)
             .logDirectory(logDirectory)
-            .agentRunnerService(agentRunner.logAppenderAgentRunnerService())
+            .taskScheduler(taskScheduler)
             .logSegmentSize(logSegmentSize)
             .logStreamControllerDisabled(true)
             .build();
@@ -100,7 +100,7 @@ public class LogStreamsManager
         final LogStream logStream = LogStreams.createFsLogStream(topicName, partitionId)
                 .deleteOnClose(false)
                 .logDirectory(logDirectory)
-                .agentRunnerService(agentRunner.logAppenderAgentRunnerService())
+                .taskScheduler(taskScheduler)
                 .logSegmentSize(logStreamsCfg.defaultLogSegmentSize * 1024 * 1024)
                 .logStreamControllerDisabled(true)
                 .build();

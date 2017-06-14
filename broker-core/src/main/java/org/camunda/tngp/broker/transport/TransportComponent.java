@@ -2,7 +2,7 @@ package org.camunda.tngp.broker.transport;
 
 import static org.camunda.tngp.broker.event.TopicSubscriptionServiceNames.TOPIC_SUBSCRIPTION_SERVICE;
 import static org.camunda.tngp.broker.services.DispatcherSubscriptionNames.TRANSPORT_CONTROL_MESSAGE_HANDLER_SUBSCRIPTION;
-import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
+import static org.camunda.tngp.broker.system.SystemServiceNames.TASK_SCHEDULER_SERVICE;
 import static org.camunda.tngp.broker.system.SystemServiceNames.COUNTERS_MANAGER_SERVICE;
 import static org.camunda.tngp.broker.task.TaskQueueServiceNames.TASK_QUEUE_SUBSCRIPTION_MANAGER;
 import static org.camunda.tngp.broker.transport.TransportServiceNames.CLIENT_API_MESSAGE_HANDLER;
@@ -43,14 +43,14 @@ public class TransportComponent implements Component
         final int sendBufferSize = transportComponentCfg.sendBufferSize * 1024 * 1024;
         final DispatcherService sendBufferService = new DispatcherService(sendBufferSize);
         serviceContainer.createService(TRANSPORT_SEND_BUFFER, sendBufferService)
-            .dependency(AGENT_RUNNER_SERVICE, sendBufferService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, sendBufferService.getTaskSchedulerInjector())
             .dependency(COUNTERS_MANAGER_SERVICE, sendBufferService.getCountersManagerInjector())
             .install();
 
         final TransportService transportService = new TransportService();
         serviceContainer.createService(TRANSPORT, transportService)
             .dependency(TRANSPORT_SEND_BUFFER, transportService.getSendBufferInjector())
-            .dependency(AGENT_RUNNER_SERVICE, transportService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, transportService.getAgentRunnerInjector())
             .install();
 
         context.addRequiredStartAction(bindClientApi(serviceContainer, transportComponentCfg));
@@ -89,7 +89,7 @@ public class TransportComponent implements Component
                 .subscriptions(TRANSPORT_CONTROL_MESSAGE_HANDLER_SUBSCRIPTION));
 
         serviceContainer.createService(serverSocketBindingReceiveBufferName(CLIENT_API_SOCKET_BINDING_NAME), controlMessageBufferService)
-            .dependency(AGENT_RUNNER_SERVICE, controlMessageBufferService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, controlMessageBufferService.getTaskSchedulerInjector())
             .dependency(COUNTERS_MANAGER_SERVICE, controlMessageBufferService.getCountersManagerInjector())
             .install();
 
@@ -112,7 +112,7 @@ public class TransportComponent implements Component
         final CompletableFuture<Void> controlMessageServiceFuture = serviceContainer.createService(CONTROL_MESSAGE_HANDLER_MANAGER, controlMessageHandlerManagerService)
             .dependency(serverSocketBindingReceiveBufferName(CLIENT_API_SOCKET_BINDING_NAME), controlMessageHandlerManagerService.getControlMessageBufferInjector())
             .dependency(TRANSPORT_SEND_BUFFER, controlMessageHandlerManagerService.getSendBufferInjector())
-            .dependency(AGENT_RUNNER_SERVICE, controlMessageHandlerManagerService.getAgentRunnerServicesInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, controlMessageHandlerManagerService.getAgentRunnerServicesInjector())
             .dependency(TASK_QUEUE_SUBSCRIPTION_MANAGER, controlMessageHandlerManagerService.getTaskSubscriptionManagerInjector())
             .dependency(TOPIC_SUBSCRIPTION_SERVICE, controlMessageHandlerManagerService.getTopicSubscriptionServiceInjector())
             .install();
@@ -143,7 +143,7 @@ public class TransportComponent implements Component
 
         final DispatcherService receiveBufferService = new DispatcherService(receiveBufferSize);
         serviceContainer.createService(serverSocketBindingReceiveBufferName(MANAGEMENT_SOCKET_BINDING_NAME), receiveBufferService)
-            .dependency(AGENT_RUNNER_SERVICE, receiveBufferService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, receiveBufferService.getTaskSchedulerInjector())
             .dependency(COUNTERS_MANAGER_SERVICE, receiveBufferService.getCountersManagerInjector())
             .install();
 
@@ -176,7 +176,7 @@ public class TransportComponent implements Component
 
         final DispatcherService receiveBufferService = new DispatcherService(receiveBufferSize);
         serviceContainer.createService(serverSocketBindingReceiveBufferName(REPLICATION_SOCKET_BINDING_NAME), receiveBufferService)
-            .dependency(AGENT_RUNNER_SERVICE, receiveBufferService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, receiveBufferService.getTaskSchedulerInjector())
             .dependency(COUNTERS_MANAGER_SERVICE, receiveBufferService.getCountersManagerInjector())
             .install();
 

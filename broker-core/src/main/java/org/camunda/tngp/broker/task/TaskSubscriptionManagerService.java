@@ -12,23 +12,19 @@
  */
 package org.camunda.tngp.broker.task;
 
-import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.logstreams.log.LogStream;
-import org.camunda.tngp.servicecontainer.Injector;
-import org.camunda.tngp.servicecontainer.Service;
-import org.camunda.tngp.servicecontainer.ServiceGroupReference;
-import org.camunda.tngp.servicecontainer.ServiceStartContext;
-import org.camunda.tngp.servicecontainer.ServiceStopContext;
-import org.camunda.tngp.util.agent.AgentRunnerService;
+import org.camunda.tngp.servicecontainer.*;
+import org.camunda.tngp.util.newagent.ScheduledTask;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 
 public class TaskSubscriptionManagerService implements Service<TaskSubscriptionManager>
 {
-    protected final Injector<AgentRunnerServices> agentRunnerServicesInjector = new Injector<>();
+    protected final Injector<TaskScheduler> taskSchedulerInjector = new Injector<>();
 
     protected ServiceStartContext serviceContext;
 
     protected TaskSubscriptionManager service;
-    protected AgentRunnerService agentRunnerService;
+    protected ScheduledTask scheduledService;
 
     protected final ServiceGroupReference<LogStream> logStreamsGroupReference = ServiceGroupReference.<LogStream>create()
         .onAdd((name, stream) -> service.addStream(stream, name))
@@ -38,18 +34,17 @@ public class TaskSubscriptionManagerService implements Service<TaskSubscriptionM
     @Override
     public void start(ServiceStartContext startContext)
     {
-        final AgentRunnerServices agentRunnerServices = agentRunnerServicesInjector.getValue();
-        agentRunnerService = agentRunnerServices.conductorAgentRunnerService();
+        final TaskScheduler taskScheduler = taskSchedulerInjector.getValue();
 
         service = new TaskSubscriptionManager(startContext);
 
-        agentRunnerService.run(service);
+        scheduledService = taskScheduler.submitTask(service);
     }
 
     @Override
     public void stop(ServiceStopContext stopContext)
     {
-        agentRunnerService.remove(service);
+        scheduledService.remove();
     }
 
     @Override
@@ -58,9 +53,9 @@ public class TaskSubscriptionManagerService implements Service<TaskSubscriptionM
         return service;
     }
 
-    public Injector<AgentRunnerServices> getAgentRunnerServicesInjector()
+    public Injector<TaskScheduler> getTaskSchedulerInjector()
     {
-        return agentRunnerServicesInjector;
+        return taskSchedulerInjector;
     }
 
     public ServiceGroupReference<LogStream> getLogStreamsGroupReference()

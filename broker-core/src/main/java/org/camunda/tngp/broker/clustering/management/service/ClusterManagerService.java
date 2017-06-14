@@ -4,22 +4,20 @@ import org.camunda.tngp.broker.clustering.management.ClusterManager;
 import org.camunda.tngp.broker.clustering.management.ClusterManagerContext;
 import org.camunda.tngp.broker.clustering.management.config.ClusterManagementConfig;
 import org.camunda.tngp.broker.clustering.raft.Raft;
-import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
-import org.camunda.tngp.servicecontainer.Injector;
-import org.camunda.tngp.servicecontainer.Service;
-import org.camunda.tngp.servicecontainer.ServiceContainer;
-import org.camunda.tngp.servicecontainer.ServiceGroupReference;
-import org.camunda.tngp.servicecontainer.ServiceStartContext;
-import org.camunda.tngp.servicecontainer.ServiceStopContext;
+import org.camunda.tngp.servicecontainer.*;
+import org.camunda.tngp.util.newagent.ScheduledTask;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 
 public class ClusterManagerService implements Service<ClusterManager>
 {
     private final Injector<ClusterManagerContext> clusterManagementContextInjector = new Injector<>();
-    private Injector<AgentRunnerServices> agentRunnerInjector = new Injector<>();
+    private Injector<TaskScheduler> taskSchedulerInjector = new Injector<>();
 
     private ClusterManager clusterManager;
     private ClusterManagementConfig config;
     private ServiceContainer serviceContainer;
+
+    private ScheduledTask scheduledClusterManager;
 
     public ClusterManagerService(final ServiceContainer serviceContainer, final ClusterManagementConfig config)
     {
@@ -38,12 +36,12 @@ public class ClusterManagerService implements Service<ClusterManager>
         startContext.run(() ->
         {
             final ClusterManagerContext context = clusterManagementContextInjector.getValue();
-            final AgentRunnerServices agentRunner = agentRunnerInjector.getValue();
+            final TaskScheduler taskScheduler = taskSchedulerInjector.getValue();
 
             clusterManager = new ClusterManager(context, serviceContainer, config);
             clusterManager.open();
 
-            agentRunner.clusterAgentService().run(clusterManager);
+            scheduledClusterManager = taskScheduler.submitTask(clusterManager);
         });
 
     }
@@ -51,8 +49,7 @@ public class ClusterManagerService implements Service<ClusterManager>
     @Override
     public void stop(ServiceStopContext stopContext)
     {
-        final AgentRunnerServices agentRunner = agentRunnerInjector.getValue();
-        agentRunner.clusterAgentService().remove(clusterManager);
+        scheduledClusterManager.remove();
     }
 
     @Override
@@ -72,9 +69,9 @@ public class ClusterManagerService implements Service<ClusterManager>
         return raftGroupReference;
     }
 
-    public Injector<AgentRunnerServices> getAgentRunnerInjector()
+    public Injector<TaskScheduler> getTaskSchedulerInjector()
     {
-        return agentRunnerInjector;
+        return taskSchedulerInjector;
     }
 
 }

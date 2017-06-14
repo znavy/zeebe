@@ -14,7 +14,7 @@ package org.camunda.tngp.broker.task;
 
 import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.SNAPSHOT_STORAGE_SERVICE;
 import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.TASK_LOCK_STREAM_PROCESSOR_ID;
-import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
+import static org.camunda.tngp.broker.system.SystemServiceNames.TASK_SCHEDULER_SERVICE;
 import static org.camunda.tngp.broker.task.TaskQueueServiceNames.taskQueueLockStreamProcessorServiceName;
 import static org.camunda.tngp.util.EnsureUtil.ensureNotNull;
 import static org.camunda.tngp.util.buffer.BufferUtil.bufferAsString;
@@ -198,7 +198,7 @@ public class TaskSubscriptionManager implements Task
             .dependency(logStreamServiceName, streamProcessorService.getSourceStreamInjector())
             .dependency(logStreamServiceName, streamProcessorService.getTargetStreamInjector())
             .dependency(SNAPSHOT_STORAGE_SERVICE, streamProcessorService.getSnapshotStorageInjector())
-            .dependency(AGENT_RUNNER_SERVICE, streamProcessorService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, streamProcessorService.getTaskSchedulerInjector())
             .install()
             .handle((r, t) -> t == null ? future.complete(streamProcessor) : future.completeExceptionally(t));
 

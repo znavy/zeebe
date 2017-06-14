@@ -156,7 +156,7 @@ public class StreamProcessorServiceTest
         final AgentRunnerServices agentRunnerServices = mock(AgentRunnerServices.class);
         final AgentRunnerService agentRunnerService = mock(AgentRunnerService.class);
         when(agentRunnerServices.logStreamProcessorAgentRunnerService()).thenReturn(agentRunnerService);
-        streamProcessorService.getAgentRunnerInjector().inject(agentRunnerServices);
+        streamProcessorService.getTaskSchedulerInjector().inject(agentRunnerServices);
 
         final LogStream logStream = mock(LogStream.class);
         when(logStream.getTopicName()).thenReturn(DEFAULT_TOPIC_NAME_BUFFER);

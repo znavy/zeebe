@@ -20,8 +20,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
-import org.camunda.tngp.util.agent.AgentRunnerService;
+import org.camunda.tngp.util.newagent.ScheduledTask;
 import org.camunda.tngp.util.newagent.Task;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 import org.camunda.tngp.util.time.ClockUtil;
 
 public class ScheduledExecutorImpl implements Task, ScheduledExecutor
@@ -34,11 +35,12 @@ public class ScheduledExecutorImpl implements Task, ScheduledExecutor
     protected final Consumer<Runnable> cmdConsumer = Runnable::run;
 
     protected final AtomicBoolean isRunning = new AtomicBoolean(false);
-    protected final AgentRunnerService agentRunnerService;
+    protected final TaskScheduler taskScheduler;
+    protected ScheduledTask scheduledTask;
 
-    public ScheduledExecutorImpl(AgentRunnerService agentRunnerService)
+    public ScheduledExecutorImpl(TaskScheduler taskScheduler)
     {
-        this.agentRunnerService = agentRunnerService;
+        this.taskScheduler = taskScheduler;
     }
 
     @Override
@@ -146,7 +148,7 @@ public class ScheduledExecutorImpl implements Task, ScheduledExecutor
     {
         if (isRunning.compareAndSet(false, true))
         {
-            agentRunnerService.run(this);
+            scheduledTask = taskScheduler.submitTask(this);
         }
     }
 
@@ -163,7 +165,7 @@ public class ScheduledExecutorImpl implements Task, ScheduledExecutor
         {
             cmdQueue.add(() ->
             {
-                agentRunnerService.remove(this);
+                scheduledTask.remove();
 
                 future.complete(null);
             });

@@ -14,9 +14,13 @@ package org.camunda.tngp.broker.workflow;
 
 import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.SNAPSHOT_STORAGE_SERVICE;
 import static org.camunda.tngp.broker.logstreams.LogStreamServiceNames.logStreamServiceName;
-import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.*;
-import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
-import static org.camunda.tngp.broker.workflow.WorkflowQueueServiceNames.*;
+import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.DEPLOYMENT_PROCESSOR_ID;
+import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.INCIDENT_PROCESSOR_ID;
+import static org.camunda.tngp.broker.logstreams.processor.StreamProcessorIds.WORKFLOW_INSTANCE_PROCESSOR_ID;
+import static org.camunda.tngp.broker.system.SystemServiceNames.TASK_SCHEDULER_SERVICE;
+import static org.camunda.tngp.broker.workflow.WorkflowQueueServiceNames.deploymentStreamProcessorServiceName;
+import static org.camunda.tngp.broker.workflow.WorkflowQueueServiceNames.incidentStreamProcessorServiceName;
+import static org.camunda.tngp.broker.workflow.WorkflowQueueServiceNames.workflowInstanceStreamProcessorServiceName;
 
 import java.io.File;
 import java.nio.channels.FileChannel;
@@ -26,7 +30,6 @@ import org.camunda.tngp.broker.incident.processor.IncidentStreamProcessor;
 import org.camunda.tngp.broker.logstreams.cfg.StreamProcessorCfg;
 import org.camunda.tngp.broker.logstreams.processor.StreamProcessorService;
 import org.camunda.tngp.broker.system.ConfigurationManager;
-import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.broker.transport.clientapi.CommandResponseWriter;
 import org.camunda.tngp.broker.workflow.processor.DeploymentStreamProcessor;
 import org.camunda.tngp.broker.workflow.processor.WorkflowInstanceStreamProcessor;
@@ -36,15 +39,19 @@ import org.camunda.tngp.hashindex.store.IndexStore;
 import org.camunda.tngp.logstreams.log.LogStream;
 import org.camunda.tngp.logstreams.processor.StreamProcessorController;
 import org.camunda.tngp.servicecontainer.*;
-import org.camunda.tngp.util.*;
+import org.camunda.tngp.util.DeferredCommandContext;
+import org.camunda.tngp.util.EnsureUtil;
+import org.camunda.tngp.util.FileUtil;
+import org.camunda.tngp.util.newagent.ScheduledTask;
 import org.camunda.tngp.util.newagent.Task;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 
 public class WorkflowQueueManagerService implements Service<WorkflowQueueManager>, WorkflowQueueManager, Task
 {
     protected static final String NAME = "workflow.queue.manager";
 
     protected final Injector<Dispatcher> sendBufferInjector = new Injector<>();
-    protected final Injector<AgentRunnerServices> agentRunnerServicesInjector = new Injector<>();
+    protected final Injector<TaskScheduler> taskSchedulerInjector = new Injector<>();
 
     protected final ServiceGroupReference<LogStream> logStreamsGroupReference = ServiceGroupReference.<LogStream>create()
             .onAdd((name, stream) -> addStream(stream, name))
@@ -63,6 +70,8 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
     protected IndexStore incidentInstanceIndex;
     protected IndexStore activityInstanceIndex;
     protected IndexStore incidentTaskIndex;
+
+    protected ScheduledTask scheduledTask;
 
     public WorkflowQueueManagerService(final ConfigurationManager configurationManager)
     {
@@ -102,7 +111,7 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
                 .dependency(logStreamServiceName, deploymentStreamProcessorService.getSourceStreamInjector())
                 .dependency(logStreamServiceName, deploymentStreamProcessorService.getTargetStreamInjector())
                 .dependency(SNAPSHOT_STORAGE_SERVICE, deploymentStreamProcessorService.getSnapshotStorageInjector())
-                .dependency(AGENT_RUNNER_SERVICE, deploymentStreamProcessorService.getAgentRunnerInjector())
+                .dependency(TASK_SCHEDULER_SERVICE, deploymentStreamProcessorService.getTaskSchedulerInjector())
                 .install();
     }
 
@@ -144,7 +153,7 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
                 .dependency(logStreamServiceName, workflowStreamProcessorService.getSourceStreamInjector())
                 .dependency(logStreamServiceName, workflowStreamProcessorService.getTargetStreamInjector())
                 .dependency(SNAPSHOT_STORAGE_SERVICE, workflowStreamProcessorService.getSnapshotStorageInjector())
-                .dependency(AGENT_RUNNER_SERVICE, workflowStreamProcessorService.getAgentRunnerInjector())
+                .dependency(TASK_SCHEDULER_SERVICE, workflowStreamProcessorService.getTaskSchedulerInjector())
                 .install();
     }
 
@@ -173,7 +182,7 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
                 .dependency(logStreamServiceName, incidentStreamProcessorService.getSourceStreamInjector())
                 .dependency(logStreamServiceName, incidentStreamProcessorService.getTargetStreamInjector())
                 .dependency(SNAPSHOT_STORAGE_SERVICE, incidentStreamProcessorService.getSnapshotStorageInjector())
-                .dependency(AGENT_RUNNER_SERVICE, incidentStreamProcessorService.getAgentRunnerInjector())
+                .dependency(TASK_SCHEDULER_SERVICE, incidentStreamProcessorService.getTaskSchedulerInjector())
                 .install();
     }
 
@@ -203,8 +212,8 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
         this.serviceContext = serviceContext;
         this.asyncContext = new DeferredCommandContext();
 
-        final AgentRunnerServices agentRunnerService = agentRunnerServicesInjector.getValue();
-        agentRunnerService.conductorAgentRunnerService().run(this);
+        final TaskScheduler taskScheduler = taskSchedulerInjector.getValue();
+        scheduledTask = taskScheduler.submitTask(this);
     }
 
     @Override
@@ -212,8 +221,9 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
     {
         ctx.run(() ->
         {
-            final AgentRunnerServices agentRunnerService = agentRunnerServicesInjector.getValue();
-            agentRunnerService.conductorAgentRunnerService().remove(this);
+            scheduledTask.remove();
+
+            clear();
         });
     }
 
@@ -233,9 +243,9 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
         return logStreamsGroupReference;
     }
 
-    public Injector<AgentRunnerServices> getAgentRunnerServicesInjector()
+    public Injector<TaskScheduler> getTaskSchedulerInjector()
     {
-        return agentRunnerServicesInjector;
+        return taskSchedulerInjector;
     }
 
     public void addStream(LogStream logStream, ServiceName<LogStream> logStreamServiceName)
@@ -258,10 +268,8 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
         return NAME;
     }
 
-    @Override
-    public void onClose()
+    private void clear()
     {
-
         workflowDeploymentIndexStore.flush();
         workflowPositionIndexStore.flush();
         workflowVersionIndexStore.flush();

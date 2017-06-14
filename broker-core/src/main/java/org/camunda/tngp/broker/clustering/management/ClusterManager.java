@@ -1,7 +1,7 @@
 package org.camunda.tngp.broker.clustering.management;
 
 import static org.camunda.tngp.broker.clustering.ClusterServiceNames.*;
-import static org.camunda.tngp.broker.system.SystemServiceNames.AGENT_RUNNER_SERVICE;
+import static org.camunda.tngp.broker.system.SystemServiceNames.TASK_SCHEDULER_SERVICE;
 import static org.camunda.tngp.broker.transport.TransportServiceNames.*;
 
 import java.io.File;
@@ -290,14 +290,14 @@ public class ClusterManager implements Task
             .dependency(clientChannelManagerServiceName, raftContextService.getClientChannelManagerInjector())
             .dependency(transportConnectionPoolServiceName, raftContextService.getTransportConnectionPoolInjector())
             .dependency(subscriptionServiceName, raftContextService.getSubscriptionInjector())
-            .dependency(AGENT_RUNNER_SERVICE, raftContextService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, raftContextService.getTaskSchedulerInjector())
             .install();
 
         final RaftService raftService = new RaftService(logStream, meta, new CopyOnWriteArrayList<>(members), bootstrap);
         final ServiceName<Raft> raftServiceName = raftServiceName(logName);
         serviceContainer.createService(raftServiceName, raftService)
             .group(RAFT_SERVICE_GROUP)
-            .dependency(AGENT_RUNNER_SERVICE, raftService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, raftService.getTaskSchedulerInjector())
             .dependency(raftContextServiceName, raftService.getRaftContextInjector())
             .install();
     }

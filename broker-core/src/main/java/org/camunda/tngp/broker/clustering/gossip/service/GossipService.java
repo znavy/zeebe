@@ -6,21 +6,23 @@ import org.camunda.tngp.broker.clustering.gossip.Gossip;
 import org.camunda.tngp.broker.clustering.gossip.GossipContext;
 import org.camunda.tngp.broker.clustering.gossip.config.GossipConfiguration;
 import org.camunda.tngp.broker.system.SystemContext;
-import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.servicecontainer.Injector;
 import org.camunda.tngp.servicecontainer.Service;
 import org.camunda.tngp.servicecontainer.ServiceStartContext;
 import org.camunda.tngp.servicecontainer.ServiceStopContext;
 import org.camunda.tngp.util.LangUtil;
+import org.camunda.tngp.util.newagent.ScheduledTask;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 
 public class GossipService implements Service<Gossip>
 {
-    private final Injector<AgentRunnerServices> agentRunnerInjector = new Injector<>();
+    private final Injector<TaskScheduler> taskSchedulerInjector = new Injector<>();
     private final Injector<GossipContext> gossipContextInjector = new Injector<>();
 
     private Gossip gossip;
     private SystemContext systemContext;
     private GossipContext gossipContext;
+    private ScheduledTask scheduledGossip;
 
     public GossipService(SystemContext context)
     {
@@ -30,7 +32,7 @@ public class GossipService implements Service<Gossip>
     @Override
     public void start(ServiceStartContext startContext)
     {
-        final AgentRunnerServices agentRunnerServices = agentRunnerInjector.getValue();
+        final TaskScheduler taskScheduler = taskSchedulerInjector.getValue();
         this.gossipContext = gossipContextInjector.getValue();
         startContext.run(() ->
         {
@@ -52,15 +54,14 @@ public class GossipService implements Service<Gossip>
 
             this.gossip = new Gossip(gossipContext);
             gossip.open();
-            agentRunnerServices.gossipAgentRunnerService().run(gossip);
+            scheduledGossip = taskScheduler.submitTask(gossip);
         });
     }
 
     @Override
     public void stop(ServiceStopContext stopContext)
     {
-        final AgentRunnerServices agentRunnerServices = agentRunnerInjector.getValue();
-        agentRunnerServices.gossipAgentRunnerService().remove(gossip);
+        scheduledGossip.remove();
     }
 
     @Override
@@ -74,9 +75,9 @@ public class GossipService implements Service<Gossip>
         return gossipContextInjector;
     }
 
-    public Injector<AgentRunnerServices> getAgentRunnerInjector()
+    public Injector<TaskScheduler> getTaskSchedulerInjector()
     {
-        return agentRunnerInjector;
+        return taskSchedulerInjector;
     }
 
 }

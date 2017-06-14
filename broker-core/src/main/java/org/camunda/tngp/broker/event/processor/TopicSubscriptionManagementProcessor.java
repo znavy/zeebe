@@ -245,7 +245,7 @@ public class TopicSubscriptionManagementProcessor implements StreamProcessor
             .dependency(streamServiceName, streamProcessorService.getSourceStreamInjector())
             .dependency(streamServiceName, streamProcessorService.getTargetStreamInjector())
             .dependency(SNAPSHOT_STORAGE_SERVICE, streamProcessorService.getSnapshotStorageInjector())
-            .dependency(AGENT_RUNNER_SERVICE, streamProcessorService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, streamProcessorService.getTaskSchedulerInjector())
             .install()
             .thenApply((v) -> processor);
     }
