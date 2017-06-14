@@ -50,7 +50,7 @@ public class TransportComponent implements Component
         final TransportService transportService = new TransportService();
         serviceContainer.createService(TRANSPORT, transportService)
             .dependency(TRANSPORT_SEND_BUFFER, transportService.getSendBufferInjector())
-            .dependency(TASK_SCHEDULER_SERVICE, transportService.getAgentRunnerInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, transportService.getTaskSchedulerInjector())
             .install();
 
         context.addRequiredStartAction(bindClientApi(serviceContainer, transportComponentCfg));
@@ -112,7 +112,7 @@ public class TransportComponent implements Component
         final CompletableFuture<Void> controlMessageServiceFuture = serviceContainer.createService(CONTROL_MESSAGE_HANDLER_MANAGER, controlMessageHandlerManagerService)
             .dependency(serverSocketBindingReceiveBufferName(CLIENT_API_SOCKET_BINDING_NAME), controlMessageHandlerManagerService.getControlMessageBufferInjector())
             .dependency(TRANSPORT_SEND_BUFFER, controlMessageHandlerManagerService.getSendBufferInjector())
-            .dependency(TASK_SCHEDULER_SERVICE, controlMessageHandlerManagerService.getAgentRunnerServicesInjector())
+            .dependency(TASK_SCHEDULER_SERVICE, controlMessageHandlerManagerService.getTaskSchedulerInjector())
             .dependency(TASK_QUEUE_SUBSCRIPTION_MANAGER, controlMessageHandlerManagerService.getTaskSubscriptionManagerInjector())
             .dependency(TOPIC_SUBSCRIPTION_SERVICE, controlMessageHandlerManagerService.getTopicSubscriptionServiceInjector())
             .install();

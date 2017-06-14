@@ -24,10 +24,16 @@ import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.camunda.tngp.broker.logstreams.BrokerEventMetadata;
 import org.camunda.tngp.broker.transport.clientapi.ErrorResponseWriter;
-import org.camunda.tngp.dispatcher.*;
-import org.camunda.tngp.protocol.clientapi.*;
-import org.camunda.tngp.util.agent.AgentRunnerService;
+import org.camunda.tngp.dispatcher.Dispatcher;
+import org.camunda.tngp.dispatcher.FragmentHandler;
+import org.camunda.tngp.dispatcher.Subscription;
+import org.camunda.tngp.protocol.clientapi.ControlMessageRequestDecoder;
+import org.camunda.tngp.protocol.clientapi.ControlMessageType;
+import org.camunda.tngp.protocol.clientapi.ErrorCode;
+import org.camunda.tngp.protocol.clientapi.MessageHeaderDecoder;
+import org.camunda.tngp.util.newagent.ScheduledTask;
 import org.camunda.tngp.util.newagent.Task;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 import org.camunda.tngp.util.state.*;
 import org.camunda.tngp.util.time.ClockUtil;
 
@@ -58,8 +64,9 @@ public class ControlMessageHandlerManager implements Task
             .from(closedState).take(TRANSITION_OPEN).to(openingState)
             .build());
 
-    protected final AgentRunnerService agentRunnerService;
+    protected final TaskScheduler taskScheduler;
     protected final AtomicBoolean isRunning = new AtomicBoolean(false);
+    protected ScheduledTask scheduledTask;
 
     protected final ControlMessageRequestHeaderDescriptor requestHeaderDescriptor = new ControlMessageRequestHeaderDescriptor();
     protected final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
@@ -81,10 +88,10 @@ public class ControlMessageHandlerManager implements Task
             Dispatcher controlMessageDispatcher,
             ErrorResponseWriter errorResponseWriter,
             long requestTimeoutInMillis,
-            AgentRunnerService agentRunnerService,
+            TaskScheduler taskScheduler,
             List<ControlMessageHandler> handlers)
     {
-        this.agentRunnerService = agentRunnerService;
+        this.taskScheduler = taskScheduler;
         this.controlMessageDispatcher = controlMessageDispatcher;
         this.requestTimeoutInMillis = requestTimeoutInMillis;
         this.errorResponseWriter = errorResponseWriter;
@@ -129,7 +136,7 @@ public class ControlMessageHandlerManager implements Task
         {
             try
             {
-                agentRunnerService.run(this);
+                scheduledTask = taskScheduler.submitTask(this);
             }
             catch (Exception e)
             {
@@ -321,7 +328,7 @@ public class ControlMessageHandlerManager implements Task
             {
                 context.completeOpenCloseFuture();
 
-                agentRunnerService.remove(ControlMessageHandlerManager.this);
+                scheduledTask.remove();
             }
         }
     }

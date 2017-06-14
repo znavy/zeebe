@@ -1,6 +1,5 @@
 package org.camunda.tngp.broker.transport;
 
-import org.camunda.tngp.broker.system.threads.AgentRunnerServices;
 import org.camunda.tngp.dispatcher.Dispatcher;
 import org.camunda.tngp.servicecontainer.Injector;
 import org.camunda.tngp.servicecontainer.Service;
@@ -12,16 +11,18 @@ import org.camunda.tngp.transport.Transports;
 import org.camunda.tngp.transport.impl.agent.Conductor;
 import org.camunda.tngp.transport.impl.agent.Receiver;
 import org.camunda.tngp.transport.impl.agent.Sender;
+import org.camunda.tngp.util.newagent.ScheduledTask;
+import org.camunda.tngp.util.newagent.TaskScheduler;
 
 public class TransportService implements Service<Transport>
 {
     protected final Injector<Dispatcher> sendBufferInjector = new Injector<>();
-    protected final Injector<AgentRunnerServices> agentRunnerInjector = new Injector<>();
+    protected final Injector<TaskScheduler> taskSchedulerInjector = new Injector<>();
 
     protected Transport transport;
-    protected Conductor transportConductor;
-    protected Receiver receiver;
-    protected Sender sender;
+    protected ScheduledTask scheduledTransportConductor;
+    protected ScheduledTask scheduledReceiver;
+    protected ScheduledTask scheduledSender;
 
     @Override
     public void start(ServiceStartContext serviceContext)
@@ -30,26 +31,25 @@ public class TransportService implements Service<Transport>
 
         transport = transportBuilder
                 .sendBuffer(sendBufferInjector.getValue())
-                .agentsExternallyManaged()
+                .tasksExternallyManaged()
                 .build();
 
-        transportConductor = transportBuilder.getTransportConductor();
-        receiver = transportBuilder.getReceiver();
-        sender = transportBuilder.getSender();
+        final Conductor transportConductor = transportBuilder.getTransportConductor();
+        final Receiver receiver = transportBuilder.getReceiver();
+        final Sender sender = transportBuilder.getSender();
 
-        final AgentRunnerServices agentRunnerServices = agentRunnerInjector.getValue();
-        agentRunnerServices.networkReceiverAgentRunnerService().run(receiver);
-        agentRunnerServices.networkSenderAgentRunnerService().run(sender);
-        agentRunnerServices.conductorAgentRunnerService().run(transportConductor);
+        final TaskScheduler taskScheduler = taskSchedulerInjector.getValue();
+        scheduledReceiver = taskScheduler.submitTask(receiver);
+        scheduledSender = taskScheduler.submitTask(sender);
+        scheduledTransportConductor = taskScheduler.submitTask(transportConductor);
     }
 
     @Override
     public void stop(ServiceStopContext stopContext)
     {
-        final AgentRunnerServices agentRunnerServices = agentRunnerInjector.getValue();
-        agentRunnerServices.networkReceiverAgentRunnerService().remove(receiver);
-        agentRunnerServices.networkSenderAgentRunnerService().remove(sender);
-        agentRunnerServices.conductorAgentRunnerService().remove(transportConductor);
+        scheduledReceiver.remove();
+        scheduledSender.remove();
+        scheduledTransportConductor.remove();
     }
 
     @Override
@@ -58,9 +58,9 @@ public class TransportService implements Service<Transport>
         return transport;
     }
 
-    public Injector<AgentRunnerServices> getAgentRunnerInjector()
+    public Injector<TaskScheduler> getTaskSchedulerInjector()
     {
-        return agentRunnerInjector;
+        return taskSchedulerInjector;
     }
 
     public Injector<Dispatcher> getSendBufferInjector()
