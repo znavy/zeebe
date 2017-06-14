@@ -20,6 +20,7 @@ import org.camunda.tngp.servicecontainer.ServiceStartContext;
 import org.camunda.tngp.servicecontainer.ServiceStopContext;
 import org.camunda.tngp.util.newagent.TaskRunner;
 import org.camunda.tngp.util.newagent.TaskScheduler;
+import org.camunda.tngp.util.newagent.TaskSchedulerImpl;
 
 public class TaskSchedulerService implements Service<TaskScheduler>
 {
@@ -64,13 +65,20 @@ public class TaskSchedulerService implements Service<TaskScheduler>
     {
         final CountersManager countersManager = countersInjector.getValue().getCountersManager();
 
-        scheduler = new TaskScheduler(availableThreads, countersManager, new DefaultTaskRunnerFactory(brokerIdleStrategy));
+        scheduler = new TaskSchedulerImpl(availableThreads, countersManager, new DefaultTaskRunnerFactory(brokerIdleStrategy));
     }
 
     @Override
     public void stop(ServiceStopContext stopContext)
     {
-        scheduler.close();
+        try
+        {
+            scheduler.close();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 
     @Override

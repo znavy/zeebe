@@ -36,7 +36,7 @@ import org.camunda.tngp.logstreams.log.*;
 import org.camunda.tngp.logstreams.processor.StreamProcessorController;
 import org.camunda.tngp.logstreams.spi.SnapshotStorage;
 import org.camunda.tngp.protocol.clientapi.EventType;
-import org.camunda.tngp.test.util.agent.ControllableAgentRunnerService;
+import org.camunda.tngp.test.util.agent.ControllableTaskScheduler;
 import org.camunda.tngp.util.buffer.BufferWriter;
 import org.junit.After;
 import org.junit.Before;
@@ -47,7 +47,7 @@ import org.junit.rules.TemporaryFolder;
 public class IncidentStreamProcessorTest
 {
     @Rule
-    public ControllableAgentRunnerService agentRunnerService = new ControllableAgentRunnerService();
+    public ControllableTaskScheduler agentRunnerService = new ControllableTaskScheduler();
 
     @Rule
     public TemporaryFolder tempFolder = new TemporaryFolder();

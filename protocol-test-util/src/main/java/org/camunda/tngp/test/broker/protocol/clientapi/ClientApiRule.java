@@ -16,6 +16,7 @@ import org.camunda.tngp.transport.requestresponse.client.RequestResponseChannelH
 import org.camunda.tngp.transport.requestresponse.client.TransportConnectionPool;
 import org.camunda.tngp.transport.requestresponse.client.TransportConnectionPoolImpl;
 import org.camunda.tngp.transport.spi.TransportChannelHandler;
+import org.camunda.tngp.util.newagent.TaskSchedulerImpl;
 import org.junit.rules.ExternalResource;
 
 public class ClientApiRule extends ExternalResource
@@ -42,6 +43,7 @@ public class ClientApiRule extends ExternalResource
         incomingMessageCollector = new RawMessageCollector();
         transport = Transports.createTransport("testTransport")
                 .threadingMode(ThreadingMode.SHARED)
+                .taskScheduler(TaskSchedulerImpl.createDefaultExecutor())
                 .build();
 
         connectionPool = TransportConnectionPool.newFixedCapacityPool(transport, 2, 64);
