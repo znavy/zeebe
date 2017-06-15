@@ -1,7 +1,8 @@
 package org.camunda.tngp.client.impl;
 
 import static org.camunda.tngp.client.ClientProperties.*;
-import static org.camunda.tngp.util.EnsureUtil.*;
+import static org.camunda.tngp.util.EnsureUtil.ensureGreaterThanOrEqual;
+import static org.camunda.tngp.util.EnsureUtil.ensureNotNullOrEmpty;
 
 import java.util.Properties;
 
@@ -27,14 +28,12 @@ public class TngpClientImpl implements TngpClient
     protected final ClientCmdExecutor cmdExecutor;
     protected final ObjectMapper objectMapper;
 
-
     public TngpClientImpl(final Properties properties)
     {
         ClientProperties.setDefaults(properties);
         this.initializationProperties = properties;
 
         final String brokerContactPoint = properties.getProperty(BROKER_CONTACTPOINT);
-
         final SocketAddress contactPoint = SocketAddress.from(brokerContactPoint);
 
         transportManager =

@@ -1,6 +1,7 @@
 package org.camunda.tngp.client.impl;
 
-import static org.camunda.tngp.util.EnsureUtil.*;
+import static org.camunda.tngp.util.EnsureUtil.ensureGreaterThan;
+import static org.camunda.tngp.util.EnsureUtil.ensureNotNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,18 +11,13 @@ import org.camunda.tngp.client.impl.cmd.TopicCommand;
 import org.camunda.tngp.dispatcher.Dispatcher;
 import org.camunda.tngp.dispatcher.Dispatchers;
 import org.camunda.tngp.dispatcher.Subscription;
-import org.camunda.tngp.transport.Channel;
-import org.camunda.tngp.transport.ChannelManager;
-import org.camunda.tngp.transport.ReceiveBufferChannelHandler;
-import org.camunda.tngp.transport.SocketAddress;
-import org.camunda.tngp.transport.Transport;
-import org.camunda.tngp.transport.TransportBuilder;
+import org.camunda.tngp.transport.*;
 import org.camunda.tngp.transport.TransportBuilder.ThreadingMode;
-import org.camunda.tngp.transport.TransportChannelListener;
-import org.camunda.tngp.transport.Transports;
 import org.camunda.tngp.transport.protocol.Protocols;
 import org.camunda.tngp.transport.requestresponse.client.TransportConnection;
 import org.camunda.tngp.transport.requestresponse.client.TransportConnectionPool;
+import org.camunda.tngp.util.newagent.TaskScheduler;
+import org.camunda.tngp.util.newagent.TaskSchedulerImpl;
 
 
 public class TransportManager implements AutoCloseable
@@ -31,16 +27,20 @@ public class TransportManager implements AutoCloseable
     private final Dispatcher dataFrameReceiveBuffer;
     private final TransportConnectionPool connectionPool;
     private final ChannelManager channelManager;
+    private final TaskScheduler taskScheduler;
 
     private final Map<SocketAddress, Channel> channelForBroker = new HashMap<>();
     private final Map<Topic, SocketAddress> brokerForTopic = new HashMap<>();
 
     public TransportManager(final BrokerManagerBuilder builder)
     {
+        this.taskScheduler = TaskSchedulerImpl.createDefaultExecutor();
+
         final TransportBuilder transportBuilder = Transports.createTransport("tngp.client")
             .sendBufferSize(builder.sendBufferSize)
             .maxMessageLength(builder.maxMessageSize)
-            .threadingMode(builder.threadingMode);
+            .threadingMode(builder.threadingMode)
+            .taskScheduler(taskScheduler);
 
         if (builder.keepAlivePeriod != null)
         {
@@ -54,6 +54,7 @@ public class TransportManager implements AutoCloseable
             .bufferSize(builder.sendBufferSize)
             .modePubSub()
             .frameMaxLength(builder.maxMessageSize)
+            .taskScheduler(taskScheduler)
             .build();
 
         connectionPool = TransportConnectionPool.newFixedCapacityPool(transport, builder.maxConnections, builder.maxRequests);
@@ -184,6 +185,7 @@ public class TransportManager implements AutoCloseable
             e.printStackTrace();
         }
 
+        taskScheduler.close();
     }
 
     static class BrokerManagerBuilder

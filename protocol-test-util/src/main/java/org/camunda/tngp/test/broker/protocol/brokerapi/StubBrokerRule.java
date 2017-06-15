@@ -19,6 +19,7 @@ import org.camunda.tngp.transport.SocketAddress;
 import org.camunda.tngp.transport.Transport;
 import org.camunda.tngp.transport.TransportBuilder.ThreadingMode;
 import org.camunda.tngp.transport.Transports;
+import org.camunda.tngp.util.newagent.TaskSchedulerImpl;
 import org.junit.rules.ExternalResource;
 
 public class StubBrokerRule extends ExternalResource
@@ -55,6 +56,7 @@ public class StubBrokerRule extends ExternalResource
 
         transport = Transports.createTransport("testTransport")
                 .threadingMode(ThreadingMode.SHARED)
+                .taskScheduler(TaskSchedulerImpl.createDefaultExecutor())
                 .build();
 
         bindAddr = new SocketAddress(host, port);
