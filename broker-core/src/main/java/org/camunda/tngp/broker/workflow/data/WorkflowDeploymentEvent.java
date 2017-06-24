@@ -17,7 +17,7 @@ public class WorkflowDeploymentEvent extends UnpackedObject
     protected static final DirectBuffer EMPTY_ARRAY = new UnsafeBuffer(MsgPackHelper.EMPTY_ARRAY);
 
     private final EnumProperty<WorkflowDeploymentEventType> eventTypeProp = new EnumProperty<>(PROP_EVENT_TYPE, WorkflowDeploymentEventType.class);
-    private final StringProperty bpmnXmlProp = new StringProperty("bpmnXml");
+    private final StringProperty resourceProp = new StringProperty("bpmnXml");
 
     private final ArrayProperty<DeployedWorkflow> deployedWorkflowsProp = new ArrayProperty<>(
             "deployedWorkflows",
@@ -30,7 +30,7 @@ public class WorkflowDeploymentEvent extends UnpackedObject
     public WorkflowDeploymentEvent()
     {
         this.declareProperty(eventTypeProp)
-            .declareProperty(bpmnXmlProp)
+            .declareProperty(resourceProp)
             .declareProperty(deployedWorkflowsProp)
             .declareProperty(errorMessageProp);
     }
@@ -46,19 +46,19 @@ public class WorkflowDeploymentEvent extends UnpackedObject
         return this;
     }
 
-    public DirectBuffer getBpmnXml()
+    public DirectBuffer getResource()
     {
-        return bpmnXmlProp.getValue();
+        return resourceProp.getValue();
     }
 
-    public WorkflowDeploymentEvent setBpmnXml(DirectBuffer bpmnXml)
+    public WorkflowDeploymentEvent setResource(DirectBuffer bpmnXml)
     {
         return setBpmnXml(bpmnXml, 0, bpmnXml.capacity());
     }
 
     public WorkflowDeploymentEvent setBpmnXml(DirectBuffer bpmnXml, int offset, int length)
     {
-        this.bpmnXmlProp.setValue(bpmnXml, offset, length);
+        this.resourceProp.setValue(bpmnXml, offset, length);
         return this;
     }
 

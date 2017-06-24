@@ -17,12 +17,18 @@ import static org.camunda.tngp.protocol.clientapi.EventType.*;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.agrona.DirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.io.DirectBufferInputStream;
+import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.bpm.model.xml.validation.ValidationResults;
+import org.camunda.bpm.swf.Transformer;
+import org.camunda.bpm.swf.ZeebeTaskFactory;
 import org.camunda.tngp.broker.Constants;
 import org.camunda.tngp.broker.logstreams.BrokerEventMetadata;
 import org.camunda.tngp.broker.logstreams.processor.HashIndexSnapshotSupport;
@@ -132,12 +138,27 @@ public class DeploymentStreamProcessor implements StreamProcessor
 
     private final class CreateDeploymentEventProcessor implements EventProcessor
     {
+        private Transformer yamlTransformer = new Transformer(new ZeebeTaskFactory());
+
         @Override
         public void processEvent()
         {
             try
             {
-                final BpmnModelInstance bpmnModelInstance = bpmnTransformer.readModelFromBuffer(deploymentEvent.getBpmnXml());
+                final DirectBuffer resourceBuffer = deploymentEvent.getResource();
+
+                BpmnModelInstance bpmnModelInstance = null;
+
+                if (!isXml(resourceBuffer))
+                {
+                    bpmnModelInstance = yamlTransformer.transform(new DirectBufferInputStream(resourceBuffer));
+                    deploymentEvent.setResource(new UnsafeBuffer(Bpmn.convertToString(bpmnModelInstance).getBytes(StandardCharsets.UTF_8)));
+                }
+                else
+                {
+                    bpmnModelInstance = bpmnTransformer.readModelFromBuffer(resourceBuffer);
+                }
+
                 final ValidationResults validationResults = bpmnTransformer.validate(bpmnModelInstance);
 
                 if (!validationResults.hasErrors())
@@ -163,6 +184,14 @@ public class DeploymentStreamProcessor implements StreamProcessor
             {
                 deploymentEvent.setEventType(WorkflowDeploymentEventType.DEPLOYMENT_REJECTED);
             }
+        }
+
+        private boolean isXml(DirectBuffer resourceBuffer)
+        {
+            final byte[] firstBytes = new byte[Math.max(32, resourceBuffer.capacity())];
+            resourceBuffer.getBytes(0, firstBytes);
+            final String string = new String(firstBytes, StandardCharsets.UTF_8);
+            return string.trim().startsWith("<?xml");
         }
 
         protected void collectDeployedWorkflows(final BpmnModelInstance bpmnModelInstance)

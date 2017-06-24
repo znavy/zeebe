@@ -1,0 +1,13 @@
+name: test
+
+tasks:
+
+    - id: TASK_1
+      type: someType
+
+    - id: TASK_2
+      type: someOtherType
+
+flow:
+    - from: TASK_1
+      to: TASK_2

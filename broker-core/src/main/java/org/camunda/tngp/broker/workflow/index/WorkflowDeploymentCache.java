@@ -126,7 +126,7 @@ public class WorkflowDeploymentCache
             workflowEvent.readValue(deploymentEvent);
 
             // currently, it can only be one
-            workflow = bpmnTransformer.transform(deploymentEvent.getBpmnXml()).get(0);
+            workflow = bpmnTransformer.transform(deploymentEvent.getResource()).get(0);
         }
         return workflow;
     }

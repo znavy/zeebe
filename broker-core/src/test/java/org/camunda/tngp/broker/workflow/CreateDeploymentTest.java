@@ -1,17 +1,17 @@
 package org.camunda.tngp.broker.workflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.camunda.tngp.broker.workflow.data.WorkflowInstanceEvent.PROP_EVENT_TYPE;
-import static org.camunda.tngp.broker.workflow.data.WorkflowInstanceEvent.PROP_WORKFLOW_BPMN_PROCESS_ID;
-import static org.camunda.tngp.broker.workflow.data.WorkflowInstanceEvent.PROP_WORKFLOW_VERSION;
+import static org.camunda.tngp.broker.workflow.data.WorkflowInstanceEvent.*;
 import static org.camunda.tngp.logstreams.log.LogStream.DEFAULT_PARTITION_ID;
 import static org.camunda.tngp.logstreams.log.LogStream.DEFAULT_TOPIC_NAME;
 
+import java.io.*;
 import java.util.List;
 import java.util.Map;
 
 import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
+import org.camunda.bpm.model.xml.impl.util.IoUtil;
 import org.camunda.tngp.broker.test.EmbeddedBrokerRule;
 import org.camunda.tngp.protocol.clientapi.EventType;
 import org.camunda.tngp.test.broker.protocol.clientapi.ClientApiRule;
@@ -55,6 +55,32 @@ public class CreateDeploymentTest
         assertThat(resp.partitionId()).isEqualTo(DEFAULT_PARTITION_ID);
         assertThat(resp.getEvent()).containsEntry(PROP_EVENT_TYPE, "DEPLOYMENT_CREATED");
     }
+
+
+    @Test
+    public void shouldCreateYamlDeployment() throws IOException
+    {
+        // given
+        final String yaml = getStringFromInputStream(CreateDeploymentTest.class.getResourceAsStream("two-tasks.yaml"), false);
+
+        // when
+        final ExecuteCommandResponse resp = apiRule.createCmdRequest()
+                .topicName(DEFAULT_TOPIC_NAME)
+                .partitionId(0)
+                .eventType(EventType.DEPLOYMENT_EVENT)
+                .command()
+                    .put(PROP_EVENT_TYPE, "CREATE_DEPLOYMENT")
+                    .put("bpmnXml", yaml)
+                .done()
+                .sendAndAwait();
+
+        // then
+        assertThat(resp.key()).isGreaterThanOrEqualTo(0L);
+        assertThat(resp.getTopicName()).isEqualTo(DEFAULT_TOPIC_NAME);
+        assertThat(resp.partitionId()).isEqualTo(DEFAULT_PARTITION_ID);
+        assertThat(resp.getEvent()).containsEntry(PROP_EVENT_TYPE, "DEPLOYMENT_CREATED");
+    }
+
 
     @SuppressWarnings("unchecked")
     @Test
@@ -148,4 +174,31 @@ public class CreateDeploymentTest
         assertThat((String) resp.getEvent().get("errorMessage")).contains("Failed to deploy BPMN model");
     }
 
+    private static String getStringFromInputStream(InputStream inputStream, boolean trim) throws IOException
+    {
+        BufferedReader bufferedReader = null;
+        final StringBuilder stringBuilder = new StringBuilder();
+        try
+        {
+            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            String line;
+            while ((line = bufferedReader.readLine()) != null)
+            {
+                if (trim)
+                {
+                    stringBuilder.append(line.trim());
+                }
+                else
+                {
+                    stringBuilder.append(line).append("\n");
+                }
+            }
+        }
+        finally
+        {
+            IoUtil.closeSilently(bufferedReader);
+        }
+
+        return stringBuilder.toString();
+    }
 }
