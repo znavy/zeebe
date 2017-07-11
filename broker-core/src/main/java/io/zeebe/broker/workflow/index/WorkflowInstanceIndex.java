@@ -51,7 +51,7 @@ public class WorkflowInstanceIndex implements AutoCloseable
 
     public WorkflowInstanceIndex()
     {
-        this.index = new Long2BytesHashIndex(Short.MAX_VALUE, 256, INDEX_VALUE_SIZE);
+        this.index = new Long2BytesHashIndex(8388608, 8, INDEX_VALUE_SIZE);
         this.snapshotSupport = new HashIndexSnapshotSupport<>(index);
     }
 

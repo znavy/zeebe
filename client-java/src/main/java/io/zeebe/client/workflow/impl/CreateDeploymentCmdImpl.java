@@ -15,6 +15,7 @@ import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import io.zeebe.client.impl.ClientCommandManager;
 import io.zeebe.client.impl.Topic;
 import io.zeebe.client.impl.cmd.AbstractExecuteCmdImpl;
+import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.workflow.cmd.CreateDeploymentCmd;
 import io.zeebe.client.workflow.cmd.DeploymentResult;
 import io.zeebe.client.workflow.cmd.WorkflowDefinition;
@@ -27,7 +28,7 @@ public class CreateDeploymentCmdImpl extends AbstractExecuteCmdImpl<DeploymentEv
 
     protected String resource;
 
-    public CreateDeploymentCmdImpl(final ClientCommandManager commandManager, final ObjectMapper objectMapper, final Topic topic)
+    public CreateDeploymentCmdImpl(final ClientCommandManager commandManager, final ObjectMapper objectMapper, MsgPackConverter msgPackConverter, final Topic topic)
     {
         super(commandManager, objectMapper, topic, DeploymentEvent.class, EventType.DEPLOYMENT_EVENT);
     }
@@ -62,7 +63,7 @@ public class CreateDeploymentCmdImpl extends AbstractExecuteCmdImpl<DeploymentEv
     {
         ensureNotNull("classpath resource", resourceName);
 
-        try (final InputStream resourceStream = getClass().getClassLoader().getResourceAsStream(resourceName))
+        try (InputStream resourceStream = getClass().getClassLoader().getResourceAsStream(resourceName))
         {
             if (resourceStream != null)
             {
@@ -73,7 +74,8 @@ public class CreateDeploymentCmdImpl extends AbstractExecuteCmdImpl<DeploymentEv
                 throw new FileNotFoundException(resourceName);
             }
 
-        } catch (final IOException e)
+        }
+        catch (final IOException e)
         {
             final String exceptionMsg = String.format("Cannot deploy resource from classpath. %s", e.getMessage());
             throw new RuntimeException(exceptionMsg, e);
@@ -85,10 +87,11 @@ public class CreateDeploymentCmdImpl extends AbstractExecuteCmdImpl<DeploymentEv
     {
         ensureNotNull("filename", filename);
 
-        try (final InputStream resourceStream = new FileInputStream(filename))
+        try (InputStream resourceStream = new FileInputStream(filename))
         {
             return resourceStream(resourceStream);
-        } catch (final IOException e)
+        }
+        catch (final IOException e)
         {
             final String exceptionMsg = String.format("Cannot deploy resource from file. %s", e.getMessage());
             throw new RuntimeException(exceptionMsg, e);

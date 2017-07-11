@@ -7,6 +7,8 @@ import org.agrona.DirectBuffer;
 
 public class ExecutableWorkflow extends ExecutableScope
 {
+    private long workflowKey;
+
     private final Map<DirectBuffer, ExecutableFlowElement> flowElementMap = new HashMap<>();
 
     public ExecutableWorkflow()
@@ -25,4 +27,13 @@ public class ExecutableWorkflow extends ExecutableScope
         return flowElementMap;
     }
 
+    public long getWorkflowKey()
+    {
+        return workflowKey;
+    }
+
+    public void setWorkflowKey(long workflowKey)
+    {
+        this.workflowKey = workflowKey;
+    }
 }

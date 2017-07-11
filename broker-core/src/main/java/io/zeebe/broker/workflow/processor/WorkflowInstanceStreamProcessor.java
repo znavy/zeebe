@@ -59,6 +59,7 @@ import io.zeebe.msgpack.mapping.Mapping;
 import io.zeebe.msgpack.mapping.MappingException;
 import io.zeebe.msgpack.mapping.MappingProcessor;
 import io.zeebe.protocol.clientapi.EventType;
+import io.zeebe.util.actor.Actor;
 
 public class WorkflowInstanceStreamProcessor implements StreamProcessor
 {
@@ -136,7 +137,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
         this.responseWriter = responseWriter;
         this.logStreamReader = new BufferedLogStreamReader();
 
-        this.latestWorkflowVersionIndex = new Bytes2LongHashIndex(Short.MAX_VALUE, 64, SIZE_OF_PROCESS_ID);
+        this.latestWorkflowVersionIndex = new Bytes2LongHashIndex(8388608, 8, SIZE_OF_PROCESS_ID);
 
         this.workflowDeploymentCache = new WorkflowDeploymentCache(deploymentCacheSize, logStreamReader);
         this.payloadCache = new PayloadCache(payloadCacheSize, logStreamReader);
@@ -153,6 +154,12 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
                 workflowDeploymentCache.getSnapshotSupport(),
                 payloadCache.getSnapshotSupport());
 
+    }
+
+    @Override
+    public int getPriority(long now)
+    {
+        return Actor.PRIORITY_HIGH;
     }
 
     @Override
@@ -353,7 +360,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
         final DirectBuffer bpmnProcessId = workflowInstanceEvent.getBpmnProcessId();
         final int version = workflowInstanceEvent.getVersion();
 
-        final ExecutableWorkflow workflow = workflowDeploymentCache.getWorkflow(bpmnProcessId, version);
+        final ExecutableWorkflow workflow = workflowDeploymentCache.getWorkflow(workflowInstanceEvent.getWorkflowKey());
 
         final DirectBuffer currentActivityId = workflowInstanceEvent.getActivityId();
 
@@ -427,6 +434,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
             workflowInstanceEvent
                     .setEventType(newEventType)
                     .setWorkflowInstanceKey(eventKey)
+                    .setWorkflowKey(workflowInstanceEvent.getWorkflowKey())
                     .setVersion(version);
         }
 
@@ -448,10 +456,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
         @Override
         public void processEvent()
         {
-            final DirectBuffer bpmnProcessId = workflowInstanceEvent.getBpmnProcessId();
-            final int version = workflowInstanceEvent.getVersion();
-
-            final ExecutableWorkflow workflow = workflowDeploymentCache.getWorkflow(bpmnProcessId, version);
+            final ExecutableWorkflow workflow = workflowDeploymentCache.getWorkflow(workflowInstanceEvent.getWorkflowKey());
 
             final ExecutableStartEvent startEvent = workflow.getScopeStartEvent();
             final DirectBuffer activityId = startEvent.getId();
@@ -459,7 +464,8 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
             workflowInstanceEvent
                 .setEventType(WorkflowInstanceEventType.START_EVENT_OCCURRED)
                 .setWorkflowInstanceKey(eventKey)
-                .setActivityId(activityId);
+                .setActivityId(activityId)
+                .setWorkflowKey(workflow.getWorkflowKey());
         }
 
         @Override
@@ -575,6 +581,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
                 .setBpmnProcessId(workflowInstanceEvent.getBpmnProcessId())
                 .setWorkflowDefinitionVersion(workflowInstanceEvent.getVersion())
                 .setWorkflowInstanceKey(workflowInstanceEvent.getWorkflowInstanceKey())
+                .setWorkflowKey(workflowInstanceEvent.getWorkflowKey())
                 .setActivityId(serviceTask.getId())
                 .setActivityInstanceKey(eventKey);
 
@@ -783,6 +790,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
                     .setEventType(WorkflowInstanceEventType.ACTIVITY_COMPLETING)
                     .setBpmnProcessId(taskHeaders.getBpmnProcessId())
                     .setVersion(taskHeaders.getWorkflowDefinitionVersion())
+                    .setWorkflowKey(taskHeaders.getWorkflowKey())
                     .setWorkflowInstanceKey(taskHeaders.getWorkflowInstanceKey())
                     .setActivityId(taskHeaders.getActivityId())
                     .setPayload(taskEvent.getPayload());
@@ -980,6 +988,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
                 .setBpmnProcessId(workflowInstanceEvent.getBpmnProcessId())
                 .setVersion(workflowInstanceEvent.getVersion())
                 .setWorkflowInstanceKey(eventKey)
+                .setWorkflowKey(workflowInstanceEvent.getWorkflowKey())
                 .setActivityId(activityInstanceIndex.getActivityId());
 
             logEntryBuilder

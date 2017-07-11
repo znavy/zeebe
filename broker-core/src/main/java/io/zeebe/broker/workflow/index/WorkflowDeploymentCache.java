@@ -17,10 +17,6 @@ import static org.agrona.BitUtil.SIZE_OF_INT;
 
 import java.nio.ByteOrder;
 
-import org.agrona.DirectBuffer;
-import org.agrona.collections.LongLruCache;
-import org.agrona.concurrent.UnsafeBuffer;
-
 import io.zeebe.broker.logstreams.processor.HashIndexSnapshotSupport;
 import io.zeebe.broker.workflow.data.WorkflowDeploymentEvent;
 import io.zeebe.broker.workflow.graph.model.ExecutableWorkflow;
@@ -29,6 +25,9 @@ import io.zeebe.hashindex.Bytes2LongHashIndex;
 import io.zeebe.logstreams.log.LogStreamReader;
 import io.zeebe.logstreams.log.LoggedEvent;
 import io.zeebe.logstreams.spi.SnapshotSupport;
+import org.agrona.DirectBuffer;
+import org.agrona.collections.Long2ObjectHashMap;
+import org.agrona.concurrent.UnsafeBuffer;
 
 /**
  * Cache of deployed workflows. It contains an LRU cache of the parsed workflows
@@ -52,17 +51,16 @@ public class WorkflowDeploymentCache implements AutoCloseable
     private final Bytes2LongHashIndex index;
     private final HashIndexSnapshotSupport<Bytes2LongHashIndex> snapshotSupport;
 
-    private final LongLruCache<ExecutableWorkflow> cache;
+    private final Long2ObjectHashMap<ExecutableWorkflow> cache;
     private final LogStreamReader logStreamReader;
 
     public WorkflowDeploymentCache(int cacheSize, LogStreamReader logStreamReader)
     {
-        this.index = new Bytes2LongHashIndex(Short.MAX_VALUE, 64, SIZE_OF_COMPOSITE_KEY);
+        this.index = new Bytes2LongHashIndex(8388608, 8, SIZE_OF_COMPOSITE_KEY);
         this.snapshotSupport = new HashIndexSnapshotSupport<>(index);
 
         this.logStreamReader = logStreamReader;
-        this.cache = new LongLruCache<>(cacheSize, this::lookupWorkflow, (workflow) ->
-        { });
+        this.cache = new Long2ObjectHashMap<>();
     }
 
     public SnapshotSupport getSnapshotSupport()
@@ -95,19 +93,14 @@ public class WorkflowDeploymentCache implements AutoCloseable
         return index.get(buffer, 0, buffer.capacity(), -1L);
     }
 
-    public ExecutableWorkflow getWorkflow(DirectBuffer bpmnProcessId, int version)
+    public ExecutableWorkflow getWorkflow(long workflowKey)
     {
-        ExecutableWorkflow workflow = null;
-
-        final long position = getDeployedWorkflowPosition(bpmnProcessId, version);
-        if (position >= 0)
-        {
-            workflow = cache.lookup(position);
-        }
+        ExecutableWorkflow workflow = cache.get(workflowKey);
 
         if (workflow == null)
         {
-            throw new RuntimeException("No workflow deployment event found.");
+            workflow = lookupWorkflow(workflowKey);
+            cache.put(workflowKey, workflow);
         }
 
         return workflow;

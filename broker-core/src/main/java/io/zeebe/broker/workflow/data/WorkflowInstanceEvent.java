@@ -16,6 +16,7 @@ public class WorkflowInstanceEvent extends UnpackedObject
     public static final DirectBuffer NO_PAYLOAD = new UnsafeBuffer(MsgPackHelper.NIL);
 
     public static final String PROP_EVENT_TYPE = "eventType";
+    public static final String PROP_WORKFLOW_KEY = "workflowKey";
     public static final String PROP_WORKFLOW_BPMN_PROCESS_ID = "bpmnProcessId";
     public static final String PROP_WORKFLOW_INSTANCE_KEY = "workflowInstanceKey";
     public static final String PROP_WORKFLOW_ACTIVITY_ID = "activityId";
@@ -23,6 +24,7 @@ public class WorkflowInstanceEvent extends UnpackedObject
     public static final String PROP_WORKFLOW_PAYLOAD = "payload";
 
     private final EnumProperty<WorkflowInstanceEventType> eventTypeProp = new EnumProperty<>(PROP_EVENT_TYPE, WorkflowInstanceEventType.class);
+    private final LongProperty workflowKeyProp = new LongProperty(PROP_WORKFLOW_KEY, -1L);
     private final StringProperty bpmnProcessIdProp = new StringProperty(PROP_WORKFLOW_BPMN_PROCESS_ID, "");
     private final LongProperty workflowInstanceKeyProp = new LongProperty(PROP_WORKFLOW_INSTANCE_KEY, -1L);
     private final StringProperty activityIdProp = new StringProperty(PROP_WORKFLOW_ACTIVITY_ID, "");
@@ -33,6 +35,7 @@ public class WorkflowInstanceEvent extends UnpackedObject
     {
         this
             .declareProperty(eventTypeProp)
+            .declareProperty(workflowKeyProp)
             .declareProperty(bpmnProcessIdProp)
             .declareProperty(workflowInstanceKeyProp)
             .declareProperty(activityIdProp)
@@ -129,4 +132,14 @@ public class WorkflowInstanceEvent extends UnpackedObject
         return this;
     }
 
+    public long getWorkflowKey()
+    {
+        return workflowKeyProp.getValue();
+    }
+
+    public WorkflowInstanceEvent setWorkflowKey(long key)
+    {
+        workflowKeyProp.setValue(key);
+        return this;
+    }
 }

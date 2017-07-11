@@ -12,26 +12,21 @@
  */
 package io.zeebe.client.impl.cmd;
 
-import static io.zeebe.protocol.clientapi.EventType.*;
-import static io.zeebe.protocol.clientapi.ExecuteCommandRequestEncoder.*;
-import static io.zeebe.util.StringUtil.*;
-import static io.zeebe.util.VarDataUtil.*;
+import static io.zeebe.protocol.clientapi.EventType.NULL_VAL;
+import static io.zeebe.protocol.clientapi.ExecuteCommandRequestEncoder.commandHeaderLength;
+import static io.zeebe.util.VarDataUtil.readBytes;
 
 import java.io.IOException;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.agrona.DirectBuffer;
-import org.agrona.MutableDirectBuffer;
 import io.zeebe.client.impl.ClientCommandManager;
 import io.zeebe.client.impl.Topic;
-import io.zeebe.protocol.clientapi.EventType;
-import io.zeebe.protocol.clientapi.ExecuteCommandRequestEncoder;
-import io.zeebe.protocol.clientapi.ExecuteCommandResponseDecoder;
-import io.zeebe.protocol.clientapi.MessageHeaderEncoder;
-import io.zeebe.util.buffer.RequestWriter;
+import io.zeebe.protocol.clientapi.*;
+import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
+import org.agrona.io.ExpandableDirectBufferOutputStream;
 
-public abstract class AbstractExecuteCmdImpl<E, R> extends AbstractCmdImpl<R> implements RequestWriter, ClientResponseHandler<R>
+public abstract class AbstractExecuteCmdImpl<E, R> extends AbstractCmdImpl<R> implements ClientResponseHandler<R>
 {
     protected final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     protected final ExecuteCommandRequestEncoder commandRequestEncoder = new ExecuteCommandRequestEncoder();
@@ -41,8 +36,6 @@ public abstract class AbstractExecuteCmdImpl<E, R> extends AbstractCmdImpl<R> im
     protected final ObjectMapper objectMapper;
     protected final Class<E> eventType;
     protected final EventType commandEventType;
-
-    protected byte[] serializedCommand;
 
     public AbstractExecuteCmdImpl(
         final ClientCommandManager commandManager,
@@ -64,28 +57,11 @@ public abstract class AbstractExecuteCmdImpl<E, R> extends AbstractCmdImpl<R> im
     }
 
     @Override
-    public RequestWriter getRequestWriter()
+    public int writeCommand(ExpandableArrayBuffer buffer)
     {
-        return this;
-    }
+        validate();
 
-    @Override
-    public int getLength()
-    {
-        ensureCommandInitialized();
-
-        return headerEncoder.encodedLength() +
-                commandRequestEncoder.sbeBlockLength() +
-                topicNameHeaderLength() +
-                getBytes(topic.getTopicName()).length +
-                commandHeaderLength() +
-                serializedCommand.length;
-    }
-
-    @Override
-    public void write(final MutableDirectBuffer buffer, int offset)
-    {
-        ensureCommandInitialized();
+        int offset = 0;
 
         headerEncoder.wrap(buffer, offset)
             .blockLength(commandRequestEncoder.sbeBlockLength())
@@ -107,26 +83,24 @@ public abstract class AbstractExecuteCmdImpl<E, R> extends AbstractCmdImpl<R> im
             .partitionId(topic.getPartitionId())
             .key(key)
             .eventType(commandEventType)
-            .topicName(topic.getTopicName())
-            .putCommand(serializedCommand, 0, serializedCommand.length);
+            .topicName(topic.getTopicName());
 
-        serializedCommand = null;
-        reset();
-    }
+        offset = commandRequestEncoder.limit();
+        final int serializedCommandOffset = offset + commandHeaderLength();
 
-    private void ensureCommandInitialized()
-    {
-        if (serializedCommand == null)
+        final ExpandableDirectBufferOutputStream out = new ExpandableDirectBufferOutputStream(buffer, serializedCommandOffset);
+        try
         {
-            try
-            {
-                serializedCommand = objectMapper.writeValueAsBytes(writeCommand());
-            }
-            catch (final JsonProcessingException e)
-            {
-                throw new RuntimeException("Failed to serialize command", e);
-            }
+            objectMapper.writeValue(out, writeCommand());
         }
+        catch (final Throwable e)
+        {
+            throw new RuntimeException("Failed to serialize command", e);
+        }
+
+        buffer.putShort(offset, (short)out.position(), java.nio.ByteOrder.LITTLE_ENDIAN);
+
+        return serializedCommandOffset + out.position();
     }
 
     protected abstract Object writeCommand();
@@ -182,7 +156,6 @@ public abstract class AbstractExecuteCmdImpl<E, R> extends AbstractCmdImpl<R> im
         }
     }
 
-    @Override
     public void validate()
     {
         topic.validate();
