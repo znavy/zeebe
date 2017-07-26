@@ -57,7 +57,7 @@ public class PollableTopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         // when
-        clientRule.topic().newPollableSubscription()
+        clientRule.topic().newPollableEventSubscription()
             .startAtHeadOfTopic()
             .name(SUBSCRIPTION_NAME)
             .open();
@@ -85,7 +85,7 @@ public class PollableTopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         // when
-        clientRule.topic().newPollableSubscription()
+        clientRule.topic().newPollableEventSubscription()
             .startAtHeadOfTopic()
             .forcedStart()
             .name(SUBSCRIPTION_NAME)
@@ -111,7 +111,7 @@ public class PollableTopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         final FailingHandler handler = new FailingHandler();
-        final PollableTopicSubscription subscription = clientRule.topic().newPollableSubscription()
+        final PollableEventSubscription subscription = clientRule.topic().newPollableEventSubscription()
             .startAtHeadOfTopic()
             .name(SUBSCRIPTION_NAME)
             .open();
@@ -144,7 +144,7 @@ public class PollableTopicSubscriptionTest
         // given
         broker.stubTopicSubscriptionApi(123L);
 
-        final PollableTopicSubscription subscription = clientRule.topic().newPollableSubscription()
+        final PollableEventSubscription subscription = clientRule.topic().newPollableEventSubscription()
             .startAtHeadOfTopic()
             .name(SUBSCRIPTION_NAME)
             .open();

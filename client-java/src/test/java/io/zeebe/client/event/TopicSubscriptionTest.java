@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.event.impl.TopicSubscriptionImpl;
+import io.zeebe.client.impl.event.TopicSubscriptionImpl;
 import io.zeebe.client.util.ClientRule;
 import io.zeebe.protocol.clientapi.ControlMessageType;
 import io.zeebe.protocol.clientapi.EventType;
@@ -51,7 +51,7 @@ public class TopicSubscriptionTest
 
     protected static final String SUBSCRIPTION_NAME = "foo";
 
-    protected static final TopicEventHandler DO_NOTHING = (m, e) ->
+    protected static final EventHandler DO_NOTHING = (m, e) ->
     { };
 
     public ClientRule clientRule = new ClientRule();
@@ -78,7 +78,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         // when
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)
@@ -106,7 +106,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         // when
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .forcedStart()
             .handler(DO_NOTHING)
@@ -130,7 +130,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         // when
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtTailOfTopic()
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)
@@ -158,7 +158,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         // when
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtPosition(654L)
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)
@@ -186,7 +186,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         // when
-        clientRule.topic().newPollableSubscription()
+        clientRule.topic().newPollableEventSubscription()
             .startAtHeadOfTopic()
             .name(SUBSCRIPTION_NAME)
             .open();
@@ -210,7 +210,7 @@ public class TopicSubscriptionTest
     public void shouldValidateEventHandlerForManagedSubscription()
     {
         // given
-        final TopicSubscriptionBuilder builder = clientRule.topic().newSubscription()
+        final EventSubscriptionBuilder builder = clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .name(SUBSCRIPTION_NAME);
 
@@ -226,7 +226,7 @@ public class TopicSubscriptionTest
     public void shouldValidateNameForManagedSubscription()
     {
         // given
-        final TopicSubscriptionBuilder builder = clientRule.topic().newSubscription()
+        final EventSubscriptionBuilder builder = clientRule.topic().newEventSubscription()
                 .startAtHeadOfTopic()
                 .handler(DO_NOTHING);
 
@@ -243,7 +243,7 @@ public class TopicSubscriptionTest
     public void shouldValidateNameForPollableSubscription()
     {
         // given
-        final PollableTopicSubscriptionBuilder builder = clientRule.topic().newPollableSubscription()
+        final PollableEventSubscriptionBuilder builder = clientRule.topic().newPollableEventSubscription()
                 .startAtHeadOfTopic();
 
         // then
@@ -261,7 +261,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         final FailingHandler handler = new FailingHandler();
-        final TopicSubscription subscription = clientRule.topic().newSubscription()
+        final EventSubscription subscription = clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(handler)
             .name(SUBSCRIPTION_NAME)
@@ -294,7 +294,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         final FailingHandler handler = new FailingHandler((m, e) -> m.getEventPosition() == 2L);
-        final TopicSubscription subscription = clientRule.topic().newSubscription()
+        final EventSubscription subscription = clientRule.topic().newEventSubscription()
                 .startAtHeadOfTopic()
                 .handler(handler)
                 .name(SUBSCRIPTION_NAME)
@@ -343,7 +343,7 @@ public class TopicSubscriptionTest
                 m.getEventPosition() == 1L &&
                 counter.decrementAndGet() > 0);
 
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(handler)
             .name(SUBSCRIPTION_NAME)
@@ -377,7 +377,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
 
         // when
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)
@@ -399,7 +399,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
         final ControllableHandler handler = new ControllableHandler();
 
-        final TopicSubscriptionImpl subscription = (TopicSubscriptionImpl) clientRule.topic().newSubscription()
+        final TopicSubscriptionImpl subscription = (TopicSubscriptionImpl) clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(handler)
             .name(SUBSCRIPTION_NAME)
@@ -445,14 +445,14 @@ public class TopicSubscriptionTest
         // given
         broker.stubTopicSubscriptionApi(123L);
 
-        final TopicSubscriptionImpl subscription = (TopicSubscriptionImpl) clientRule.topic().newSubscription()
+        final TopicSubscriptionImpl subscription = (TopicSubscriptionImpl) clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)
             .open();
 
         // when
-        client.disconnect();
+        client.disconnectAll();
 
         // then
         assertThat(subscription.isClosed());
@@ -464,7 +464,7 @@ public class TopicSubscriptionTest
         // given
         broker.stubTopicSubscriptionApi(123L);
 
-        final TopicSubscription subscription = clientRule.topic().newSubscription()
+        final EventSubscription subscription = clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)
@@ -488,7 +488,7 @@ public class TopicSubscriptionTest
         // given
         broker.stubTopicSubscriptionApi(123L);
 
-        final TopicSubscription firstSubscription = clientRule.topic().newSubscription()
+        final EventSubscription firstSubscription = clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)
@@ -496,13 +496,13 @@ public class TopicSubscriptionTest
 
         broker.closeTransport();
         TestUtil.waitUntil(() -> !firstSubscription.isOpen());
-        client.disconnect();
+        client.disconnectAll();
 
         broker.bindTransport();
         client.connect();
 
         // when
-        final TopicSubscription secondSubscription = clientRule.topic().newSubscription()
+        final EventSubscription secondSubscription = clientRule.topic().newEventSubscription()
                 .startAtHeadOfTopic()
                 .handler(DO_NOTHING)
                 .name(SUBSCRIPTION_NAME)
@@ -520,7 +520,7 @@ public class TopicSubscriptionTest
 
         final RecordingTopicEventHandler eventHandler = new RecordingTopicEventHandler();
 
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(eventHandler)
             .taskEventHandler(eventHandler)
@@ -552,7 +552,7 @@ public class TopicSubscriptionTest
 
         final RecordingTopicEventHandler eventHandler = new RecordingTopicEventHandler();
 
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(eventHandler)
             .taskEventHandler(eventHandler)
@@ -584,7 +584,7 @@ public class TopicSubscriptionTest
 
         final RecordingTopicEventHandler eventHandler = new RecordingTopicEventHandler();
 
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(eventHandler)
             .taskEventHandler(eventHandler)
@@ -616,7 +616,7 @@ public class TopicSubscriptionTest
 
         final RecordingTopicEventHandler eventHandler = new RecordingTopicEventHandler();
 
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(eventHandler)
             .taskEventHandler(eventHandler)
@@ -648,7 +648,7 @@ public class TopicSubscriptionTest
 
         final RecordingTopicEventHandler defaultEventHandler = new RecordingTopicEventHandler();
 
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(defaultEventHandler)
             .name(SUBSCRIPTION_NAME)
@@ -672,7 +672,7 @@ public class TopicSubscriptionTest
         // given
         broker.stubTopicSubscriptionApi(123L);
 
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)
@@ -703,7 +703,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
         final RecordingEventHandler recordingHandler = new RecordingEventHandler();
 
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(recordingHandler)
             .name(SUBSCRIPTION_NAME)
@@ -730,7 +730,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
         final ControllableHandler handler = new ControllableHandler();
 
-        clientRule.topic().newSubscription()
+        clientRule.topic().newEventSubscription()
             .startAtHeadOfTopic()
             .handler(handler)
             .name(SUBSCRIPTION_NAME)
@@ -766,7 +766,7 @@ public class TopicSubscriptionTest
                     && "SUBSCRIBE".equals(e.getCommand().get("eventType")));
     }
 
-    private class RecordingTopicEventHandler implements TopicEventHandler, TaskEventHandler, WorkflowInstanceEventHandler, IncidentEventHandler
+    private class RecordingTopicEventHandler implements EventHandler, TaskEventHandler, WorkflowInstanceEventHandler, IncidentEventHandler
     {
         public int numTopicEvents = 0;
         public int numTaskEvents = 0;
@@ -774,7 +774,7 @@ public class TopicSubscriptionTest
         public int numIncidentEvents = 0;
 
         @Override
-        public void handle(EventMetadata metadata, TopicEvent event) throws Exception
+        public void handle(EventMetadata metadata, Event event) throws Exception
         {
             numTopicEvents += 1;
         }

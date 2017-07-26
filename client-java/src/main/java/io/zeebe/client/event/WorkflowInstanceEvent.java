@@ -16,7 +16,7 @@
 package io.zeebe.client.event;
 
 /**
- * POJO representing an event of type {@link TopicEventType#WORKFLOW_INSTANCE}.
+ * POJO representing an event of type {@link EventType#WORKFLOW_INSTANCE}.
  */
 public interface WorkflowInstanceEvent
 {

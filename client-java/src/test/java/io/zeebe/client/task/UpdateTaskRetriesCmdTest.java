@@ -30,11 +30,12 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.zeebe.client.impl.ClientCommandManager;
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.cmd.TaskCommand;
+import io.zeebe.client.impl.Partition;
+import io.zeebe.client.impl.cmd.ClientCommandManager;
 import io.zeebe.client.impl.cmd.ClientResponseHandler;
 import io.zeebe.client.impl.data.MsgPackConverter;
-import io.zeebe.client.task.impl.*;
+import io.zeebe.client.impl.task.*;
 import io.zeebe.protocol.clientapi.*;
 import org.agrona.ExpandableArrayBuffer;
 import org.junit.*;
@@ -66,7 +67,7 @@ public class UpdateTaskRetriesCmdTest
 
         objectMapper = new ObjectMapper(new MessagePackFactory());
 
-        command = new UpdateTaskRetriesCmdImpl(commandManager, objectMapper, msgPackConverter, new Topic(TOPIC_NAME, PARTITION_ID));
+        command = new UpdateTaskRetriesCmdImpl(commandManager, objectMapper, msgPackConverter, new Partition(TOPIC_NAME, PARTITION_ID));
     }
 
     @Test
@@ -103,7 +104,7 @@ public class UpdateTaskRetriesCmdTest
 
         final byte[] command = readBytes(requestDecoder::getCommand, requestDecoder::commandLength);
 
-        final TaskEvent taskEvent = objectMapper.readValue(command, TaskEvent.class);
+        final TaskCommand taskEvent = objectMapper.readValue(command, TaskCommand.class);
 
         assertThat(taskEvent.getEventType()).isEqualTo(TaskEventType.UPDATE_RETRIES);
         assertThat(taskEvent.getType()).isEqualTo("foo");
@@ -123,7 +124,7 @@ public class UpdateTaskRetriesCmdTest
         responseEncoder.wrap(writeBuffer, 0);
 
         // given
-        final TaskEvent taskEvent = new TaskEvent();
+        final TaskCommand taskEvent = new TaskCommand();
         taskEvent.setEventType(TaskEventType.RETRIES_UPDATED);
 
         final byte[] jsonEvent = objectMapper.writeValueAsBytes(taskEvent);
@@ -152,7 +153,7 @@ public class UpdateTaskRetriesCmdTest
         responseEncoder.wrap(writeBuffer, 0);
 
         // given
-        final TaskEvent taskEvent = new TaskEvent();
+        final TaskCommand taskEvent = new TaskCommand();
         taskEvent.setEventType(TaskEventType.UPDATE_RETRIES_REJECTED);
 
         final byte[] jsonEvent = objectMapper.writeValueAsBytes(taskEvent);

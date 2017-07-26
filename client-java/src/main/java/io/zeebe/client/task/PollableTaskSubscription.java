@@ -22,7 +22,7 @@ package io.zeebe.client.task;
  *
  * @author Lindhauer
  */
-public interface PollableTaskSubscription
+public interface PollableTaskSubscription extends AutoCloseable
 {
 
     /**
@@ -33,6 +33,7 @@ public interface PollableTaskSubscription
     /**
      * Closes the subscription. Blocks until all remaining tasks have been handled.
      */
+    @Override
     void close();
 
     /**

@@ -20,8 +20,8 @@ import static io.zeebe.util.StringUtil.getBytes;
 
 import java.io.ByteArrayInputStream;
 
+import io.zeebe.client.ClientCommandRejectedException;
 import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.cmd.ClientCommandRejectedException;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.util.ClientRule;
 import io.zeebe.client.workflow.cmd.WorkflowInstance;

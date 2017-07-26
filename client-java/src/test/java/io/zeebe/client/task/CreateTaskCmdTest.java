@@ -32,11 +32,12 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.zeebe.client.impl.ClientCommandManager;
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.cmd.TaskCommand;
+import io.zeebe.client.impl.Partition;
+import io.zeebe.client.impl.cmd.ClientCommandManager;
 import io.zeebe.client.impl.cmd.ClientResponseHandler;
 import io.zeebe.client.impl.data.MsgPackConverter;
-import io.zeebe.client.task.impl.*;
+import io.zeebe.client.impl.task.*;
 import io.zeebe.protocol.clientapi.*;
 import org.agrona.ExpandableArrayBuffer;
 import org.junit.*;
@@ -68,7 +69,7 @@ public class CreateTaskCmdTest
 
         objectMapper = new ObjectMapper(new MessagePackFactory());
 
-        createTaskCommand = new CreateTaskCmdImpl(commandManager, objectMapper, msgPackConverter, new Topic(TOPIC_NAME, PARTITION_ID));
+        createTaskCommand = new CreateTaskCmdImpl(commandManager, objectMapper, msgPackConverter, new Partition(TOPIC_NAME, PARTITION_ID));
     }
 
     @Test
@@ -101,7 +102,7 @@ public class CreateTaskCmdTest
 
         final byte[] command = readBytes(requestDecoder::getCommand, requestDecoder::commandLength);
 
-        final TaskEvent taskEvent = objectMapper.readValue(command, TaskEvent.class);
+        final TaskCommand taskEvent = objectMapper.readValue(command, TaskCommand.class);
 
         assertThat(taskEvent.getEventType()).isEqualTo(TaskEventType.CREATE);
         assertThat(taskEvent.getType()).isEqualTo("foo");
@@ -136,7 +137,7 @@ public class CreateTaskCmdTest
 
         final byte[] command = readBytes(requestDecoder::getCommand, requestDecoder::commandLength);
 
-        final TaskEvent taskEvent = objectMapper.readValue(command, TaskEvent.class);
+        final TaskCommand taskEvent = objectMapper.readValue(command, TaskCommand.class);
 
         assertThat(taskEvent.getHeaders()).hasSize(2).containsAllEntriesOf(headers);
         assertThat(taskEvent.getPayload()).isEqualTo(msgPackConverter.convertToMsgPack(new ByteArrayInputStream(payload)));
@@ -160,7 +161,7 @@ public class CreateTaskCmdTest
 
         final byte[] command = readBytes(requestDecoder::getCommand, requestDecoder::commandLength);
 
-        final TaskEvent taskEvent = objectMapper.readValue(command, TaskEvent.class);
+        final TaskCommand taskEvent = objectMapper.readValue(command, TaskCommand.class);
 
         assertThat(taskEvent.getRetries()).isEqualTo(3);
     }
@@ -179,7 +180,7 @@ public class CreateTaskCmdTest
         final Map<String, Object> headers = new HashMap<>();
         headers.put("k", "v");
 
-        final TaskEvent taskEvent = new TaskEvent();
+        final TaskCommand taskEvent = new TaskCommand();
         taskEvent.setEventType(TaskEventType.CREATED);
         taskEvent.setType("foo");
         taskEvent.setHeaders(headers);

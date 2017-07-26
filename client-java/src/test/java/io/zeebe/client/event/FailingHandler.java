@@ -20,9 +20,9 @@ import java.util.function.BiFunction;
 public class FailingHandler extends RecordingEventHandler
 {
 
-    protected BiFunction<EventMetadata, TopicEvent, Boolean> failureCondition;
+    protected BiFunction<EventMetadata, Event, Boolean> failureCondition;
 
-    public FailingHandler(BiFunction<EventMetadata, TopicEvent, Boolean> failureCondition)
+    public FailingHandler(BiFunction<EventMetadata, Event, Boolean> failureCondition)
     {
         this.failureCondition = failureCondition;
     }
@@ -33,7 +33,7 @@ public class FailingHandler extends RecordingEventHandler
     }
 
     @Override
-    public void handle(EventMetadata metadata, TopicEvent event)
+    public void handle(EventMetadata metadata, Event event)
     {
         super.handle(metadata, event);
 

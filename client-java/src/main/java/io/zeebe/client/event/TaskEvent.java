@@ -15,48 +15,88 @@
  */
 package io.zeebe.client.event;
 
-import java.time.Instant;
 import java.util.Map;
 
 /**
- * POJO representing an event of type {@link TopicEventType#TASK}.
+ * POJO representing an event of type {@link EventType#TASK}.
  */
-public interface TaskEvent
+public class TaskEvent extends Event
 {
+    private Long lockTime;
+    private String lockOwner;
+    private Integer retries;
+    private String type;
+    private Map<String, Object> headers;
+    private byte[] payload;
 
-    /**
-     * @return the task's type
-     */
-    String getType();
+    public TaskEvent()
+    {
 
-    /**
-     * @return the name of the type in the task's event lifecycle
-     */
-    String getEventType();
+    }
 
-    /**
-     * @return headers associated with this task
-     */
-    Map<String, Object> getHeaders();
+    public TaskEvent(TaskEvent taskEvent)
+    {
+        this.lockOwner = taskEvent.getLockOwner();
+        // ...
+    }
 
-    /**
-     * @return the lock owner
-     */
-    String getLockOwner();
+    public void setLockTime(Long lockTime)
+    {
+        this.lockTime = lockTime;
+    }
 
-    /**
-     * @return remaining retries
-     */
-    Integer getRetries();
+    public void setLockOwner(String lockOwner)
+    {
+        this.lockOwner = lockOwner;
+    }
 
-    /**
-     * @return the time until when the task is locked
-     *   and can be exclusively processed by this client.
-     */
-    Instant getLockExpirationTime();
+    public void setRetries(Integer retries)
+    {
+        this.retries = retries;
+    }
 
-    /**
-     * @return JSON-formatted payload
-     */
-    String getPayload();
+    public void setHeaders(Map<String, Object> headers)
+    {
+        this.headers = headers;
+    }
+
+    public void setPayload(byte[] payload)
+    {
+        this.payload = payload;
+    }
+
+    public Long getLockTime()
+    {
+        return lockTime;
+    }
+
+    public String getLockOwner()
+    {
+        return lockOwner;
+    }
+
+    public Integer getRetries()
+    {
+        return retries;
+    }
+
+    public String getType()
+    {
+        return type;
+    }
+
+    public Map<String, Object> getHeaders()
+    {
+        return headers;
+    }
+
+    public byte[] getPayload()
+    {
+        return payload;
+    }
+
+    public void setType(String type)
+    {
+        this.type = type;
+    }
 }

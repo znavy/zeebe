@@ -20,7 +20,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class RecordingEventHandler implements TopicEventHandler
+public class RecordingEventHandler implements EventHandler
 {
 
     protected List<RecordedEvent> events = new ArrayList<>();
@@ -28,7 +28,7 @@ public class RecordingEventHandler implements TopicEventHandler
 
 
     @Override
-    public void handle(EventMetadata metadata, TopicEvent event)
+    public void handle(EventMetadata metadata, Event event)
     {
         final RecordedEvent recordedEvent = new RecordedEvent();
         recordedEvent.metadata = metadata;
@@ -54,13 +54,13 @@ public class RecordingEventHandler implements TopicEventHandler
     public static class RecordedEvent
     {
         protected EventMetadata metadata;
-        protected TopicEvent event;
+        protected Event event;
 
         public EventMetadata getMetadata()
         {
             return metadata;
         }
-        public TopicEvent getEvent()
+        public Event getEvent()
         {
             return event;
         }

@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static io.zeebe.protocol.clientapi.EventType.NULL_VAL;
 import static io.zeebe.protocol.clientapi.EventType.TASK_EVENT;
 
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.impl.Partition;
 import io.zeebe.client.impl.cmd.AbstractExecuteCmdImpl;
 import io.zeebe.protocol.clientapi.EventType;
 import org.junit.Rule;
@@ -67,7 +67,7 @@ public class ExecuteCommandTest
     {
         ClientCommand(EventType commandEventType)
         {
-            super(null, null, new Topic("test-topic", 0), Void.class, commandEventType);
+            super(null, null, new Partition("test-topic", 0), Void.class, commandEventType);
         }
 
         @Override

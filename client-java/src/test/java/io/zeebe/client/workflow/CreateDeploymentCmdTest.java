@@ -26,17 +26,20 @@ import static org.mockito.Mockito.mock;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Properties;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.zeebe.client.impl.ClientCommandManager;
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.TopicClient;
+import io.zeebe.client.ZeebeClient;
+import io.zeebe.client.impl.Partition;
+import io.zeebe.client.impl.cmd.ClientCommandManager;
 import io.zeebe.client.impl.cmd.ClientResponseHandler;
 import io.zeebe.client.impl.data.MsgPackConverter;
+import io.zeebe.client.impl.workflow.*;
 import io.zeebe.client.workflow.cmd.DeploymentResult;
-import io.zeebe.client.workflow.impl.*;
 import io.zeebe.protocol.clientapi.*;
 import org.agrona.ExpandableArrayBuffer;
 import org.camunda.bpm.model.bpmn.Bpmn;
@@ -74,7 +77,7 @@ public class CreateDeploymentCmdTest
 
         objectMapper = new ObjectMapper(new MessagePackFactory());
 
-        command = new CreateDeploymentCmdImpl(commandManager, objectMapper, new MsgPackConverter(), new Topic(TOPIC_NAME, PARTITION_ID));
+        command = new CreateDeploymentCmdImpl(commandManager, objectMapper, new MsgPackConverter(), new Partition(TOPIC_NAME, PARTITION_ID));
     }
 
     @Test
@@ -295,5 +298,4 @@ public class CreateDeploymentCmdTest
 
         return objectMapper.readValue(buffer, DeploymentEvent.class);
     }
-
 }

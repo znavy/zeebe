@@ -67,7 +67,7 @@ public class CreateTaskTest
 
         // when
         final Long taskKey = clientRule.taskTopic()
-            .create()
+            .createTask()
             .taskType("foo")
             .retries(3)
             .execute();

@@ -16,7 +16,7 @@
 package io.zeebe.client.event;
 
 /**
- * POJO representing an event of type {@link TopicEventType#INCIDENT}.
+ * POJO representing an event of type {@link EventType#INCIDENT}.
  */
 public interface IncidentEvent
 {

@@ -22,8 +22,7 @@ import java.io.IOException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.zeebe.client.impl.ClientCommandManager;
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.impl.Partition;
 import io.zeebe.protocol.clientapi.*;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
@@ -43,7 +42,7 @@ public abstract class AbstractControlMessageCmd<E, R> extends AbstractCmdImpl<R>
     public AbstractControlMessageCmd(
             ClientCommandManager commandManager,
             ObjectMapper objectMapper,
-            Topic topic,
+            Partition topic,
             Class<E> messageType,
             ControlMessageType controlMessageType)
     {

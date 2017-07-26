@@ -423,7 +423,6 @@ public class TaskSubscriptionTest
 
         // when
         client.disconnect();
-        client.connect();
 
         // then
         final RecordingTaskHandler taskHandler = new RecordingTaskHandler();

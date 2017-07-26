@@ -19,8 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static io.zeebe.test.broker.protocol.brokerapi.StubBrokerRule.TEST_PARTITION_ID;
 import static io.zeebe.test.broker.protocol.brokerapi.StubBrokerRule.TEST_TOPIC_NAME;
 
+import io.zeebe.client.ClientCommandRejectedException;
 import io.zeebe.client.WorkflowTopicClient;
-import io.zeebe.client.cmd.ClientCommandRejectedException;
 import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.client.util.ClientRule;
 import io.zeebe.protocol.clientapi.EventType;

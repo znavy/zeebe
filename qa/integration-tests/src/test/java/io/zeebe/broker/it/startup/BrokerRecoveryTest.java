@@ -498,7 +498,6 @@ public class BrokerRecoveryTest
         onStop.run();
 
         brokerRule.startBroker();
-        clientRule.getClient().connect();
         eventRecorder.startRecordingEvents();
     }
 

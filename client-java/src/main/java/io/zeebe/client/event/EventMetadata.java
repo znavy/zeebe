@@ -42,5 +42,5 @@ public interface EventMetadata
     /**
      * @return the type of the event
      */
-    TopicEventType getEventType();
+    EventType getEventType();
 }

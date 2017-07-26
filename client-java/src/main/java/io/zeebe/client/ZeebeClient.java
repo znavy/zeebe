@@ -17,55 +17,22 @@ package io.zeebe.client;
 
 import java.util.Properties;
 
-import io.zeebe.client.clustering.RequestTopologyCmd;
 import io.zeebe.client.impl.ZeebeClientImpl;
+import io.zeebe.client.topology.Topology;
 
 public interface ZeebeClient extends AutoCloseable
 {
     /**
-     * Provides APIs specific to topics of type <code>task</code>.
-     *
-     * @param topicName
-     *              the name of the topic
-     *
-     * @param partitionId
-     *            the id of the topic partition
+     * The name of the default topic
      */
-    TaskTopicClient taskTopic(String topicName, int partitionId);
+    String DEFAULT_TOPIC_NAME = "default-topic";
+
+    Topology getTopology();
 
     /**
-     * Provides APIs specific to topics of type <code>workflow</code>.
-     *
-     * @param topicName
-     *              the name of the topic
-     *
-     * @param partitionId
-     *            the id of the topic partition
+     * Disconnects the client from the configured brokers.
      */
-    WorkflowTopicClient workflowTopic(String topicName, int partitionId);
-
-    /**
-     * Provides general purpose APIs for any kind of topic.
-     *
-     * @param topicName
-     *              the name of the topic
-     *
-     * @param partitionId
-     *            the id of the topic partition
-     */
-    TopicClient topic(String topicName, int partitionId);
-
-    RequestTopologyCmd requestTopology();
-
-    /**
-     * Connects the client to the configured broker. Not thread-safe.
-     */
-    void connect();
-
-    /**
-     * Disconnects the client from the configured broker. Not thread-safe.
-     */
-    void disconnect();
+    void disconnectAll();
 
     @Override
     void close();
@@ -74,5 +41,12 @@ public interface ZeebeClient extends AutoCloseable
     {
         return new ZeebeClientImpl(properties);
     }
+
+    static ZeebeClient createDefaultClient()
+    {
+        return create(new Properties());
+    }
+
+    TaskClient taskClient();
 
 }

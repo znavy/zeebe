@@ -15,20 +15,74 @@
  */
 package io.zeebe.client;
 
-import io.zeebe.client.event.PollableTopicSubscriptionBuilder;
-import io.zeebe.client.event.TopicSubscriptionBuilder;
+import io.zeebe.client.event.EventSubscriptionBuilder;
+import io.zeebe.client.event.PollableEventSubscriptionBuilder;
+import io.zeebe.client.task.*;
+import io.zeebe.client.task.cmd.*;
+import io.zeebe.client.workflow.cmd.*;
 
 public interface TopicClient
 {
+    /**
+     * Deploy new workflow definitions.
+     */
+    CreateDeploymentCmd deploy();
+
+    /**
+     * Create new workflow instance.
+     */
+    StartWorkflowInstanceCmd startWorkflowInstance();
+
+    /**
+     * Cancel a workflow instance.
+     */
+    CancelWorkflowInstanceCmd cancelWorkflowInstance();
+
+    /**
+     * Update the payload of a workflow instance.
+     */
+    UpdateWorkflowPayloadCmd updateWorkflowPayload();
+
+    /**
+     * Create a new task.
+     */
+    CreateTaskCmd createTask();
+
+    /**
+     * Complete a locked task.
+     */
+    CompleteTaskCmd completeTask();
+
+    /**
+     * Mark a locked task as failed.
+     */
+    FailTaskCmd failTask();
+
+    /**
+     * Update the remaining retries of a task.
+     */
+    UpdateTaskRetriesCmd updateTaskRetries();
+
+    /**
+     * Create a new subscription to lock tasks and execute them by the given
+     * handler.
+     */
+    TaskSubscriptionBuilder newTaskSubscription();
+
+    /**
+     * Create a new subscription to lock tasks. Use
+     * {@linkplain PollableTaskSubscription#poll(io.zeebe.client.task.TaskHandler)}
+     * to execute the locked tasks.
+     */
+    PollableTaskSubscriptionBuilder newPollableTaskSubscription();
 
     /**
      * @return a builder for an event subscription and managed event handling
      */
-    TopicSubscriptionBuilder newSubscription();
+    EventSubscriptionBuilder newEventSubscription();
 
     /**
      * @return a builder for an event subscription and manual event handling
      */
-    PollableTopicSubscriptionBuilder newPollableSubscription();
-
+    PollableEventSubscriptionBuilder newPollableEventSubscription();
 }

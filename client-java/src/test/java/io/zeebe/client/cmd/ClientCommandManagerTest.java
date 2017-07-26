@@ -28,9 +28,9 @@ import java.util.HashMap;
 import java.util.List;
 
 import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.impl.ClientCommandController;
+import io.zeebe.client.impl.cmd.ClientCommandController;
+import io.zeebe.client.impl.task.CreateTaskCmdImpl;
 import io.zeebe.client.task.cmd.CreateTaskCmd;
-import io.zeebe.client.task.impl.CreateTaskCmdImpl;
 import io.zeebe.client.util.ClientRule;
 import io.zeebe.protocol.clientapi.ErrorCode;
 import io.zeebe.protocol.clientapi.EventType;
@@ -154,7 +154,7 @@ public class ClientCommandManagerTest
 
     protected CreateTaskCmd createTaskCmd(final String topicName, final int partitionId)
     {
-        return client.taskTopic(topicName, partitionId).create().taskType("test");
+        return client.taskTopic(topicName, partitionId).createTask().taskType("test");
     }
 
     protected CreateTaskCmd createFailingTaskCmd()

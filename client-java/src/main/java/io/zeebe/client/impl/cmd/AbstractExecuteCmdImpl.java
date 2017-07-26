@@ -22,8 +22,8 @@ import static io.zeebe.util.VarDataUtil.readBytes;
 import java.io.IOException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.zeebe.client.impl.ClientCommandManager;
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.impl.Partition;
+import io.zeebe.client.impl.event.TopicClientImpl;
 import io.zeebe.protocol.clientapi.*;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
@@ -40,20 +40,14 @@ public abstract class AbstractExecuteCmdImpl<E, R> extends AbstractCmdImpl<R> im
     protected final Class<E> eventType;
     protected final EventType commandEventType;
 
-    public AbstractExecuteCmdImpl(
-        final ClientCommandManager commandManager,
-        final ObjectMapper objectMapper,
-        final Topic topic,
-        final Class<E> eventType,
-        final EventType commandEventType)
+    public AbstractExecuteCmdImpl(TopicClientImpl topicClient)
     {
-        super(commandManager, topic);
+        super(topicClient);
 
         if (commandEventType == null || commandEventType == NULL_VAL)
         {
             throw new IllegalArgumentException("commandEventType cannot be null");
         }
-
         this.objectMapper = objectMapper;
         this.eventType = eventType;
         this.commandEventType = commandEventType;

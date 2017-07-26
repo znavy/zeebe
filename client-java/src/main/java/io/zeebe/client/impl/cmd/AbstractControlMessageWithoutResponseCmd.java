@@ -16,14 +16,13 @@
 package io.zeebe.client.impl.cmd;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.zeebe.client.impl.ClientCommandManager;
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.impl.Partition;
 import io.zeebe.protocol.clientapi.ControlMessageType;
 
 public abstract class AbstractControlMessageWithoutResponseCmd<E> extends AbstractControlMessageCmd<E, Void>
 {
 
-    public AbstractControlMessageWithoutResponseCmd(final ClientCommandManager commandManager, final ObjectMapper objectMapper, final Topic topic, final Class<E> messageType, final ControlMessageType controlMessageType)
+    public AbstractControlMessageWithoutResponseCmd(final ClientCommandManager commandManager, final ObjectMapper objectMapper, final Partition topic, final Class<E> messageType, final ControlMessageType controlMessageType)
     {
         super(commandManager, objectMapper, topic, messageType, controlMessageType);
     }

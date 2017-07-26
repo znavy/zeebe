@@ -48,8 +48,6 @@ public class NonBlockingTaskCreator
 
         try (ZeebeClient client = ZeebeClient.create(properties))
         {
-            client.connect();
-
             final TaskTopicClient asyncTaskService = client.taskTopic(topicName, partitionId);
 
             final String payload = "{}";

@@ -16,18 +16,18 @@
 package io.zeebe.client.impl;
 
 import io.zeebe.client.WorkflowTopicClient;
+import io.zeebe.client.impl.workflow.*;
 import io.zeebe.client.workflow.cmd.*;
-import io.zeebe.client.workflow.impl.*;
 
 public class WorkflowTopicClientImpl implements WorkflowTopicClient
 {
     protected final ZeebeClientImpl client;
-    protected final Topic topic;
+    protected final Partition topic;
 
     public WorkflowTopicClientImpl(final ZeebeClientImpl client, final String topicName, final int partitionId)
     {
         this.client = client;
-        this.topic = new Topic(topicName, partitionId);
+        this.topic = new Partition(topicName, partitionId);
     }
 
     @Override
@@ -37,9 +37,9 @@ public class WorkflowTopicClientImpl implements WorkflowTopicClient
     }
 
     @Override
-    public CreateWorkflowInstanceCmd create()
+    public StartWorkflowInstanceCmd create()
     {
-        return new CreateWorkflowInstanceCmdImpl(client.getCommandManager(), client.getObjectMapper(), client.getMsgPackConverter(), topic);
+        return new StartWorkflowInstanceCmdImpl(client.getCommandManager(), client.getObjectMapper(), client.getMsgPackConverter(), topic);
     }
 
     @Override
@@ -49,9 +49,9 @@ public class WorkflowTopicClientImpl implements WorkflowTopicClient
     }
 
     @Override
-    public UpdatePayloadCmd updatePayload()
+    public UpdateWorkflowPayloadCmd updatePayload()
     {
-        return new UpdatePayloadCmdImpl(client.getCommandManager(), client.getObjectMapper(), client.getMsgPackConverter(), topic);
+        return new UpdateWorkflowPayloadCmdImpl(client.getCommandManager(), client.getObjectMapper(), client.getMsgPackConverter(), topic);
     }
 
 }

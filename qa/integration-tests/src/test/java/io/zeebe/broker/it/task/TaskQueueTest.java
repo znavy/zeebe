@@ -15,27 +15,18 @@
  */
 package io.zeebe.broker.it.task;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static io.zeebe.logstreams.log.LogStream.DEFAULT_PARTITION_ID;
 import static io.zeebe.logstreams.log.LogStream.DEFAULT_TOPIC_NAME;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
-import io.zeebe.client.TaskTopicClient;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.cmd.BrokerRequestException;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
-import org.junit.rules.Timeout;
+import io.zeebe.client.task.Task;
+import org.junit.*;
+import org.junit.rules.*;
 
-/**
- * Tests the entire cycle of task creation, polling and completion as a smoke test for when something gets broken
- *
- * @author Lindhauer
- */
 public class TaskQueueTest
 {
     public EmbeddedBrokerRule brokerRule = new EmbeddedBrokerRule();
@@ -57,14 +48,14 @@ public class TaskQueueTest
     @Test
     public void shouldCreateTask()
     {
-        final Long taskKey = clientRule.taskTopic().create()
+        final Task task = clientRule.getClient().defaultTopic().createTask()
             .taskType("foo")
             .addHeader("k1", "a")
             .addHeader("k2", "b")
             .payload("{ \"payload\" : 123 }")
             .execute();
 
-        assertThat(taskKey).isGreaterThanOrEqualTo(0);
+        assertThat(task.getKey()).isGreaterThanOrEqualTo(0);
     }
 
     @Test

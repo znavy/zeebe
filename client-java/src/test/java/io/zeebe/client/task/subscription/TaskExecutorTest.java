@@ -20,9 +20,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.zeebe.client.task.impl.subscription.EventSubscriptions;
-import io.zeebe.client.task.impl.subscription.SubscriptionExecutor;
-import io.zeebe.client.task.impl.subscription.TaskSubscriptionImpl;
+import io.zeebe.client.impl.task.subscription.*;
 import org.junit.Test;
 
 public class TaskExecutorTest

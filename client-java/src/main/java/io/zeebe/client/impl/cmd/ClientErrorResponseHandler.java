@@ -16,7 +16,7 @@
 package io.zeebe.client.impl.cmd;
 
 import org.agrona.DirectBuffer;
-import io.zeebe.client.cmd.BrokerRequestException;
+import io.zeebe.client.BrokerRequestException;
 import io.zeebe.protocol.clientapi.ErrorCode;
 import io.zeebe.protocol.clientapi.ErrorResponseDecoder;
 

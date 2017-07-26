@@ -20,7 +20,7 @@ import java.util.List;
 import io.zeebe.transport.SocketAddress;
 
 /**
- * POJO representing an event of type {@link TopicEventType#RAFT}.
+ * POJO representing an event of type {@link EventType#RAFT}.
  */
 public interface RaftEvent
 {

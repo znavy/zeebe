@@ -18,8 +18,9 @@ package io.zeebe.client.task.cmd;
 import java.util.Map;
 
 import io.zeebe.client.cmd.SetPayloadCmd;
+import io.zeebe.client.task.Task;
 
-public interface CreateTaskCmd extends SetPayloadCmd<Long, CreateTaskCmd>
+public interface CreateTaskCmd extends SetPayloadCmd<Task, CreateTaskCmd>
 {
     int DEFAULT_RETRIES = 3;
 

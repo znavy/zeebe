@@ -525,7 +525,7 @@ public class TaskSubscriptionTest
                 .handler(t ->
                 {
                     t.setPayload("{\"a\": 1}");
-                    t.complete();
+                    t.completeTask();
                 })
                 .lockOwner("foo")
                 .lockTime(10000L)
@@ -562,7 +562,7 @@ public class TaskSubscriptionTest
         stubTaskCompleteRequest();
 
         clientRule.taskTopic().newTaskSubscription()
-                .handler(Task::complete)
+                .handler(Task::completeTask)
                 .lockOwner("foo")
                 .lockTime(10000L)
                 .taskType("bar")
@@ -641,7 +641,7 @@ public class TaskSubscriptionTest
         broker.stubTaskSubscriptionApi(123L);
 
         final TaskSubscription subscription = clientRule.taskTopic().newTaskSubscription()
-            .handler((t) -> t.complete())
+            .handler((t) -> t.completeTask())
             .lockOwner("owner")
             .lockTime(1000L)
             .taskFetchSize(5)

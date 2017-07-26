@@ -26,11 +26,11 @@ import java.io.IOException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.zeebe.client.impl.ClientCommandManager;
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.impl.Partition;
+import io.zeebe.client.impl.cmd.ClientCommandManager;
 import io.zeebe.client.impl.data.MsgPackConverter;
-import io.zeebe.client.task.impl.CloseTaskSubscriptionCmdImpl;
-import io.zeebe.client.task.impl.TaskSubscription;
+import io.zeebe.client.impl.task.CloseTaskSubscriptionCmdImpl;
+import io.zeebe.client.impl.task.TaskSubscription;
 import io.zeebe.protocol.clientapi.*;
 import org.agrona.ExpandableArrayBuffer;
 import org.junit.*;
@@ -59,7 +59,7 @@ public class CloseTaskSubscriptionCmdTest
 
         objectMapper = new ObjectMapper(new MessagePackFactory());
 
-        command = new CloseTaskSubscriptionCmdImpl(commandManager, objectMapper, new MsgPackConverter(), new Topic(DEFAULT_TOPIC_NAME, DEFAULT_PARTITION_ID));
+        command = new CloseTaskSubscriptionCmdImpl(commandManager, objectMapper, new MsgPackConverter(), new Partition(DEFAULT_TOPIC_NAME, DEFAULT_PARTITION_ID));
     }
 
     @Test

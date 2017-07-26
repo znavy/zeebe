@@ -79,6 +79,7 @@
   <sbe:message name="ExecuteCommandResponse" id="21">
     <field name="partitionId" id="1" type="uint16" />
     <field name="key" id="2" type="uint64" />
+    <!-- TODO: add event type -->
     <data name="topicName" id="3" type="varDataEncoding" />
     <data name="event" id="4" type="varDataEncoding" />
   </sbe:message>

@@ -32,11 +32,12 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.zeebe.client.impl.ClientCommandManager;
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.cmd.TaskCommand;
+import io.zeebe.client.impl.Partition;
+import io.zeebe.client.impl.cmd.ClientCommandManager;
 import io.zeebe.client.impl.cmd.ClientResponseHandler;
 import io.zeebe.client.impl.data.MsgPackConverter;
-import io.zeebe.client.task.impl.*;
+import io.zeebe.client.impl.task.*;
 import io.zeebe.protocol.clientapi.*;
 import org.agrona.ExpandableArrayBuffer;
 import org.junit.*;
@@ -68,7 +69,7 @@ public class FailTaskCmdTest
 
         objectMapper = new ObjectMapper(new MessagePackFactory());
 
-        failTaskCommand = new FailTaskCmdImpl(commandManager, objectMapper, new MsgPackConverter(), new Topic(TOPIC_NAME, PARTITION_ID));
+        failTaskCommand = new FailTaskCmdImpl(commandManager, objectMapper, new MsgPackConverter(), new Partition(TOPIC_NAME, PARTITION_ID));
     }
 
     @Test
@@ -103,7 +104,7 @@ public class FailTaskCmdTest
 
         final byte[] command = readBytes(requestDecoder::getCommand, requestDecoder::commandLength);
 
-        final TaskEvent taskEvent = objectMapper.readValue(command, TaskEvent.class);
+        final TaskCommand taskEvent = objectMapper.readValue(command, TaskCommand.class);
 
         assertThat(taskEvent.getEventType()).isEqualTo(TaskEventType.FAIL);
         assertThat(taskEvent.getType()).isEqualTo("foo");
@@ -141,7 +142,7 @@ public class FailTaskCmdTest
 
         final byte[] command = readBytes(requestDecoder::getCommand, requestDecoder::commandLength);
 
-        final TaskEvent taskEvent = objectMapper.readValue(command, TaskEvent.class);
+        final TaskCommand taskEvent = objectMapper.readValue(command, TaskCommand.class);
 
         assertThat(taskEvent.getHeaders()).hasSize(2).containsAllEntriesOf(headers);
         assertThat(taskEvent.getPayload()).isEqualTo(msgPackConverter.convertToMsgPack(new ByteArrayInputStream(payload)));
@@ -158,7 +159,7 @@ public class FailTaskCmdTest
         responseEncoder.wrap(writeBuffer, 0);
 
         // given
-        final TaskEvent taskEvent = new TaskEvent();
+        final TaskCommand taskEvent = new TaskCommand();
         taskEvent.setEventType(TaskEventType.FAILED);
 
         final byte[] jsonEvent = objectMapper.writeValueAsBytes(taskEvent);
@@ -187,7 +188,7 @@ public class FailTaskCmdTest
         responseEncoder.wrap(writeBuffer, 0);
 
         // given
-        final TaskEvent taskEvent = new TaskEvent();
+        final TaskCommand taskEvent = new TaskCommand();
         taskEvent.setEventType(TaskEventType.FAIL_REJECTED);
 
         final byte[] jsonEvent = objectMapper.writeValueAsBytes(taskEvent);

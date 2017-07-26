@@ -27,13 +27,13 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.zeebe.client.impl.ClientCommandManager;
-import io.zeebe.client.impl.Topic;
+import io.zeebe.client.impl.Partition;
+import io.zeebe.client.impl.cmd.ClientCommandManager;
 import io.zeebe.client.impl.cmd.ClientResponseHandler;
 import io.zeebe.client.impl.data.MsgPackConverter;
-import io.zeebe.client.task.impl.CreateTaskSubscriptionCmdImpl;
-import io.zeebe.client.task.impl.TaskSubscription;
-import io.zeebe.client.task.impl.subscription.EventSubscriptionCreationResult;
+import io.zeebe.client.impl.task.CreateTaskSubscriptionCmdImpl;
+import io.zeebe.client.impl.task.TaskSubscription;
+import io.zeebe.client.impl.task.subscription.EventSubscriptionCreationResult;
 import io.zeebe.protocol.clientapi.*;
 import io.zeebe.transport.RemoteAddress;
 import org.agrona.ExpandableArrayBuffer;
@@ -66,7 +66,7 @@ public class CreateTaskSubscriptionCmdTest
 
         objectMapper = new ObjectMapper(new MessagePackFactory());
 
-        command = new CreateTaskSubscriptionCmdImpl(commandManager, objectMapper, new MsgPackConverter(), new Topic(DEFAULT_TOPIC_NAME, DEFAULT_PARTITION_ID));
+        command = new CreateTaskSubscriptionCmdImpl(commandManager, objectMapper, new MsgPackConverter(), new Partition(DEFAULT_TOPIC_NAME, DEFAULT_PARTITION_ID));
     }
 
     @Test

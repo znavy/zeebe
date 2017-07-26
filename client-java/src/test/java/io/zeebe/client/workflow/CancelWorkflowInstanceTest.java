@@ -17,8 +17,8 @@ package io.zeebe.client.workflow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.zeebe.client.ClientCommandRejectedException;
 import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.cmd.ClientCommandRejectedException;
 import io.zeebe.client.util.ClientRule;
 import io.zeebe.test.broker.protocol.brokerapi.ExecuteCommandRequest;
 import io.zeebe.test.broker.protocol.brokerapi.StubBrokerRule;
