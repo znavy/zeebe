@@ -15,15 +15,26 @@
  */
 package io.zeebe.client.cmd;
 
+import io.zeebe.client.event.Event;
+
 /**
  * A client command was rejected by the broker.
  */
-public class ClientCommandRejectedException extends RuntimeException
+public class ClientCommandRejectedException extends ClientException
 {
     private static final long serialVersionUID = 1L;
 
-    public ClientCommandRejectedException(String errorMessage)
+    protected final Event rejectedEvent;
+
+    public ClientCommandRejectedException(Event rejectedEvent, String errorMessage)
     {
         super(errorMessage);
+        this.rejectedEvent = rejectedEvent;
+    }
+
+    // TODO: unit test this
+    public Event getRejectedEvent()
+    {
+        return rejectedEvent;
     }
 }

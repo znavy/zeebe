@@ -21,7 +21,7 @@ import io.zeebe.client.event.impl.PollableTopicSubscriptionBuilderImpl;
 import io.zeebe.client.event.impl.TopicClientImpl;
 import io.zeebe.client.event.impl.TopicSubscriptionBuilderImpl;
 import io.zeebe.client.event.impl.TopicSubscriptionImpl;
-import io.zeebe.client.impl.TaskTopicClientImpl;
+import io.zeebe.client.impl.TasksClientImpl;
 import io.zeebe.client.impl.ZeebeClientImpl;
 import io.zeebe.client.impl.data.MsgPackMapper;
 import io.zeebe.client.task.PollableTaskSubscriptionBuilder;
@@ -152,24 +152,29 @@ public class SubscriptionManager implements TransportListener
         this.topicSubscriptions.closeAll();
     }
 
-    public TaskSubscriptionBuilder newTaskSubscription(TaskTopicClientImpl client)
+    // TODO: man kann das durchreichen des clients teilweise vermeiden, da der client jetzt zustandslos ist
+    public TaskSubscriptionBuilder newTaskSubscription(TasksClientImpl client, String topic)
     {
-        return new TaskSubscriptionBuilderImpl(client, taskAcquisition, autoCompleteTasks, msgPackMapper);
+        final int partitionId = 0; // TODO: would become a lookup request in the future
+        return new TaskSubscriptionBuilderImpl(client, topic, partitionId, taskAcquisition, autoCompleteTasks, msgPackMapper);
     }
 
-    public PollableTaskSubscriptionBuilder newPollableTaskSubscription(TaskTopicClientImpl client)
+    public PollableTaskSubscriptionBuilder newPollableTaskSubscription(TasksClientImpl client, String topic)
     {
-        return new PollableTaskSubscriptionBuilderImpl(client, taskAcquisition, autoCompleteTasks, msgPackMapper);
+        final int partitionId = 0; // TODO: would become a lookup request in the future
+        return new PollableTaskSubscriptionBuilderImpl(client, topic, partitionId, taskAcquisition, autoCompleteTasks, msgPackMapper);
     }
 
-    public TopicSubscriptionBuilder newTopicSubscription(TopicClientImpl client)
+    public TopicSubscriptionBuilder newTopicSubscription(TopicClientImpl client, String topic)
     {
-        return new TopicSubscriptionBuilderImpl(client, topicSubscriptionAcquisition, msgPackMapper, topicSubscriptionPrefetchCapacity);
+        final int partitionId = 0; // TODO: would become a lookup request in the future
+        return new TopicSubscriptionBuilderImpl(client, topic, partitionId, topicSubscriptionAcquisition, msgPackMapper, topicSubscriptionPrefetchCapacity);
     }
 
-    public PollableTopicSubscriptionBuilder newPollableTopicSubscription(TopicClientImpl client)
+    public PollableTopicSubscriptionBuilder newPollableTopicSubscription(TopicClientImpl client, String topic)
     {
-        return new PollableTopicSubscriptionBuilderImpl(client, topicSubscriptionAcquisition, topicSubscriptionPrefetchCapacity);
+        final int partitionId = 0; // TODO: would become a lookup request in the future
+        return new PollableTopicSubscriptionBuilderImpl(client, topic, partitionId, topicSubscriptionAcquisition, topicSubscriptionPrefetchCapacity);
     }
 
     @Override

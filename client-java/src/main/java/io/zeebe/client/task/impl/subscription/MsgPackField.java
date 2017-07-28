@@ -15,10 +15,14 @@
  */
 package io.zeebe.client.task.impl.subscription;
 
+import java.io.InputStream;
+
 import io.zeebe.client.impl.data.MsgPackConverter;
 
 public class MsgPackField
 {
+    // TODO: should reuse converter
+    // TODO: could do lazy initialization, i.e. only convert when required
     protected final MsgPackConverter msgPackConverter = new MsgPackConverter();
 
     protected String json;
@@ -32,12 +36,39 @@ public class MsgPackField
     public void setJson(String json)
     {
         this.json = json;
+        if (json != null)
+        {
+            this.msgPack = this.msgPackConverter.convertToMsgPack(json);
+        }
+        else
+        {
+            this.msgPack = null;
+        }
+    }
+
+    public void setJson(InputStream stream)
+    {
+        if (stream != null)
+        {
+            setMsgPack(this.msgPackConverter.convertToMsgPack(stream));
+        }
+        else
+        {
+            setMsgPack(null);
+        }
     }
 
     public void setMsgPack(byte[] msgPack)
     {
         this.msgPack = msgPack;
-        this.json = this.msgPackConverter.convertToJson(msgPack);
+        if (msgPack != null)
+        {
+            this.json = this.msgPackConverter.convertToJson(msgPack);
+        }
+        else
+        {
+            this.json = null;
+        }
     }
 
     public byte[] getMsgPack()

@@ -21,7 +21,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import io.zeebe.client.*;
-import io.zeebe.client.task.cmd.CreateTaskCmd;
+import io.zeebe.client.task.cmd.CreateTaskCommand;
 
 public class NonBlockingTaskCreator
 {
@@ -50,7 +50,7 @@ public class NonBlockingTaskCreator
         {
             client.connect();
 
-            final TaskTopicClient asyncTaskService = client.taskTopic(topicName, partitionId);
+            final TasksClient asyncTaskService = client.tasks(topicName, partitionId);
 
             final String payload = "{}";
 
@@ -65,7 +65,7 @@ public class NonBlockingTaskCreator
 
                 if (inFlightRequests.size() < maxConcurrentRequests)
                 {
-                    final CreateTaskCmd cmd = asyncTaskService
+                    final CreateTaskCommand cmd = asyncTaskService
                             .create()
                             .taskType("greeting")
                             .addHeader("some", "value")

@@ -15,6 +15,9 @@
  */
 package io.zeebe.client.task;
 
+import io.zeebe.client.event.TaskEvent;
+import io.zeebe.client.task.impl.subscription.TaskController;
+
 /**
  * Implementations MUST be thread-safe.
  */
@@ -26,6 +29,6 @@ public interface TaskHandler
      * <p>Handles a task. Implements the work to be done
      * whenever a task of a certain type is executed.
      */
-    void handle(Task task);
+    void handle(TaskController controller, TaskEvent task);
 
 }

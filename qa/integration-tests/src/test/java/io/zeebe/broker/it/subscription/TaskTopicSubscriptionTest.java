@@ -22,19 +22,19 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.zeebe.broker.it.ClientRule;
-import io.zeebe.broker.it.EmbeddedBrokerRule;
-import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.event.EventMetadata;
-import io.zeebe.client.event.TaskEvent;
-import io.zeebe.client.event.TaskEventHandler;
-import io.zeebe.test.util.TestUtil;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
 import org.junit.rules.Timeout;
+
+import io.zeebe.broker.it.ClientRule;
+import io.zeebe.broker.it.EmbeddedBrokerRule;
+import io.zeebe.client.ZeebeClient;
+import io.zeebe.client.event.TaskEvent;
+import io.zeebe.client.event.TaskEventHandler;
+import io.zeebe.test.util.TestUtil;
 
 public class TaskTopicSubscriptionTest
 {
@@ -65,17 +65,16 @@ public class TaskTopicSubscriptionTest
     public void shouldReceiveTaskPOJOEvents()
     {
         // given
-        clientRule.taskTopic().create()
+        clientRule.tasks().create(clientRule.getDefaultTopic(), "foo")
                 .addHeader("key", "value")
                 .payload("{}")
-                .taskType("foo")
                 .retries(2)
                 .execute();
 
         final RecordingTaskPOJOEventHandler handler = new RecordingTaskPOJOEventHandler();
 
         // when
-        clientRule.topic().newSubscription()
+        clientRule.topics().newSubscription(clientRule.getDefaultTopic())
             .startAtHeadOfTopic()
             .taskEventHandler(handler)
             .name("sub-1")
@@ -85,7 +84,7 @@ public class TaskTopicSubscriptionTest
         TestUtil.waitUntil(() -> handler.numRecordedEvents() == 2);
 
         final TaskEvent event1 = handler.getEvent(0);
-        assertThat(event1.getEventType()).isEqualTo("CREATE");
+        assertThat(event1.getState()).isEqualTo("CREATE");
         assertThat(event1.getHeaders()).containsExactly(entry("key", "value"));
         assertThat(event1.getLockExpirationTime()).isNull();
         assertThat(event1.getLockOwner()).isNull();
@@ -94,7 +93,7 @@ public class TaskTopicSubscriptionTest
         assertThat(event1.getPayload()).isEqualTo("{}");
 
         final TaskEvent event2 = handler.getEvent(1);
-        assertThat(event2.getEventType()).isEqualTo("CREATED");
+        assertThat(event2.getState()).isEqualTo("CREATED");
     }
 
 
@@ -102,16 +101,15 @@ public class TaskTopicSubscriptionTest
     public void shouldInvokeDefaultHandler() throws IOException
     {
         // given
-        final long taskKey = clientRule.taskTopic().create()
+        final TaskEvent task = clientRule.tasks().create(clientRule.getDefaultTopic(), "foo")
                 .addHeader("key", "value")
                 .payload("{}")
-                .taskType("foo")
                 .execute();
 
         final RecordingEventHandler handler = new RecordingEventHandler();
 
         // when no POJO handler is registered
-        clientRule.topic().newSubscription()
+        clientRule.topics().newSubscription(clientRule.getDefaultTopic())
             .startAtHeadOfTopic()
             .handler(handler)
             .name("sub-2")
@@ -120,25 +118,19 @@ public class TaskTopicSubscriptionTest
         // then
         TestUtil.waitUntil(() -> handler.numRecordedTaskEvents() == 2);
 
+        final long taskKey = task.getMetadata().getEventKey();
         handler.assertTaskEvent(0, taskKey, "CREATE");
         handler.assertTaskEvent(1, taskKey, "CREATED");
     }
 
     protected static class RecordingTaskPOJOEventHandler implements TaskEventHandler
     {
-        protected List<EventMetadata> metadata = new ArrayList<>();
         protected List<TaskEvent> events = new ArrayList<>();
 
         @Override
-        public void handle(EventMetadata metadata, TaskEvent event) throws Exception
+        public void handle(TaskEvent event) throws Exception
         {
-            this.metadata.add(metadata);
             this.events.add(event);
-        }
-
-        public EventMetadata getMetadata(int index)
-        {
-            return metadata.get(index);
         }
 
         public TaskEvent getEvent(int index)

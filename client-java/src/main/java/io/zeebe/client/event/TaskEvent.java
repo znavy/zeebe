@@ -21,18 +21,13 @@ import java.util.Map;
 /**
  * POJO representing an event of type {@link TopicEventType#TASK}.
  */
-public interface TaskEvent
+public interface TaskEvent extends Event
 {
 
     /**
      * @return the task's type
      */
     String getType();
-
-    /**
-     * @return the name of the type in the task's event lifecycle
-     */
-    String getEventType();
 
     /**
      * @return headers associated with this task

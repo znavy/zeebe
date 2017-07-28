@@ -47,7 +47,7 @@ public class WorkflowInstanceWorker
 
         System.out.println(String.format("> Open task subscription for topic '%s', partition '%d' and type '%s'", topicName, partitionId, taskType));
 
-        final TaskSubscription subscription = zeebeClient.taskTopic(topicName, partitionId)
+        final TaskSubscription subscription = zeebeClient.tasks(topicName, partitionId)
             .newTaskSubscription()
             .taskType(taskType)
             .lockOwner(lockOwner)

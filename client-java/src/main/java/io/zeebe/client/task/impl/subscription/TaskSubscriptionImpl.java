@@ -17,13 +17,14 @@ package io.zeebe.client.task.impl.subscription;
 
 import org.slf4j.Logger;
 
+import io.zeebe.client.event.EventMetadata;
+import io.zeebe.client.event.impl.TaskEventImpl;
 import io.zeebe.client.impl.Loggers;
-import io.zeebe.client.impl.TaskTopicClientImpl;
+import io.zeebe.client.impl.TasksClientImpl;
 import io.zeebe.client.impl.data.MsgPackMapper;
 import io.zeebe.client.task.PollableTaskSubscription;
 import io.zeebe.client.task.TaskHandler;
 import io.zeebe.client.task.TaskSubscription;
-import io.zeebe.client.task.impl.TaskEvent;
 
 public class TaskSubscriptionImpl
     extends EventSubscription<TaskSubscriptionImpl>
@@ -32,7 +33,7 @@ public class TaskSubscriptionImpl
     protected static final Logger LOGGER = Loggers.TASK_SUBSCRIPTION_LOGGER;
 
     protected final TaskHandler taskHandler;
-    protected final TaskTopicClientImpl taskClient;
+    protected final TasksClientImpl taskClient;
 
     protected final String taskType;
     protected final long lockTime;
@@ -42,7 +43,9 @@ public class TaskSubscriptionImpl
     protected MsgPackMapper msgPackMapper;
 
     public TaskSubscriptionImpl(
-            TaskTopicClientImpl client,
+            TasksClientImpl client,
+            String topic,
+            int partition,
             TaskHandler taskHandler,
             String taskType,
             long lockTime,
@@ -52,7 +55,7 @@ public class TaskSubscriptionImpl
             boolean autoComplete,
             EventAcquisition<TaskSubscriptionImpl> acqusition)
     {
-        super(capacity, acqusition);
+        super(topic, partition, capacity, acqusition);
         this.taskClient = client;
         this.taskHandler = taskHandler;
         this.taskType = taskType;
@@ -89,22 +92,38 @@ public class TaskSubscriptionImpl
     {
         int polledEvents = pollEvents((e) ->
         {
-            final TaskEvent taskEvent = msgPackMapper.convert(e.getAsMsgPack(), TaskEvent.class);
-            final TaskImpl task = new TaskImpl(taskClient, this, e.getEventKey(), taskEvent);
+            final TaskEventImpl taskEvent = msgPackMapper.convert(e.getAsMsgPack(), TaskEventImpl.class);
+            // TODO: have this code only in one place
+            final EventMetadata metadata = e.getMetadata();
+            taskEvent.setKey(metadata.getEventKey());
+            taskEvent.setPartitionId(metadata.getPartitionId());
+            taskEvent.setTopicName(metadata.getTopicName());
+            taskEvent.setEventPosition(metadata.getEventPosition());
+
+            final TaskController controller = new TaskController(taskClient, taskEvent);
 
             try
             {
-                taskHandler.handle(task);
+                taskHandler.handle(controller, taskEvent);
 
-                if (autoComplete && !task.isCompleted())
+                if (autoComplete && !controller.isTaskCompleted())
                 {
-                    task.complete();
+                    controller.completeTask();
                 }
             }
-            catch (Exception ex)
+            catch (Exception handlingException)
             {
-                LOGGER.info("An error ocurred when handling task " + task.getKey() + ". Reporting to broker.", ex);
-                task.fail(ex);
+                LOGGER.info("An error ocurred when handling task " + taskEvent.getMetadata().getEventKey() +
+                        ". Reporting failure to broker.", handlingException);
+                try
+                {
+                    controller.fail(handlingException);
+                }
+                catch (Exception failureException)
+                {
+                    LOGGER.info("Could not report failure of task " + taskEvent.getMetadata().getEventKey() +
+                        " to broker. Continuing with next task", failureException);
+                }
             }
         });
 
@@ -120,8 +139,8 @@ public class TaskSubscriptionImpl
     @Override
     protected void requestEventSourceReplenishment(int eventsProcessed)
     {
-        taskClient.increaseSubscriptionCredits()
-            .subscriptionId(subscriberKey)
+        taskClient.increaseSubscriptionCredits(topic, partitionId)
+            .subscriberKey(subscriberKey)
             .credits(eventsProcessed)
             .execute();
     }
@@ -129,7 +148,7 @@ public class TaskSubscriptionImpl
     @Override
     public EventSubscriptionCreationResult requestNewSubscription()
     {
-        return taskClient.brokerTaskSubscription()
+        return taskClient.createTaskSubscription(topic, partitionId)
                 .taskType(taskType)
                 .lockDuration(lockTime)
                 .lockOwner(lockOwner)
@@ -140,27 +159,12 @@ public class TaskSubscriptionImpl
     @Override
     public void requestSubscriptionClose()
     {
-        taskClient.closeBrokerTaskSubscription()
-            .subscriptionId(subscriberKey)
-            .execute();
-
+        taskClient.closeTaskSubscription(topic, partitionId, subscriberKey).execute();
     }
 
     @Override
     public String toString()
     {
         return "TaskSubscriptionImpl [taskType=" + taskType + ", subscriberKey=" + subscriberKey + "]";
-    }
-
-    @Override
-    public String getTopicName()
-    {
-        return taskClient.getTopic().getTopicName();
-    }
-
-    @Override
-    public int getPartitionId()
-    {
-        return taskClient.getTopic().getPartitionId();
     }
 }

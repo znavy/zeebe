@@ -15,25 +15,42 @@
  */
 package io.zeebe.client.impl;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.zeebe.client.clustering.impl.ClientTopologyManager;
-import io.zeebe.client.cmd.BrokerRequestException;
+import io.zeebe.client.cmd.BrokerErrorException;
 import io.zeebe.client.cmd.ClientCommandRejectedException;
-import io.zeebe.client.impl.cmd.*;
-import io.zeebe.protocol.clientapi.*;
-import io.zeebe.transport.*;
+import io.zeebe.client.cmd.ClientException;
+import io.zeebe.client.impl.cmd.CommandImpl;
+import io.zeebe.client.impl.cmd.ReceiverAwareResponseResult;
+import io.zeebe.client.task.impl.ControlMessageRequest;
+import io.zeebe.protocol.clientapi.ErrorCode;
+import io.zeebe.protocol.clientapi.ErrorResponseDecoder;
+import io.zeebe.protocol.clientapi.MessageHeaderDecoder;
+import io.zeebe.transport.ClientRequest;
+import io.zeebe.transport.ClientTransport;
+import io.zeebe.transport.RemoteAddress;
 import io.zeebe.util.buffer.BufferReader;
 import io.zeebe.util.buffer.BufferUtil;
-import io.zeebe.util.buffer.BufferWriter;
-import io.zeebe.util.state.*;
-import org.agrona.*;
+import io.zeebe.util.state.SimpleStateMachineContext;
+import io.zeebe.util.state.State;
+import io.zeebe.util.state.StateMachine;
+import io.zeebe.util.state.WaitState;
+import io.zeebe.util.time.ClockUtil;
 
 @SuppressWarnings("rawtypes")
-public class ClientCommandController implements BufferReader, BufferWriter
+public class ClientCommandController implements BufferReader
 {
-    public static final int DEFAULT_RETRIES = 5;
+    private static final long CMD_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
 
     protected static final int TRANSITION_DEFAULT = 0;
     protected static final int TRANSITION_FAILED = 1;
@@ -54,23 +71,29 @@ public class ClientCommandController implements BufferReader, BufferWriter
 
     protected final ClientTopologyManager topologyManager;
 
-    protected AbstractCmdImpl command;
     protected CompletableFuture future;
 
     protected final ClientTransport transport;
-
-    protected final ExpandableArrayBuffer cmdBuffer = new ExpandableArrayBuffer();
-    protected int cmdLength = 0;
 
     protected boolean isConfigured = false;
 
     private Consumer<ClientCommandController> closeConsumer;
 
-    public ClientCommandController(final ClientTransport transport, final ClientTopologyManager topologyManager, Consumer<ClientCommandController> closeConsumer)
+    protected final CommandRequestHandler commandRequestHandler;
+    protected RequestResponseHandler currentRequestHandler;
+    protected ControlMessageRequestHandler controlMessageHandler;
+
+    public ClientCommandController(
+            final ClientTransport transport,
+            final ClientTopologyManager topologyManager,
+            final ObjectMapper objectMapper,
+            Consumer<ClientCommandController> closeConsumer)
     {
         this.transport = transport;
         this.topologyManager = topologyManager;
         this.closeConsumer = closeConsumer;
+        this.commandRequestHandler = new CommandRequestHandler(objectMapper);
+        this.controlMessageHandler = new ControlMessageRequestHandler(objectMapper);
 
         stateMachine = StateMachine.<Context>builder(Context::new)
             .initialState(closedState)
@@ -92,15 +115,26 @@ public class ClientCommandController implements BufferReader, BufferWriter
             .build();
     }
 
-    public void configure(final AbstractCmdImpl command, final CompletableFuture future)
+    public void configureCommandRequest(final CommandImpl command, final CompletableFuture future)
     {
-        this.command = command;
         this.future = future;
+        commandRequestHandler.configure(command);
 
-        cmdLength = command.writeCommand(cmdBuffer);
-
+        currentRequestHandler = commandRequestHandler;
         isConfigured = true;
+
     }
+
+    public void configureControlMessageRequest(ControlMessageRequest controlMessage, CompletableFuture future)
+    {
+        this.future = future;
+        controlMessageHandler.configure(controlMessage);
+
+        currentRequestHandler = controlMessageHandler;
+        isConfigured = true;
+
+    }
+
 
     public int doWork()
     {
@@ -112,16 +146,9 @@ public class ClientCommandController implements BufferReader, BufferWriter
         return stateMachine.getCurrentState() == closedState && !isConfigured;
     }
 
-    @Override
-    public int getLength()
+    protected boolean shouldRetryRequestOnError(ErrorCode errorCode)
     {
-        return cmdLength;
-    }
-
-    @Override
-    public void write(MutableDirectBuffer buffer, int offset)
-    {
-        buffer.putBytes(offset, cmdBuffer, 0, cmdLength);
+        return ErrorCode.TOPIC_NOT_FOUND == errorCode || ErrorCode.REQUEST_TIMEOUT == errorCode;
     }
 
     @Override
@@ -129,8 +156,6 @@ public class ClientCommandController implements BufferReader, BufferWriter
     {
         messageHeaderDecoder.wrap(buffer, 0);
 
-        final int schemaId = messageHeaderDecoder.schemaId();
-        final int templateId = messageHeaderDecoder.templateId();
         final int blockLength = messageHeaderDecoder.blockLength();
         final int version = messageHeaderDecoder.version();
 
@@ -138,16 +163,14 @@ public class ClientCommandController implements BufferReader, BufferWriter
 
         final Context context = stateMachine.getContext();
 
-        final ClientResponseHandler responseHandler = command.getResponseHandler();
-
-        if (schemaId == responseHandler.getResponseSchemaId() && templateId == responseHandler.getResponseTemplateId())
+        if (currentRequestHandler.handlesResponse(messageHeaderDecoder))
         {
-            final Object responseObject = responseHandler.readResponse(buffer, responseMessageOffset, blockLength, version);
+            final Object responseObject = currentRequestHandler.getResult(buffer, responseMessageOffset, blockLength, messageHeaderDecoder.version());
 
             // expose request channel if need to keep a reference of it (e.g. subscriptions)
             if (responseObject instanceof ReceiverAwareResponseResult)
             {
-                ((ReceiverAwareResponseResult) responseObject).setReceiver(context.receiveRemote);
+                ((ReceiverAwareResponseResult) responseObject).setReceiver(context.receiver);
             }
 
             context.responseObject = responseObject;
@@ -172,30 +195,27 @@ public class ClientCommandController implements BufferReader, BufferWriter
         {
             ++context.attempts;
 
-            final Topic topic = command.getTopic();
+            final RemoteAddress target = currentRequestHandler.getTarget(topologyManager);
+            final long now = ClockUtil.getCurrentTimeInMillis();
 
-            if (context.attempts > DEFAULT_RETRIES)
+            if (now > context.timeout)
             {
-                if (topic != null)
-                {
-                    context.exception = new RuntimeException("Cannot execute command. No broker for topic with name '" + topic.getTopicName() + "' and partition id '" + topic.getPartitionId() + "' found.", context.exception);
-                }
-                else
-                {
-                    context.exception = new RuntimeException("Cannot execute command. No broker found.", context.exception);
-                }
+                context.exception = new ClientException(
+                        "Cannot execute request (timeout). " +
+                            "Request was: " + currentRequestHandler.describeRequest() +
+                            ". Contacted brokers: " + context.contactedBrokers.toString(), context.exception);
                 context.take(TRANSITION_FAILED);
                 return 0;
             }
 
-            context.receiveRemote = topologyManager.getLeaderForTopic(topic);
-
-            if (context.receiveRemote != null)
+            if (target != null)
             {
-                final ClientRequest request = transport.getOutput().sendRequest(context.receiveRemote, ClientCommandController.this);
+                final ClientRequest request = transport.getOutput().sendRequest(target, currentRequestHandler);
 
                 if (request != null)
                 {
+                    context.receiver = target;
+                    context.contactedBrokers.add(target);
                     context.request = request;
                     context.take(TRANSITION_DEFAULT);
                 }
@@ -273,9 +293,10 @@ public class ClientCommandController implements BufferReader, BufferWriter
                     context.exception = e;
                     context.take(TRANSITION_FAILED);
                 }
-                catch (Throwable e)
+                catch (Exception e)
                 {
-                    context.take(TRANSITION_REFRESH_TOPOLOGY);
+                    context.exception = new ClientException("Unexpected exception during response handling", e);
+                    context.take(TRANSITION_FAILED);
                 }
                 finally
                 {
@@ -356,11 +377,11 @@ public class ClientCommandController implements BufferReader, BufferWriter
                 try
                 {
                     final String errorMessage = BufferUtil.bufferAsString(context.errorBuffer);
-                    exception = new BrokerRequestException(context.errorCode, errorMessage);
+                    exception = new BrokerErrorException(errorCode, errorMessage);
                 }
                 catch (final Exception e)
                 {
-                    exception = new BrokerRequestException(errorCode, "Unable to parse error message from response: " + e.getMessage());
+                    exception = new BrokerErrorException(errorCode, "Unable to parse error message from response: " + e.getMessage());
                 }
             }
             else if (exception == null)
@@ -391,6 +412,7 @@ public class ClientCommandController implements BufferReader, BufferWriter
             if (isConfigured)
             {
                 context.reset();
+                context.timeout = ClockUtil.getCurrentTimeInMillis() + CMD_TIMEOUT;
                 isConfigured = false;
                 context.take(TRANSITION_DEFAULT);
             }
@@ -399,9 +421,8 @@ public class ClientCommandController implements BufferReader, BufferWriter
 
     static class Context extends SimpleStateMachineContext
     {
-        public RemoteAddress receiveRemote;
-
         public ClientRequest request;
+        protected Set<RemoteAddress> contactedBrokers = new HashSet<>();
 
         CompletableFuture<Void> topologyRefreshFuture;
 
@@ -409,7 +430,9 @@ public class ClientCommandController implements BufferReader, BufferWriter
         Object responseObject;
         ErrorCode errorCode = ErrorCode.NULL_VAL;
         MutableDirectBuffer errorBuffer;
-        Throwable exception;
+        Exception exception;
+        long timeout;
+        RemoteAddress receiver;
 
         Context(final StateMachine<?> stateMachine)
         {
@@ -425,8 +448,10 @@ public class ClientCommandController implements BufferReader, BufferWriter
             errorCode = ErrorCode.NULL_VAL;
             errorBuffer = null;
             exception = null;
+            contactedBrokers.clear();
         }
 
     }
+
 
 }

@@ -28,6 +28,7 @@ public interface EventMetadata
      */
     int getPartitionId();
 
+    // TODO: consider removing "event" from the following three getters
     /**
      * @return the unique position the event has in the topic. Events are ordered by position.
      */

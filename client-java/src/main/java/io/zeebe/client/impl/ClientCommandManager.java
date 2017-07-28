@@ -15,15 +15,22 @@
  */
 package io.zeebe.client.impl;
 
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
-import io.zeebe.client.clustering.impl.ClientTopologyManager;
-import io.zeebe.client.impl.cmd.AbstractCmdImpl;
-import io.zeebe.transport.ClientTransport;
-import io.zeebe.util.actor.Actor;
 import org.agrona.LangUtil;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.zeebe.client.clustering.impl.ClientTopologyManager;
+import io.zeebe.client.event.Event;
+import io.zeebe.client.impl.cmd.CommandImpl;
+import io.zeebe.client.task.impl.ControlMessageRequest;
+import io.zeebe.transport.ClientTransport;
+import io.zeebe.util.actor.Actor;
+
+// TODO: consider renaming to RequestManager; similar for ClientCommandController
 public class ClientCommandManager implements Actor
 {
     private int capacity;
@@ -34,7 +41,11 @@ public class ClientCommandManager implements Actor
     protected final ClientTransport transport;
     protected final ClientTopologyManager topologyManager;
 
-    public ClientCommandManager(final ClientTransport transport, final ClientTopologyManager topologyManager, int capacity)
+    public ClientCommandManager(
+            final ClientTransport transport,
+            final ClientTopologyManager topologyManager,
+            ObjectMapper objectMapper,
+            int capacity)
     {
         this.transport = transport;
         this.topologyManager = topologyManager;
@@ -45,7 +56,7 @@ public class ClientCommandManager implements Actor
 
         for (int i = 0; i < capacity; i++)
         {
-            final ClientCommandController controller = new ClientCommandController(transport, topologyManager, ctrl -> pooledCmds.add(ctrl));
+            final ClientCommandController controller = new ClientCommandController(transport, topologyManager, objectMapper, ctrl -> pooledCmds.add(ctrl));
             this.commandControllers[i] = controller;
             this.pooledCmds.add(controller);
         }
@@ -65,14 +76,14 @@ public class ClientCommandManager implements Actor
         return wc;
     }
 
-    public <R> CompletableFuture<R> executeAsync(final AbstractCmdImpl<R> command)
+    public <E extends Event> CompletableFuture<E> executeAsync(final CommandImpl<E> command)
     {
-        final CompletableFuture<R> future = new CompletableFuture<>();
+        final CompletableFuture<E> future = new CompletableFuture<>();
 
         try
         {
             final ClientCommandController ctrl = pooledCmds.take();
-            ctrl.configure(command, future);
+            ctrl.configureCommandRequest(command, future);
         }
         catch (InterruptedException e)
         {
@@ -82,11 +93,34 @@ public class ClientCommandManager implements Actor
         return future;
     }
 
-    public <R> R execute(final AbstractCmdImpl<R> command)
+    public <E extends Event> E execute(final CommandImpl<E> command)
+    {
+        return waitAndResolve(executeAsync(command));
+    }
+
+
+    public <E> CompletableFuture<E> executeAsync(final ControlMessageRequest<E> controlMessage)
+    {
+        final CompletableFuture<E> future = new CompletableFuture<>();
+
+        try
+        {
+            final ClientCommandController ctrl = pooledCmds.take();
+            ctrl.configureControlMessageRequest(controlMessage, future);
+        }
+        catch (InterruptedException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
+
+        return future;
+    }
+
+    protected <E> E waitAndResolve(CompletableFuture<E> future)
     {
         try
         {
-            return executeAsync(command).get();
+            return future.get();
         }
         catch (final InterruptedException e)
         {
@@ -96,5 +130,10 @@ public class ClientCommandManager implements Actor
         {
             throw (RuntimeException) e.getCause();
         }
+    }
+
+    public <E> E execute(ControlMessageRequest<E> controlMessage)
+    {
+        return waitAndResolve(executeAsync(controlMessage));
     }
 }

@@ -17,21 +17,14 @@ package io.zeebe.client;
 
 import java.util.Properties;
 
-import io.zeebe.client.clustering.RequestTopologyCmd;
+import io.zeebe.client.clustering.impl.TopologyResponse;
 import io.zeebe.client.impl.ZeebeClientImpl;
+import io.zeebe.client.task.cmd.Request;
 
 public interface ZeebeClient extends AutoCloseable
 {
-    /**
-     * Provides APIs specific to topics of type <code>task</code>.
-     *
-     * @param topicName
-     *              the name of the topic
-     *
-     * @param partitionId
-     *            the id of the topic partition
-     */
-    TaskTopicClient taskTopic(String topicName, int partitionId);
+    // TODO: javadoc
+    TasksClient tasks();
 
     /**
      * Provides APIs specific to topics of type <code>workflow</code>.
@@ -42,7 +35,7 @@ public interface ZeebeClient extends AutoCloseable
      * @param partitionId
      *            the id of the topic partition
      */
-    WorkflowTopicClient workflowTopic(String topicName, int partitionId);
+    WorkflowsClient workflows();
 
     /**
      * Provides general purpose APIs for any kind of topic.
@@ -53,9 +46,10 @@ public interface ZeebeClient extends AutoCloseable
      * @param partitionId
      *            the id of the topic partition
      */
-    TopicClient topic(String topicName, int partitionId);
+    TopicsClient topics();
 
-    RequestTopologyCmd requestTopology();
+    // TODO: this exposes an impl class as its result
+    Request<TopologyResponse> requestTopology();
 
     /**
      * Connects the client to the configured broker. Not thread-safe.
