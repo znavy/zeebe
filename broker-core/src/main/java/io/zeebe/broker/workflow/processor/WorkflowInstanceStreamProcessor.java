@@ -220,7 +220,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
         event.readValue(workflowInstanceEvent);
 
         EventProcessor eventProcessor = null;
-        switch (workflowInstanceEvent.getEventType())
+        switch (workflowInstanceEvent.getState())
         {
             case CREATE_WORKFLOW_INSTANCE:
                 eventProcessor = createWorkflowInstanceEventProcessor;
@@ -275,7 +275,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
         taskEvent.reset();
         event.readValue(taskEvent);
 
-        switch (taskEvent.getEventType())
+        switch (taskEvent.getState())
         {
             case CREATED:
                 return taskCreatedEventProcessor;
@@ -293,7 +293,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
         workflowEvent.reset();
         event.readValue(workflowEvent);
 
-        switch (workflowEvent.getEventType())
+        switch (workflowEvent.getState())
         {
             case CREATED:
                 return workflowCreatedEventProcessor;
@@ -403,7 +403,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
         @Override
         public void processEvent()
         {
-            WorkflowInstanceEventType newEventType = WorkflowInstanceEventType.WORKFLOW_INSTANCE_REJECTED;
+            WorkflowInstanceState newEventType = WorkflowInstanceState.WORKFLOW_INSTANCE_REJECTED;
 
             long workflowKey = workflowInstanceEvent.getWorkflowKey();
             final DirectBuffer bpmnProcessId = workflowInstanceEvent.getBpmnProcessId();
@@ -433,12 +433,12 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
                         .setBpmnProcessId(workflow.getId())
                         .setVersion(workflow.getVersion());
 
-                    newEventType = WorkflowInstanceEventType.WORKFLOW_INSTANCE_CREATED;
+                    newEventType = WorkflowInstanceState.WORKFLOW_INSTANCE_CREATED;
                 }
             }
 
             workflowInstanceEvent
-                    .setEventType(newEventType)
+                    .setState(newEventType)
                     .setWorkflowInstanceKey(eventKey);
         }
 
@@ -469,7 +469,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
                 final DirectBuffer activityId = startEvent.getId();
 
                 workflowInstanceEvent
-                    .setEventType(WorkflowInstanceEventType.START_EVENT_OCCURRED)
+                    .setState(WorkflowInstanceState.START_EVENT_OCCURRED)
                     .setWorkflowInstanceKey(eventKey)
                     .setActivityId(activityId);
             }
@@ -508,7 +508,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
             final ExecutableSequenceFlow sequenceFlow = currentActivity.getOutgoingSequenceFlows()[0];
 
             workflowInstanceEvent
-                .setEventType(WorkflowInstanceEventType.SEQUENCE_FLOW_TAKEN)
+                .setState(WorkflowInstanceState.SEQUENCE_FLOW_TAKEN)
                 .setActivityId(sequenceFlow.getId());
         }
 
@@ -535,7 +535,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
             if (activeTokenCount == 1)
             {
                 workflowInstanceEvent
-                    .setEventType(WorkflowInstanceEventType.WORKFLOW_INSTANCE_COMPLETED)
+                    .setState(WorkflowInstanceState.WORKFLOW_INSTANCE_COMPLETED)
                     .setActivityId("");
 
                 isCompleted = true;
@@ -584,11 +584,11 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
 
             if (targetNode instanceof ExecutableEndEvent)
             {
-                workflowInstanceEvent.setEventType(WorkflowInstanceEventType.END_EVENT_OCCURRED);
+                workflowInstanceEvent.setState(WorkflowInstanceState.END_EVENT_OCCURRED);
             }
             else if (targetNode instanceof ExecutableServiceTask)
             {
-                workflowInstanceEvent.setEventType(WorkflowInstanceEventType.ACTIVITY_READY);
+                workflowInstanceEvent.setState(WorkflowInstanceState.ACTIVITY_READY);
             }
             else
             {
@@ -616,7 +616,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
             {
                 final ExecutableServiceTask serviceTask = (ExecutableServiceTask) activty;
 
-                workflowInstanceEvent.setEventType(WorkflowInstanceEventType.ACTIVITY_ACTIVATED);
+                workflowInstanceEvent.setState(WorkflowInstanceState.ACTIVITY_ACTIVATED);
 
                 try
                 {
@@ -686,7 +686,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
             taskEvent.reset();
 
             taskEvent
-                .setEventType(TaskEventType.CREATE)
+                .setState(TaskState.CREATE)
                 .setType(taskMetadata.getTaskType())
                 .setRetries(taskMetadata.getRetries())
                 .setPayload(workflowInstanceEvent.getPayload());
@@ -770,7 +770,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
             if (taskHeaders.getWorkflowInstanceKey() > 0 && isTaskOpen(activityInstanceKey))
             {
                 workflowInstanceEvent
-                    .setEventType(WorkflowInstanceEventType.ACTIVITY_COMPLETING)
+                    .setState(WorkflowInstanceState.ACTIVITY_COMPLETING)
                     .setBpmnProcessId(taskHeaders.getBpmnProcessId())
                     .setVersion(taskHeaders.getWorkflowDefinitionVersion())
                     .setWorkflowKey(taskHeaders.getWorkflowKey())
@@ -815,7 +815,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
         {
             final ExecutableServiceTask serviceTask = getCurrentActivity();
 
-            workflowInstanceEvent.setEventType(WorkflowInstanceEventType.ACTIVITY_COMPLETED);
+            workflowInstanceEvent.setState(WorkflowInstanceState.ACTIVITY_COMPLETED);
 
             setWorkflowInstancePayload(serviceTask.getIoMapping().getOutputMappings());
         }
@@ -880,7 +880,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
                 lookupWorkflowInstanceEvent(workflowInstanceIndex.getPosition());
 
                 workflowInstanceEvent
-                    .setEventType(WorkflowInstanceEventType.WORKFLOW_INSTANCE_CANCELED)
+                    .setState(WorkflowInstanceState.WORKFLOW_INSTANCE_CANCELED)
                     .setPayload(WorkflowInstanceEvent.NO_PAYLOAD);
 
                 activityInstanceKey = workflowInstanceIndex.getActivityInstanceKey();
@@ -890,7 +890,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
             }
             else
             {
-                workflowInstanceEvent.setEventType(WorkflowInstanceEventType.CANCEL_WORKFLOW_INSTANCE_REJECTED);
+                workflowInstanceEvent.setState(WorkflowInstanceState.CANCEL_WORKFLOW_INSTANCE_REJECTED);
             }
         }
 
@@ -941,7 +941,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
 
             taskEvent.reset();
             taskEvent
-                .setEventType(TaskEventType.CANCEL)
+                .setState(TaskState.CANCEL)
                 .setType(EMPTY_TASK_TYPE)
                 .headers()
                     .setBpmnProcessId(workflowInstanceEvent.getBpmnProcessId())
@@ -967,7 +967,7 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
 
             activityInstanceEvent.reset();
             activityInstanceEvent
-                .setEventType(WorkflowInstanceEventType.ACTIVITY_TERMINATED)
+                .setState(WorkflowInstanceState.ACTIVITY_TERMINATED)
                 .setBpmnProcessId(workflowInstanceEvent.getBpmnProcessId())
                 .setVersion(workflowInstanceEvent.getVersion())
                 .setWorkflowInstanceKey(eventKey)
@@ -1011,17 +1011,17 @@ public class WorkflowInstanceStreamProcessor implements StreamProcessor
 
             // the map contains the activity when it is ready, activated or completing
             // in this cases, the payload can be updated and it is taken for the next workflow instance event
-            WorkflowInstanceEventType workflowInstanceEventType = WorkflowInstanceEventType.UPDATE_PAYLOAD_REJECTED;
+            WorkflowInstanceState workflowInstanceEventType = WorkflowInstanceState.UPDATE_PAYLOAD_REJECTED;
             if (currentActivityInstanceKey > 0 && currentActivityInstanceKey == eventKey)
             {
                 final DirectBuffer payload = workflowInstanceEvent.getPayload();
                 if (isValidPayload(payload))
                 {
-                    workflowInstanceEventType = WorkflowInstanceEventType.PAYLOAD_UPDATED;
+                    workflowInstanceEventType = WorkflowInstanceState.PAYLOAD_UPDATED;
                     isUpdated = true;
                 }
             }
-            workflowInstanceEvent.setEventType(workflowInstanceEventType);
+            workflowInstanceEvent.setState(workflowInstanceEventType);
         }
 
         @Override
