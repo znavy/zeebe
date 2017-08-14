@@ -54,7 +54,7 @@ public class EventLogger
             .handler(event ->
             {
                 final EventMetadata metadata = event.getMetadata();
-                System.out.println(String.format(">>> [topic: %d, position: %d, key: %d, type: %s]\n%s\n===",
+                System.out.println(String.format(">>> [partition: %d, position: %d, key: %d, type: %s]\n%s\n===",
                         metadata.getPartitionId(),
                         metadata.getPosition(),
                         metadata.getKey(),
