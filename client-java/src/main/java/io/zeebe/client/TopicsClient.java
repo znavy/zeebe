@@ -15,6 +15,8 @@
  */
 package io.zeebe.client;
 
+import io.zeebe.client.cmd.Request;
+import io.zeebe.client.event.Event;
 import io.zeebe.client.event.PollableTopicSubscription;
 import io.zeebe.client.event.PollableTopicSubscriptionBuilder;
 import io.zeebe.client.event.TopicSubscriptionBuilder;
@@ -43,5 +45,8 @@ public interface TopicsClient
      * @return a builder for an event subscription and manual event handling
      */
     PollableTopicSubscriptionBuilder newPollableSubscription(String topicName);
+
+    // TODO: could return a proper event
+    Request<Event> create(String topicName, int partitions);
 
 }
