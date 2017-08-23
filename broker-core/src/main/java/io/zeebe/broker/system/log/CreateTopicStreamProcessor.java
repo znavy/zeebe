@@ -26,13 +26,17 @@ import io.zeebe.logstreams.log.LoggedEvent;
 import io.zeebe.logstreams.processor.EventProcessor;
 import io.zeebe.logstreams.processor.StreamProcessor;
 import io.zeebe.logstreams.processor.StreamProcessorContext;
+import io.zeebe.logstreams.snapshot.ZbMapSnapshotSupport;
 import io.zeebe.logstreams.spi.SnapshotSupport;
+import io.zeebe.map.Bytes2LongZbMap;
 import io.zeebe.protocol.Protocol;
 import io.zeebe.protocol.clientapi.EventType;
 import io.zeebe.protocol.impl.BrokerEventMetadata;
 
 public class CreateTopicStreamProcessor implements StreamProcessor, EventProcessor
 {
+
+    protected static final long
 
     protected final BrokerEventMetadata sourceMetadata = new BrokerEventMetadata();
     protected final TopicEvent event = new TopicEvent();
@@ -50,9 +54,14 @@ public class CreateTopicStreamProcessor implements StreamProcessor, EventProcess
     // TODO: das hier ist teilweise repetitiv
     protected final CommandResponseWriter responseWriter;
 
+    protected final Bytes2LongZbMap topics;
+    protected final ZbMapSnapshotSupport<Bytes2LongZbMap> stateResource;
+
     public CreateTopicStreamProcessor(CommandResponseWriter responseWriter)
     {
         this.responseWriter = responseWriter;
+        this.topics = new Bytes2LongZbMap(64); // TODO: constant for this
+        this.stateResource = new ZbMapSnapshotSupport<>(topics);
     }
 
     @Override
@@ -64,10 +73,11 @@ public class CreateTopicStreamProcessor implements StreamProcessor, EventProcess
         this.targetStream = context.getTargetStream();
     }
 
+    // TODO: repetitive
     @Override
     public SnapshotSupport getStateResource()
     {
-        return new NoopSnapshotSupport();
+        return stateResource;
     }
 
     @Override
@@ -91,9 +101,15 @@ public class CreateTopicStreamProcessor implements StreamProcessor, EventProcess
         }
     }
 
+    protected boolean creationAccepted;
+
     @Override
     public void processEvent()
     {
+        if (topics.get(event.getName(), -1) >= 0)
+        {
+        }
+
         event.setState(TopicState.CREATE_REJECTED);
     }
 
