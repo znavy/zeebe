@@ -38,12 +38,12 @@ public class TransportServiceNames
 
     public static ServiceName<Dispatcher> receiveBufferName(String identifier)
     {
-        return ServiceName.newServiceName(String.format("transport.%s.receive-buffer", identifier), Dispatcher.class);
+        return ServiceName.newServiceName(String.format("transport.%s.receive_buffer", identifier), Dispatcher.class);
     }
 
     public static ServiceName<Dispatcher> sendBufferName(String identifier)
     {
-        return ServiceName.newServiceName(String.format("transport.%s.send-buffer", identifier), Dispatcher.class);
+        return ServiceName.newServiceName(String.format("transport.%s.send_buffer", identifier), Dispatcher.class);
     }
 
     public static ServiceName<ServerTransport> serverTransport(String identifier)
@@ -53,7 +53,7 @@ public class TransportServiceNames
 
     public static ServiceName<BufferingServerTransport> bufferingServerTransport(String identifier)
     {
-        return ServiceName.newServiceName(String.format("transport.%s.buffering-server", identifier), BufferingServerTransport.class);
+        return ServiceName.newServiceName(String.format("transport.%s.buffering_server", identifier), BufferingServerTransport.class);
     }
 
     public static ServiceName<ClientTransport> clientTransport(String identifier)

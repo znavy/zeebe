@@ -17,9 +17,7 @@
  */
 package io.zeebe.broker.system;
 
-import static io.zeebe.broker.system.SystemServiceNames.ACTOR_SCHEDULER_SERVICE;
-import static io.zeebe.broker.system.SystemServiceNames.COUNTERS_MANAGER_SERVICE;
-import static io.zeebe.broker.system.SystemServiceNames.EXECUTOR_SERVICE;
+import static io.zeebe.broker.system.SystemServiceNames.*;
 
 import io.zeebe.broker.clustering.ClusterServiceNames;
 import io.zeebe.broker.logstreams.LogStreamServiceNames;
@@ -44,6 +42,7 @@ public class SystemComponent implements Component
 
         final ActorSchedulerService agentRunnerService = new ActorSchedulerService(context.getConfigurationManager());
         serviceContainer.createService(ACTOR_SCHEDULER_SERVICE, agentRunnerService)
+            .dependency(COUNTERS_MANAGER_SERVICE, agentRunnerService.getCountersManagerInjector())
             .install();
 
         final ScheduledExecutorService executorService = new ScheduledExecutorService();

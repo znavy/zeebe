@@ -22,9 +22,8 @@ import static io.zeebe.broker.logstreams.LogStreamServiceNames.logStreamServiceN
 import static io.zeebe.broker.logstreams.processor.StreamProcessorIds.TASK_EXPIRE_LOCK_STREAM_PROCESSOR_ID;
 import static io.zeebe.broker.logstreams.processor.StreamProcessorIds.TASK_QUEUE_STREAM_PROCESSOR_ID;
 import static io.zeebe.broker.system.SystemServiceNames.ACTOR_SCHEDULER_SERVICE;
-import static io.zeebe.broker.task.TaskQueueServiceNames.TASK_QUEUE_STREAM_PROCESSOR_SERVICE_GROUP_NAME;
-import static io.zeebe.broker.task.TaskQueueServiceNames.taskQueueExpireLockStreamProcessorServiceName;
-import static io.zeebe.broker.task.TaskQueueServiceNames.taskQueueInstanceStreamProcessorServiceName;
+import static io.zeebe.broker.system.SystemServiceNames.COUNTERS_MANAGER_SERVICE;
+import static io.zeebe.broker.task.TaskQueueServiceNames.*;
 
 import java.time.Duration;
 
@@ -37,17 +36,10 @@ import io.zeebe.broker.transport.clientapi.CommandResponseWriter;
 import io.zeebe.broker.transport.clientapi.SubscribedEventWriter;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.logstreams.processor.StreamProcessorController;
-import io.zeebe.servicecontainer.Injector;
-import io.zeebe.servicecontainer.Service;
-import io.zeebe.servicecontainer.ServiceGroupReference;
-import io.zeebe.servicecontainer.ServiceName;
-import io.zeebe.servicecontainer.ServiceStartContext;
-import io.zeebe.servicecontainer.ServiceStopContext;
+import io.zeebe.servicecontainer.*;
 import io.zeebe.transport.ServerTransport;
 import io.zeebe.util.DeferredCommandContext;
-import io.zeebe.util.actor.Actor;
-import io.zeebe.util.actor.ActorReference;
-import io.zeebe.util.actor.ActorScheduler;
+import io.zeebe.util.actor.*;
 
 public class TaskQueueManagerService implements Service<TaskQueueManager>, TaskQueueManager, Actor
 {
@@ -101,6 +93,7 @@ public class TaskQueueManagerService implements Service<TaskQueueManager>, TaskQ
               .dependency(logStreamServiceName, taskInstanceStreamProcessorService.getTargetStreamInjector())
               .dependency(SNAPSHOT_STORAGE_SERVICE, taskInstanceStreamProcessorService.getSnapshotStorageInjector())
               .dependency(ACTOR_SCHEDULER_SERVICE, taskInstanceStreamProcessorService.getActorSchedulerInjector())
+              .dependency(COUNTERS_MANAGER_SERVICE, taskInstanceStreamProcessorService.getCountersInjector())
               .install();
 
         startExpireLockService(logName, logStreamServiceName);
@@ -124,6 +117,7 @@ public class TaskQueueManagerService implements Service<TaskQueueManager>, TaskQ
             .dependency(logStreamServiceName, expireLockStreamProcessorService.getTargetStreamInjector())
             .dependency(SNAPSHOT_STORAGE_SERVICE, expireLockStreamProcessorService.getSnapshotStorageInjector())
             .dependency(ACTOR_SCHEDULER_SERVICE, expireLockStreamProcessorService.getActorSchedulerInjector())
+            .dependency(COUNTERS_MANAGER_SERVICE, expireLockStreamProcessorService.getCountersInjector())
             .install()
             .thenRun(() ->
             {

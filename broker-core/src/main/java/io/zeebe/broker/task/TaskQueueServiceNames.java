@@ -29,16 +29,16 @@ public class TaskQueueServiceNames
 
     public static ServiceName<StreamProcessorController> taskQueueInstanceStreamProcessorServiceName(String taskQueueName)
     {
-        return ServiceName.newServiceName(String.format("taskqueue.%s.processor.instance", taskQueueName), StreamProcessorController.class);
+        return ServiceName.newServiceName(String.format("%s.processor.taskinstance", taskQueueName), StreamProcessorController.class);
     }
 
     public static ServiceName<StreamProcessorController> taskQueueLockStreamProcessorServiceName(String taskQueueName, String taskType)
     {
-        return ServiceName.newServiceName(String.format("taskqueue.%s.processor.lock.%s", taskQueueName, taskType), StreamProcessorController.class);
+        return ServiceName.newServiceName(String.format("%s.processor.tasklock.%s", taskQueueName, taskType), StreamProcessorController.class);
     }
 
     public static ServiceName<StreamProcessorController> taskQueueExpireLockStreamProcessorServiceName(String taskQueueName)
     {
-        return ServiceName.newServiceName(String.format("taskqueue.%s.processor.expire.lock", taskQueueName), StreamProcessorController.class);
+        return ServiceName.newServiceName(String.format("%s.processor.expirelock", taskQueueName), StreamProcessorController.class);
     }
 }

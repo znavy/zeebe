@@ -18,6 +18,7 @@
 package io.zeebe.broker.logstreams;
 
 import io.zeebe.broker.logstreams.cfg.LogStreamsCfg;
+import io.zeebe.broker.services.Counters;
 import io.zeebe.broker.system.ConfigurationManager;
 import io.zeebe.servicecontainer.Injector;
 import io.zeebe.servicecontainer.Service;
@@ -29,6 +30,7 @@ public class LogStreamsManagerService implements Service<LogStreamsManager>
 {
 
     protected final Injector<ActorScheduler> actorSchedulerInjector = new Injector<>();
+    protected final Injector<Counters> countersInjector = new Injector<>();
 
     protected LogStreamsCfg logStreamsCfg;
 
@@ -42,7 +44,8 @@ public class LogStreamsManagerService implements Service<LogStreamsManager>
     @Override
     public void start(ServiceStartContext serviceContext)
     {
-        service = new LogStreamsManager(logStreamsCfg, actorSchedulerInjector.getValue());
+        final Counters counters = countersInjector.getValue();
+        service = new LogStreamsManager(logStreamsCfg, actorSchedulerInjector.getValue(), counters.getCountersManager());
     }
 
     @Override
@@ -60,6 +63,11 @@ public class LogStreamsManagerService implements Service<LogStreamsManager>
     public Injector<ActorScheduler> getActorSchedulerInjector()
     {
         return actorSchedulerInjector;
+    }
+
+    public Injector<Counters> getCountersInjector()
+    {
+        return countersInjector;
     }
 
 }

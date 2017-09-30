@@ -28,11 +28,11 @@ public class TopicSubscriptionServiceNames
 
     public static ServiceName<StreamProcessorController> subscriptionPushServiceName(String logStreamName, String subscriptionName)
     {
-        return ServiceName.newServiceName(String.format("log.%s.subscription.push.%s", logStreamName, subscriptionName), StreamProcessorController.class);
+        return ServiceName.newServiceName(String.format("%s.processor.subscription_push_%s", logStreamName, subscriptionName), StreamProcessorController.class);
     }
 
     public static ServiceName<StreamProcessorController> subscriptionManagementServiceName(String logStreamName)
     {
-        return ServiceName.newServiceName(String.format("log.%s.subscription.management", logStreamName), StreamProcessorController.class);
+        return ServiceName.newServiceName(String.format("%s.processor.subscription_management", logStreamName), StreamProcessorController.class);
     }
 }

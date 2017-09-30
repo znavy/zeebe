@@ -17,14 +17,15 @@
  */
 package io.zeebe.broker.logstreams.processor;
 
-import io.zeebe.protocol.Protocol;
-import io.zeebe.protocol.impl.BrokerEventMetadata;
+import io.zeebe.broker.services.Counters;
 import io.zeebe.logstreams.LogStreams;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.logstreams.log.LoggedEvent;
 import io.zeebe.logstreams.processor.*;
 import io.zeebe.logstreams.spi.SnapshotPositionProvider;
 import io.zeebe.logstreams.spi.SnapshotStorage;
+import io.zeebe.protocol.Protocol;
+import io.zeebe.protocol.impl.BrokerEventMetadata;
 import io.zeebe.servicecontainer.*;
 import io.zeebe.util.actor.ActorScheduler;
 
@@ -34,6 +35,7 @@ public class StreamProcessorService implements Service<StreamProcessorController
     private final Injector<LogStream> targetStreamInjector = new Injector<>();
     private final Injector<SnapshotStorage> snapshotStorageInjector = new Injector<>();
     private final Injector<ActorScheduler> actorSchedulerInjector = new Injector<>();
+    private final Injector<Counters> countersInjector = new Injector<>();
 
     private final String name;
     private final int id;
@@ -100,6 +102,8 @@ public class StreamProcessorService implements Service<StreamProcessorController
     @Override
     public void start(ServiceStartContext ctx)
     {
+        final Counters counters = countersInjector.getValue();
+
         final LogStream sourceStream = sourceStreamInjector.getValue();
         final LogStream targetStream = targetStreamInjector.getValue();
 
@@ -135,6 +139,7 @@ public class StreamProcessorService implements Service<StreamProcessorController
             .reprocessingEventFilter(reprocessingEventFilter)
             .errorHandler(errorHandler)
             .readOnly(readOnly)
+            .countersManager(counters.getCountersManager())
             .build();
 
         ctx.async(streamProcessorController.openAsync());
@@ -175,6 +180,11 @@ public class StreamProcessorService implements Service<StreamProcessorController
     public StreamProcessorController getStreamProcessorController()
     {
         return streamProcessorController;
+    }
+
+    public Injector<Counters> getCountersInjector()
+    {
+        return countersInjector;
     }
 
     protected static class MetadataEventFilter implements EventFilter

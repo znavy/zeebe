@@ -19,12 +19,7 @@ package io.zeebe.broker.transport;
 
 import static io.zeebe.broker.system.SystemServiceNames.ACTOR_SCHEDULER_SERVICE;
 import static io.zeebe.broker.system.SystemServiceNames.COUNTERS_MANAGER_SERVICE;
-import static io.zeebe.broker.transport.TransportServiceNames.CLIENT_API_MESSAGE_HANDLER;
-import static io.zeebe.broker.transport.TransportServiceNames.CLIENT_API_SERVER_NAME;
-import static io.zeebe.broker.transport.TransportServiceNames.MANAGEMENT_API_CLIENT_NAME;
-import static io.zeebe.broker.transport.TransportServiceNames.MANAGEMENT_API_SERVER_NAME;
-import static io.zeebe.broker.transport.TransportServiceNames.REPLICATION_API_CLIENT_NAME;
-import static io.zeebe.broker.transport.TransportServiceNames.REPLICATION_API_SERVER_NAME;
+import static io.zeebe.broker.transport.TransportServiceNames.*;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
@@ -41,15 +36,10 @@ import io.zeebe.broker.transport.cfg.SocketBindingCfg;
 import io.zeebe.broker.transport.cfg.TransportComponentCfg;
 import io.zeebe.broker.transport.clientapi.ClientApiMessageHandlerService;
 import io.zeebe.broker.transport.controlmessage.ControlMessageHandlerManagerService;
-import io.zeebe.dispatcher.Dispatcher;
-import io.zeebe.dispatcher.DispatcherBuilder;
-import io.zeebe.dispatcher.Dispatchers;
+import io.zeebe.dispatcher.*;
 import io.zeebe.servicecontainer.ServiceContainer;
 import io.zeebe.servicecontainer.ServiceName;
-import io.zeebe.transport.ServerMessageHandler;
-import io.zeebe.transport.ServerRequestHandler;
-import io.zeebe.transport.ServerTransportBuilder;
-import io.zeebe.transport.SocketAddress;
+import io.zeebe.transport.*;
 
 public class TransportComponent implements Component
 {
@@ -182,6 +172,7 @@ public class TransportComponent implements Component
             .dependency(requestHandlerDependency, service.getRequestHandlerInjector())
             .dependency(messageHandlerDependency, service.getMessageHandlerInjector())
             .dependency(ACTOR_SCHEDULER_SERVICE, service.getSchedulerInjector())
+            .dependency(COUNTERS_MANAGER_SERVICE, service.getCountersInjector())
             .install();
 
     }
@@ -202,6 +193,7 @@ public class TransportComponent implements Component
             .dependency(receiveBufferName, service.getReceiveBufferInjector())
             .dependency(sendBufferName, service.getSendBufferInjector())
             .dependency(ACTOR_SCHEDULER_SERVICE, service.getSchedulerInjector())
+            .dependency(COUNTERS_MANAGER_SERVICE, service.getCountersInjector())
             .install();
     }
 
@@ -247,12 +239,13 @@ public class TransportComponent implements Component
         final ServiceName<Dispatcher> receiveBufferName = createReceiveBuffer(serviceContainer, name, receiveBufferSize);
         final ServiceName<Dispatcher> sendBufferName = createSendBuffer(serviceContainer, name, receiveBufferSize);
 
-        final ClientTransportService service = new ClientTransportService(requestPoolSize);
+        final ClientTransportService service = new ClientTransportService(requestPoolSize, name);
 
         return serviceContainer.createService(TransportServiceNames.clientTransport(name), service)
             .dependency(receiveBufferName, service.getReceiveBufferInjector())
             .dependency(sendBufferName, service.getSendBufferInjector())
             .dependency(ACTOR_SCHEDULER_SERVICE, service.getSchedulerInjector())
+            .dependency(COUNTERS_MANAGER_SERVICE, service.getCountersInjector())
             .install();
     }
 }

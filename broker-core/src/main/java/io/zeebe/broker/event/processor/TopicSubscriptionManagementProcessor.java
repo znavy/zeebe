@@ -18,7 +18,7 @@
 package io.zeebe.broker.event.processor;
 
 import static io.zeebe.broker.logstreams.LogStreamServiceNames.SNAPSHOT_STORAGE_SERVICE;
-import static io.zeebe.broker.system.SystemServiceNames.ACTOR_SCHEDULER_SERVICE;
+import static io.zeebe.broker.system.SystemServiceNames.*;
 
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
@@ -266,6 +266,7 @@ public class TopicSubscriptionManagementProcessor implements StreamProcessor
             .dependency(streamServiceName, streamProcessorService.getTargetStreamInjector())
             .dependency(SNAPSHOT_STORAGE_SERVICE, streamProcessorService.getSnapshotStorageInjector())
             .dependency(ACTOR_SCHEDULER_SERVICE, streamProcessorService.getActorSchedulerInjector())
+            .dependency(COUNTERS_MANAGER_SERVICE, streamProcessorService.getCountersInjector())
             .install()
             .thenApply((v) -> processor);
     }

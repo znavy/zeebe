@@ -19,11 +19,9 @@ package io.zeebe.broker.transport;
 
 import java.net.InetSocketAddress;
 
+import io.zeebe.broker.services.Counters;
 import io.zeebe.dispatcher.Dispatcher;
-import io.zeebe.servicecontainer.Injector;
-import io.zeebe.servicecontainer.Service;
-import io.zeebe.servicecontainer.ServiceStartContext;
-import io.zeebe.servicecontainer.ServiceStopContext;
+import io.zeebe.servicecontainer.*;
 import io.zeebe.transport.*;
 import io.zeebe.util.actor.ActorScheduler;
 import org.slf4j.Logger;
@@ -36,6 +34,7 @@ public class ServerTransportService implements Service<ServerTransport>
     protected final Injector<Dispatcher> sendBufferInjector = new Injector<>();
     protected final Injector<ServerRequestHandler> requestHandlerInjector = new Injector<>();
     protected final Injector<ServerMessageHandler> messageHandlerInjector = new Injector<>();
+    protected final Injector<Counters> countersInjector = new Injector<>();
 
     protected final String readableName;
     protected final InetSocketAddress bindAddress;
@@ -51,12 +50,15 @@ public class ServerTransportService implements Service<ServerTransport>
     @Override
     public void start(ServiceStartContext serviceContext)
     {
+        final Counters counters = countersInjector.getValue();
         final ActorScheduler scheduler = schedulerInjector.getValue();
         final Dispatcher sendBuffer = sendBufferInjector.getValue();
         final ServerRequestHandler requestHandler = requestHandlerInjector.getValue();
         final ServerMessageHandler messageHandler = messageHandlerInjector.getValue();
 
         serverTransport = Transports.newServerTransport()
+            .name(readableName)
+            .countersManager(counters.getCountersManager())
             .bindAddress(bindAddress)
             .sendBuffer(sendBuffer)
             .scheduler(scheduler)
@@ -95,6 +97,11 @@ public class ServerTransportService implements Service<ServerTransport>
     public Injector<ActorScheduler> getSchedulerInjector()
     {
         return schedulerInjector;
+    }
+
+    public Injector<Counters> getCountersInjector()
+    {
+        return countersInjector;
     }
 
 }

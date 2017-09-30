@@ -26,16 +26,16 @@ public class WorkflowQueueServiceNames
 
     public static ServiceName<StreamProcessorController> deploymentStreamProcessorServiceName(String queueName)
     {
-        return ServiceName.newServiceName(String.format("workflow.%s.processor.deployment", queueName), StreamProcessorController.class);
+        return ServiceName.newServiceName(String.format("%s.processor.workflowdeployment", queueName), StreamProcessorController.class);
     }
 
     public static ServiceName<StreamProcessorController> workflowInstanceStreamProcessorServiceName(String queueName)
     {
-        return ServiceName.newServiceName(String.format("workflow.%s.processor.instance", queueName), StreamProcessorController.class);
+        return ServiceName.newServiceName(String.format("%s.processor.workflowinstance", queueName), StreamProcessorController.class);
     }
 
     public static ServiceName<StreamProcessorController> incidentStreamProcessorServiceName(String queueName)
     {
-        return ServiceName.newServiceName(String.format("workflow.%s.processor.incident", queueName), StreamProcessorController.class);
+        return ServiceName.newServiceName(String.format("%s.processor.workflowincident", queueName), StreamProcessorController.class);
     }
 }

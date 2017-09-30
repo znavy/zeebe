@@ -19,7 +19,7 @@ package io.zeebe.broker;
 
 import static java.lang.Runtime.getRuntime;
 
-import java.util.Scanner;
+import java.util.*;
 
 public class StandaloneBroker
 {

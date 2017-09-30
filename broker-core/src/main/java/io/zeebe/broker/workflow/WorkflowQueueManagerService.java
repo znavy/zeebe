@@ -21,6 +21,7 @@ import static io.zeebe.broker.logstreams.LogStreamServiceNames.SNAPSHOT_STORAGE_
 import static io.zeebe.broker.logstreams.LogStreamServiceNames.logStreamServiceName;
 import static io.zeebe.broker.logstreams.processor.StreamProcessorIds.INCIDENT_PROCESSOR_ID;
 import static io.zeebe.broker.system.SystemServiceNames.ACTOR_SCHEDULER_SERVICE;
+import static io.zeebe.broker.system.SystemServiceNames.COUNTERS_MANAGER_SERVICE;
 import static io.zeebe.broker.workflow.WorkflowQueueServiceNames.deploymentStreamProcessorServiceName;
 import static io.zeebe.broker.workflow.WorkflowQueueServiceNames.incidentStreamProcessorServiceName;
 import static io.zeebe.broker.workflow.WorkflowQueueServiceNames.workflowInstanceStreamProcessorServiceName;
@@ -101,6 +102,7 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
                 .dependency(logStreamServiceName, deploymentStreamProcessorService.getTargetStreamInjector())
                 .dependency(SNAPSHOT_STORAGE_SERVICE, deploymentStreamProcessorService.getSnapshotStorageInjector())
                 .dependency(ACTOR_SCHEDULER_SERVICE, deploymentStreamProcessorService.getActorSchedulerInjector())
+                .dependency(COUNTERS_MANAGER_SERVICE, deploymentStreamProcessorService.getCountersInjector())
                 .install();
     }
 
@@ -132,6 +134,7 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
                 .dependency(logStreamServiceName, workflowStreamProcessorService.getTargetStreamInjector())
                 .dependency(SNAPSHOT_STORAGE_SERVICE, workflowStreamProcessorService.getSnapshotStorageInjector())
                 .dependency(ACTOR_SCHEDULER_SERVICE, workflowStreamProcessorService.getActorSchedulerInjector())
+                .dependency(COUNTERS_MANAGER_SERVICE, workflowStreamProcessorService.getCountersInjector())
                 .install();
     }
 
@@ -155,6 +158,7 @@ public class WorkflowQueueManagerService implements Service<WorkflowQueueManager
                 .dependency(logStreamServiceName, incidentStreamProcessorService.getTargetStreamInjector())
                 .dependency(SNAPSHOT_STORAGE_SERVICE, incidentStreamProcessorService.getSnapshotStorageInjector())
                 .dependency(ACTOR_SCHEDULER_SERVICE, incidentStreamProcessorService.getActorSchedulerInjector())
+                .dependency(COUNTERS_MANAGER_SERVICE, incidentStreamProcessorService.getCountersInjector())
                 .install();
     }
 

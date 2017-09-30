@@ -20,6 +20,7 @@ package io.zeebe.broker.transport;
 import java.net.InetSocketAddress;
 
 import io.zeebe.broker.Loggers;
+import io.zeebe.broker.services.Counters;
 import io.zeebe.dispatcher.Dispatcher;
 import io.zeebe.servicecontainer.Injector;
 import io.zeebe.servicecontainer.Service;
@@ -37,6 +38,7 @@ public class BufferingServerTransportService implements Service<BufferingServerT
     protected final Injector<ActorScheduler> schedulerInjector = new Injector<>();
     protected final Injector<Dispatcher> receiveBufferInjector = new Injector<>();
     protected final Injector<Dispatcher> sendBufferInjector = new Injector<>();
+    protected final Injector<Counters> countersInjector = new Injector<>();
 
     protected final String readableName;
     protected final InetSocketAddress bindAddress;
@@ -55,8 +57,11 @@ public class BufferingServerTransportService implements Service<BufferingServerT
         final ActorScheduler scheduler = schedulerInjector.getValue();
         final Dispatcher receiveBuffer = receiveBufferInjector.getValue();
         final Dispatcher sendBuffer = sendBufferInjector.getValue();
+        final Counters counters = countersInjector.getValue();
 
         serverTransport = Transports.newServerTransport()
+            .name(readableName)
+            .countersManager(counters.getCountersManager())
             .bindAddress(bindAddress)
             .sendBuffer(sendBuffer)
             .scheduler(scheduler)
@@ -92,4 +97,8 @@ public class BufferingServerTransportService implements Service<BufferingServerT
         return schedulerInjector;
     }
 
+    public Injector<Counters> getCountersInjector()
+    {
+        return countersInjector;
+    }
 }

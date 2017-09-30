@@ -17,6 +17,7 @@
  */
 package io.zeebe.broker.transport;
 
+import io.zeebe.broker.services.Counters;
 import io.zeebe.dispatcher.Dispatcher;
 import io.zeebe.servicecontainer.Injector;
 import io.zeebe.servicecontainer.Service;
@@ -31,24 +32,29 @@ public class ClientTransportService implements Service<ClientTransport>
     protected final Injector<ActorScheduler> schedulerInjector = new Injector<>();
     protected final Injector<Dispatcher> receiveBufferInjector = new Injector<>();
     protected final Injector<Dispatcher> sendBufferInjector = new Injector<>();
+    protected final Injector<Counters> countersInjector = new Injector<>();
     protected final int requestPoolSize;
 
     protected ClientTransport transport;
+    private String name;
 
-    public ClientTransportService(int requestPoolSize)
+    public ClientTransportService(int requestPoolSize, String name)
     {
         this.requestPoolSize = requestPoolSize;
+        this.name = name;
     }
 
     @Override
     public void start(ServiceStartContext startContext)
     {
-
+        final Counters counters = countersInjector.getValue();
         final Dispatcher receiveBuffer = receiveBufferInjector.getValue();
         final Dispatcher sendBuffer = sendBufferInjector.getValue();
         final ActorScheduler scheduler = schedulerInjector.getValue();
 
         transport = Transports.newClientTransport()
+            .name(name)
+            .countersManager(counters.getCountersManager())
             .messageReceiveBuffer(receiveBuffer)
             .sendBuffer(sendBuffer)
             .requestPoolSize(requestPoolSize)
@@ -81,6 +87,11 @@ public class ClientTransportService implements Service<ClientTransport>
     public Injector<ActorScheduler> getSchedulerInjector()
     {
         return schedulerInjector;
+    }
+
+    public Injector<Counters> getCountersInjector()
+    {
+        return countersInjector;
     }
 
 }

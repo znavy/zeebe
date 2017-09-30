@@ -29,7 +29,7 @@ import java.util.function.Consumer;
 
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2ObjectHashMap;
-
+import org.agrona.concurrent.status.CountersManager;
 import io.zeebe.broker.logstreams.cfg.LogStreamsCfg;
 import io.zeebe.logstreams.LogStreams;
 import io.zeebe.logstreams.fs.FsLogStreamBuilder;
@@ -42,11 +42,13 @@ public class LogStreamsManager
     protected LogStreamsCfg logStreamsCfg;
     protected ActorScheduler actorScheduler;
     protected Map<DirectBuffer, Int2ObjectHashMap<LogStream>> logStreams;
+    private CountersManager countersManager;
 
-    public LogStreamsManager(final LogStreamsCfg logStreamsCfg, final ActorScheduler actorScheduler)
+    public LogStreamsManager(final LogStreamsCfg logStreamsCfg, final ActorScheduler actorScheduler, CountersManager countersManager)
     {
         this.logStreamsCfg = logStreamsCfg;
         this.actorScheduler = actorScheduler;
+        this.countersManager = countersManager;
         this.logStreams = new HashMap<>();
     }
 
@@ -110,6 +112,7 @@ public class LogStreamsManager
             .actorScheduler(actorScheduler)
             .logSegmentSize(logSegmentSize)
             .logStreamControllerDisabled(true)
+            .countersManager(countersManager)
             .build();
 
         addLogStream(logStream);
@@ -126,6 +129,7 @@ public class LogStreamsManager
                       .actorScheduler(actorScheduler)
                       .logSegmentSize(logStreamsCfg.defaultLogSegmentSize * 1024 * 1024)
                       .logStreamControllerDisabled(true)
+                      .countersManager(countersManager)
                       .build();
 
         addLogStream(logStream);
