@@ -20,12 +20,17 @@ package io.zeebe.broker.logstreams.processor;
 import io.zeebe.logstreams.LogStreams;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.logstreams.log.LoggedEvent;
-import io.zeebe.logstreams.processor.*;
+import io.zeebe.logstreams.processor.EventFilter;
+import io.zeebe.logstreams.processor.StreamProcessor;
+import io.zeebe.logstreams.processor.StreamProcessorController;
 import io.zeebe.logstreams.spi.SnapshotPositionProvider;
 import io.zeebe.logstreams.spi.SnapshotStorage;
 import io.zeebe.protocol.Protocol;
 import io.zeebe.protocol.impl.BrokerEventMetadata;
-import io.zeebe.servicecontainer.*;
+import io.zeebe.servicecontainer.Injector;
+import io.zeebe.servicecontainer.Service;
+import io.zeebe.servicecontainer.ServiceStartContext;
+import io.zeebe.servicecontainer.ServiceStopContext;
 import io.zeebe.util.actor.ActorScheduler;
 
 public class StreamProcessorService implements Service<StreamProcessorController>
@@ -117,6 +122,7 @@ public class StreamProcessorService implements Service<StreamProcessorController
             .sourceStream(sourceStream)
             .targetStream(targetStream)
             .snapshotStorage(snapshotStorage)
+            .snapshotPolicy(l -> false)
             .snapshotPositionProvider(snapshotPositionProvider)
             .actorScheduler(actorScheduler)
             .eventFilter(eventFilter)
