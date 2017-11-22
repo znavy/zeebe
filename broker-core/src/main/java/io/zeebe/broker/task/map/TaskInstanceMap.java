@@ -19,11 +19,18 @@ package io.zeebe.broker.task.map;
 
 import static org.agrona.BitUtil.*;
 
+import java.io.*;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 
 import io.zeebe.broker.task.processor.TaskSubscription;
 import io.zeebe.logstreams.snapshot.ZbMapSnapshotSupport;
+import io.zeebe.map.Loggers;
 import io.zeebe.map.Long2BytesZbMap;
+import io.zeebe.map.ZbMapSerializer;
+import io.zeebe.map.iterator.Long2BytesZbMapEntry;
+import io.zeebe.util.buffer.BufferWriter;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 
@@ -48,15 +55,38 @@ public class TaskInstanceMap
     private final UnsafeBuffer lockOwnerBuffer = new UnsafeBuffer(0, 0);
 
     private final Long2BytesZbMap map;
+    private final Long2BytesZbMap map2;
     private final ZbMapSnapshotSupport<Long2BytesZbMap> snapshotSupport;
 
     private long key;
     private boolean isRead = false;
+    private final ZbMapSerializer serializer;
+
+    enum Op {
+        PUT,
+        REMOVE
+    }
+
+    class Command {
+        final Op op;
+        final long key;
+
+        Command(final Op op, final long key)
+        {
+            this.op = op;
+            this.key = key;
+        }
+    }
+
+    private final List<Command> commands = new ArrayList<>();
 
     public TaskInstanceMap()
     {
         this.map = new Long2BytesZbMap(MAP_VALUE_SIZE);
+        this.map2 = new Long2BytesZbMap(MAP_VALUE_SIZE);
         this.snapshotSupport = new ZbMapSnapshotSupport<>(map);
+        serializer = new ZbMapSerializer();
+        serializer.wrap(map2);
     }
 
     public ZbMapSnapshotSupport<Long2BytesZbMap> getSnapshotSupport()
@@ -69,12 +99,57 @@ public class TaskInstanceMap
         isRead = false;
     }
 
-    public void remove(long workflowInstanceKey)
+    public void remove(final long taskInstanceKey)
     {
-        map.remove(workflowInstanceKey);
+        commands.add(new Command(Op.REMOVE, taskInstanceKey));
+        try
+        {
+            map.remove(taskInstanceKey);
+        }
+        catch (final IllegalArgumentException e)
+        {
+            Loggers.ZB_MAP_LOGGER.info("Remove task instance key: {}", taskInstanceKey);
+            System.out.println(map2.toString());
+            System.out.println(map2.getBucketBufferArray().toString());
+            try (FileOutputStream output = new FileOutputStream("/tmp/taskinstance.map"))
+            {
+
+                serializer.writeToStream(output);
+            }
+            catch (final IOException e1)
+            {
+                e1.printStackTrace();
+            }
+
+            System.out.println("COMMAND LOG:");
+            try (PrintWriter writer = new PrintWriter(new FileWriter("/tmp/map.commands.log")))
+            {
+                for (final Command command : commands)
+                {
+                    switch (command.op)
+                    {
+                    case PUT:
+                        writer.println("map.put(" + command.key + "L, buffer);");
+                        break;
+                    case REMOVE:
+                        writer.println("map.remove(" + command.key + "L);");
+                        break;
+                    }
+                }
+
+            }
+            catch (IOException e1)
+            {
+                e1.printStackTrace();
+            }
+
+            throw e;
+        }
+
+        map2.remove(taskInstanceKey);
     }
 
-    public TaskInstanceMap wrapTaskInstanceKey(long key)
+    public TaskInstanceMap wrapTaskInstanceKey(final long key)
     {
         final DirectBuffer result = map.get(key);
         if (result != null)
@@ -107,7 +182,7 @@ public class TaskInstanceMap
         return lockOwnerBuffer;
     }
 
-    public TaskInstanceMap newTaskInstance(long taskInstanceKey)
+    public TaskInstanceMap newTaskInstance(final long taskInstanceKey)
     {
         key = taskInstanceKey;
         isRead = true;
@@ -117,17 +192,19 @@ public class TaskInstanceMap
     public void write()
     {
         ensureRead();
+        commands.add(new Command(Op.PUT, key));
         map.put(key, buffer);
+        map2.put(key, buffer);
     }
 
-    public TaskInstanceMap setState(short state)
+    public TaskInstanceMap setState(final short state)
     {
         ensureRead();
         buffer.putShort(STATE_OFFSET, state, BYTE_ORDER);
         return this;
     }
 
-    public TaskInstanceMap setLockOwner(DirectBuffer lockOwner)
+    public TaskInstanceMap setLockOwner(final DirectBuffer lockOwner)
     {
         ensureRead();
         buffer.putInt(LOCK_OWNER_LENGTH_OFFSET, lockOwner.capacity(), BYTE_ORDER);
