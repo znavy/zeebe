@@ -19,7 +19,10 @@ package io.zeebe.broker.task.map;
 
 import static org.agrona.BitUtil.*;
 
-import java.io.*;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,8 +32,6 @@ import io.zeebe.logstreams.snapshot.ZbMapSnapshotSupport;
 import io.zeebe.map.Loggers;
 import io.zeebe.map.Long2BytesZbMap;
 import io.zeebe.map.ZbMapSerializer;
-import io.zeebe.map.iterator.Long2BytesZbMapEntry;
-import io.zeebe.util.buffer.BufferWriter;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 
@@ -62,12 +63,14 @@ public class TaskInstanceMap
     private boolean isRead = false;
     private final ZbMapSerializer serializer;
 
-    enum Op {
+    enum Op
+    {
         PUT,
         REMOVE
     }
 
-    class Command {
+    class Command
+    {
         final Op op;
         final long key;
 
@@ -128,12 +131,12 @@ public class TaskInstanceMap
                 {
                     switch (command.op)
                     {
-                    case PUT:
-                        writer.println("put;" + command.key);
-                        break;
-                    case REMOVE:
-                        writer.println("remove;" + command.key);
-                        break;
+                        case PUT:
+                            writer.println("put;" + command.key);
+                            break;
+                        case REMOVE:
+                            writer.println("remove;" + command.key);
+                            break;
                     }
                 }
 
