@@ -57,6 +57,7 @@ public class TaskInstanceMap
     public TaskInstanceMap()
     {
         this.map = new ObservableLong2BytesZbMap(MAP_VALUE_SIZE, "/tmp/task-instance-map.csv");
+        //this.map = new Long2BytesZbMap(MAP_VALUE_SIZE);
         this.snapshotSupport = new ZbMapSnapshotSupport<>(map);
     }
 

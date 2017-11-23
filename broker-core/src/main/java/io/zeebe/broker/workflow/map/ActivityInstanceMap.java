@@ -58,6 +58,7 @@ public class ActivityInstanceMap implements AutoCloseable
     public ActivityInstanceMap()
     {
         this.map = new ObservableLong2BytesZbMap(INDEX_VALUE_SIZE, "/tmp/activity-instance-map.csv");
+        //this.map = new Long2BytesZbMap(INDEX_VALUE_SIZE);
         this.snapshotSupport = new ZbMapSnapshotSupport<>(map);
     }
 
