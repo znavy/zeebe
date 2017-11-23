@@ -122,17 +122,17 @@ public class TaskInstanceMap
             }
 
             System.out.println("COMMAND LOG:");
-            try (PrintWriter writer = new PrintWriter(new FileWriter("/tmp/map.commands.log")))
+            try (PrintWriter writer = new PrintWriter(new FileWriter("/tmp/map.commands.csv")))
             {
                 for (final Command command : commands)
                 {
                     switch (command.op)
                     {
                     case PUT:
-                        writer.println("map.put(" + command.key + "L, buffer);");
+                        writer.println("put;" + command.key);
                         break;
                     case REMOVE:
-                        writer.println("map.remove(" + command.key + "L);");
+                        writer.println("remove;" + command.key);
                         break;
                     }
                 }
