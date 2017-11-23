@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
@@ -186,11 +188,12 @@ public class LargeWorkflowTest
     }
 
     @Test
-    public void shouldCreateAndCompleteWorkflowInstances() throws InterruptedException
+    public void shouldCreateAndCompleteWorkflowInstances() throws InterruptedException, ExecutionException
     {
         final WorkflowsClient workflowService = clientRule.workflows();
 
         final AtomicLong completed = new AtomicLong(0);
+        final CompletableFuture<Void> finished = new CompletableFuture<>();
 
         clientRule.tasks()
                   .newTaskSubscription(clientRule.getDefaultTopic())
@@ -206,6 +209,10 @@ public class LargeWorkflowTest
                       {
                           System.out.println("Completed: " + c);
                       }
+                      if (c >= 1_000_000)
+                      {
+                          finished.complete(null);
+                      }
                   })
                   .open();
 
@@ -220,11 +227,7 @@ public class LargeWorkflowTest
         }
 
         // then
-
-        while (completed.get() < 1_000_000)
-        {
-            Thread.sleep(1000);
-        }
+        finished.get();
     }
 
     private static final int MAP_VALUE_SIZE = SIZE_OF_SHORT + SIZE_OF_INT + SIZE_OF_CHAR * TaskSubscription.LOCK_OWNER_MAX_LENGTH;
