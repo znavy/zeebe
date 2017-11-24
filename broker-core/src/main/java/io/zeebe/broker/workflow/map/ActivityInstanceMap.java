@@ -23,7 +23,6 @@ import java.nio.ByteOrder;
 
 import io.zeebe.logstreams.snapshot.ZbMapSnapshotSupport;
 import io.zeebe.map.Long2BytesZbMap;
-import io.zeebe.map.ObservableLong2BytesZbMap;
 import io.zeebe.model.bpmn.impl.ZeebeConstraints;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -57,8 +56,7 @@ public class ActivityInstanceMap implements AutoCloseable
 
     public ActivityInstanceMap()
     {
-        this.map = new ObservableLong2BytesZbMap(INDEX_VALUE_SIZE, "/tmp/activity-instance-map.csv");
-        //this.map = new Long2BytesZbMap(INDEX_VALUE_SIZE);
+        this.map = new Long2BytesZbMap(INDEX_VALUE_SIZE);
         this.snapshotSupport = new ZbMapSnapshotSupport<>(map);
     }
 

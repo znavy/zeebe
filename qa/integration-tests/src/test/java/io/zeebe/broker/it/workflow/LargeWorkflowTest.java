@@ -15,11 +15,7 @@
  */
 package io.zeebe.broker.it.workflow;
 
-import static org.agrona.BitUtil.*;
-
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -39,14 +35,9 @@ import java.util.regex.Pattern;
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.broker.it.EmbeddedBrokerRule;
 import io.zeebe.broker.it.startup.BrokerRestartTest;
-import io.zeebe.broker.task.processor.TaskSubscription;
 import io.zeebe.client.WorkflowsClient;
 import io.zeebe.client.event.WorkflowInstanceEvent;
-import io.zeebe.map.Long2BytesZbMap;
-import io.zeebe.map.ZbMapSerializer;
 import io.zeebe.test.util.TestFileUtil;
-import io.zeebe.util.buffer.BufferUtil;
-import org.agrona.DirectBuffer;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,8 +51,8 @@ public class LargeWorkflowTest
     public static final int CREATION_TIMES = 10_000_000;
     public static final URL PATH = LargeWorkflowTest.class.getResource("");
 
-    //public EmbeddedBrokerRule brokerRule = new EmbeddedBrokerRule(() -> brokerConfig(PATH.getPath()));
-    public EmbeddedBrokerRule brokerRule = new EmbeddedBrokerRule();
+    public EmbeddedBrokerRule brokerRule = new EmbeddedBrokerRule(() -> brokerConfig(PATH.getPath()));
+    //public EmbeddedBrokerRule brokerRule = new EmbeddedBrokerRule();
     public ClientRule clientRule = new ClientRule();
     //    public TopicEventRecorder eventRecorder = new TopicEventRecorder(clientRule);
 
@@ -205,11 +196,11 @@ public class LargeWorkflowTest
                       tasksClient.complete(task)
                                  .payload("{ \"orderStatus\": \"RESERVED\" }")
                                  .execute();
-                      if (c % 100 == 0)
+                      if (c % 1_000 == 0)
                       {
                           System.out.println("Completed: " + c);
                       }
-                      if (c >= 1_000_000)
+                      if (c >= 10_000_000)
                       {
                           finished.complete(null);
                       }
@@ -217,7 +208,7 @@ public class LargeWorkflowTest
                   .open();
 
         // when
-        for (int i = 0; i < 100_000; i++)
+        for (int i = 0; i < 1_000_000; i++)
         {
             workflowService.create(clientRule.getDefaultTopic())
                            .bpmnProcessId("extended-order-process")
@@ -228,25 +219,5 @@ public class LargeWorkflowTest
 
         // then
         finished.get();
-    }
-
-    private static final int MAP_VALUE_SIZE = SIZE_OF_SHORT + SIZE_OF_INT + SIZE_OF_CHAR * TaskSubscription.LOCK_OWNER_MAX_LENGTH;
-
-    @Test
-    public void foo() throws IOException
-    {
-        final Long2BytesZbMap map = new Long2BytesZbMap(MAP_VALUE_SIZE);
-
-        final ZbMapSerializer serializer = new ZbMapSerializer();
-        serializer.wrap(map);
-        serializer.readFromStream(new FileInputStream("/tmp/taskinstance.map.244816600568"));
-
-        map.remove(244816600568L);
-    }
-
-    @Test
-    public void bar()
-    {
-
     }
 }

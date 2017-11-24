@@ -24,7 +24,6 @@ import java.nio.ByteOrder;
 import io.zeebe.broker.task.processor.TaskSubscription;
 import io.zeebe.logstreams.snapshot.ZbMapSnapshotSupport;
 import io.zeebe.map.Long2BytesZbMap;
-import io.zeebe.map.ObservableLong2BytesZbMap;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 
@@ -56,8 +55,7 @@ public class TaskInstanceMap
 
     public TaskInstanceMap()
     {
-        this.map = new ObservableLong2BytesZbMap(MAP_VALUE_SIZE, "/tmp/task-instance-map.csv");
-        //this.map = new Long2BytesZbMap(MAP_VALUE_SIZE);
+        this.map = new Long2BytesZbMap(MAP_VALUE_SIZE);
         this.snapshotSupport = new ZbMapSnapshotSupport<>(map);
     }
 
