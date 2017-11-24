@@ -33,6 +33,7 @@ import io.zeebe.broker.logstreams.processor.StreamProcessorService;
 import io.zeebe.broker.transport.clientapi.CommandResponseWriter;
 import io.zeebe.broker.transport.clientapi.ErrorResponseWriter;
 import io.zeebe.broker.transport.clientapi.SubscribedEventWriter;
+import io.zeebe.logstreams.impl.Loggers;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.logstreams.log.LogStreamWriter;
 import io.zeebe.logstreams.log.LoggedEvent;
@@ -154,6 +155,7 @@ public class TopicSubscriptionManagementProcessor implements StreamProcessor
 
         if (subscriberEvent.getState() == TopicSubscriberState.SUBSCRIBE)
         {
+            Loggers.LOGSTREAMS_LOGGER.debug("Processing SUBSCRIBE event at position {}", event.getPosition());
             subscribeProcessor.wrap(currentEvent, metadata, subscriberEvent);
             return subscribeProcessor;
         }
@@ -313,6 +315,7 @@ public class TopicSubscriptionManagementProcessor implements StreamProcessor
         public void processEvent()
         {
             subscriptionEvent.setState(TopicSubscriptionState.ACKNOWLEDGED);
+            Loggers.LOGSTREAMS_LOGGER.debug("Processing ACK event at position {}", currentEvent.getPosition());
         }
 
         @Override
@@ -369,6 +372,14 @@ public class TopicSubscriptionManagementProcessor implements StreamProcessor
         @Override
         public boolean executeSideEffects()
         {
+            final TopicSubscriptionPushProcessor pushProcessor = subscriptionRegistry.getProcessorByName(subscriberEvent.getName());
+
+            if (pushProcessor == null)
+            {
+                // this is the case when this event is processed after broker restart/leader change
+                // TODO: need dedicated test case for this branch
+                return true;
+            }
 
             final boolean responseWritten = responseWriter
                     .partitionId(logStreamPartitionId)
@@ -379,7 +390,6 @@ public class TopicSubscriptionManagementProcessor implements StreamProcessor
 
             if (responseWritten)
             {
-                final TopicSubscriptionPushProcessor pushProcessor = subscriptionRegistry.getProcessorByName(subscriberEvent.getName());
                 pushProcessor.enable();
             }
 
@@ -400,11 +410,14 @@ public class TopicSubscriptionManagementProcessor implements StreamProcessor
                 .requestStreamId(-1)
                 .requestId(-1);
 
-            return writer
+
+            final long position = writer
                     .key(currentEvent.getKey())
                     .metadataWriter(metadata)
                     .valueWriter(subscriptionEvent)
                     .tryWrite();
+            Loggers.LOGSTREAMS_LOGGER.debug("Writing ACK Event at position {}", position);
+            return position;
         }
     }
 

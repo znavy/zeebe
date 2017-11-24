@@ -50,7 +50,7 @@ import io.zeebe.util.time.ClockUtil;
 @SuppressWarnings("rawtypes")
 public class RequestController implements BufferReader
 {
-    public static final int CMD_TIMEOUT_SECONDS = 5;
+    public static final int CMD_TIMEOUT_SECONDS = 20;
     public static final long CMD_TIMEOUT = TimeUnit.SECONDS.toMillis(CMD_TIMEOUT_SECONDS);
 
     protected static final int TRANSITION_DEFAULT = 0;
@@ -237,6 +237,7 @@ public class RequestController implements BufferReader
             }
             else if (targetPartition < 0) // there is no suitable partition
             {
+                Loggers.CLIENT_LOGGER.debug("Could not determine a partition for topic {}. Refreshing topology", targetTopic);
                 context.take(TRANSITION_REFRESH_TOPOLOGY);
             }
             else
@@ -278,6 +279,7 @@ public class RequestController implements BufferReader
             }
             else
             {
+                Loggers.CLIENT_LOGGER.debug("Leader for partition {} not found. Refreshing topology", currentRequestHandler.getTargetPartition());
                 context.take(TRANSITION_REFRESH_TOPOLOGY);
             }
 
@@ -291,6 +293,7 @@ public class RequestController implements BufferReader
             if (request != null)
             {
                 context.receiver = remote;
+                Loggers.CLIENT_LOGGER.debug("Sending request to " + context.receiver);
                 context.contactedBrokers.add(remote);
                 context.request = request;
                 context.take(TRANSITION_DEFAULT);
@@ -370,7 +373,7 @@ public class RequestController implements BufferReader
                 catch (Exception e)
                 {
                     context.exception = new ClientException("Unexpected exception during response handling", e);
-                    context.take(TRANSITION_FAILED);
+                    context.take(TRANSITION_REFRESH_TOPOLOGY);
                 }
                 finally
                 {
@@ -414,6 +417,7 @@ public class RequestController implements BufferReader
                 context.errorBuffer = null;
 
                 // partition not found -> refresh topology -> retry request
+                Loggers.CLIENT_LOGGER.debug("Got partition not found response from {}. Refreshing topology", context.receiver);
                 context.take(TRANSITION_REFRESH_TOPOLOGY);
             }
             else

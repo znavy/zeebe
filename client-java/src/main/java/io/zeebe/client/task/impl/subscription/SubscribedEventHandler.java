@@ -24,4 +24,6 @@ public interface SubscribedEventHandler
      * @return true if event could be successfully handled; false, if it should be retried later
      */
     boolean onEvent(long subscriberKey, GeneralEventImpl event);
+
+    boolean onTermination(int partitionId, long subscriberKey);
 }

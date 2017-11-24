@@ -124,6 +124,7 @@ public abstract class EventSubscription<T extends EventSubscription<T>>
             // TODO: can become non-blocking
             try
             {
+                LOGGER.debug("Opening subscription");
                 result = requestNewSubscription();
             }
             catch (Exception e)
@@ -134,6 +135,7 @@ public abstract class EventSubscription<T extends EventSubscription<T>>
                 context.take(TRANSITION_ABORT);
                 return 1;
             }
+            LOGGER.debug("subscription opened");
 
             subscriberKey = result.getSubscriberKey();
             partitionId = result.getPartitionId();

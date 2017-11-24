@@ -25,6 +25,7 @@ import io.zeebe.protocol.Protocol;
 import org.agrona.DirectBuffer;
 
 import io.zeebe.protocol.impl.BrokerEventMetadata;
+import io.zeebe.broker.Loggers;
 import io.zeebe.broker.logstreams.processor.MetadataFilter;
 import io.zeebe.broker.task.CreditsRequest;
 import io.zeebe.broker.task.TaskSubscriptionManager;
@@ -214,6 +215,7 @@ public class TaskInstanceStreamProcessor implements StreamProcessor
 
             if (sourceEventMetadata.hasRequestMetadata())
             {
+                Loggers.SYSTEM_LOGGER.debug("Responding to CREATE request");
                 success = writeResponse();
             }
             return success;

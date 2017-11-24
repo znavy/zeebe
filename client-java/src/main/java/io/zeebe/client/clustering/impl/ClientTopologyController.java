@@ -111,6 +111,7 @@ public class ClientTopologyController
         {
             int workCount = 0;
 
+            Loggers.CLIENT_LOGGER.debug("Requesting topology from {}", context.remoteAddress);
             final ClientRequest request = output.sendRequest(context.remoteAddress, requestHandler);
             context.timeout = ClockUtil.getCurrentTimeInMillis() + RequestController.CMD_TIMEOUT;
             if (request != null)
@@ -118,6 +119,10 @@ public class ClientTopologyController
                 workCount++;
                 context.request = request;
                 context.take(TRANSITION_DEFAULT);
+            }
+            else
+            {
+                Loggers.CLIENT_LOGGER.debug("Could not make request due to transport backpressure");
             }
 
             return workCount;
@@ -142,6 +147,7 @@ public class ClientTopologyController
                 {
                     final DirectBuffer response = request.get();
                     final TopologyResponse topologyResponse = decodeTopology(response);
+                    Loggers.CLIENT_LOGGER.debug("Obtained topology {}", topologyResponse);
                     successCallback.accept(topologyResponse);
                 }
                 catch (Exception e)

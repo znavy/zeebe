@@ -17,6 +17,7 @@ package io.zeebe.broker.it.clustering;
 
 import static io.zeebe.test.util.TestUtil.doRepeatedly;
 
+import java.util.Collection;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -50,6 +51,15 @@ public class TopologyObserver
 
         LOG.info("Broker {} is known by the cluster", socketAddress);
     }
+
+    public void waitForBrokers(final Collection<SocketAddress> socketAddresses)
+    {
+        for (SocketAddress address : socketAddresses)
+        {
+            waitForBroker(address);
+        }
+    }
+
 
     public SocketAddress waitForLeader(final int partition, final Set<SocketAddress> socketAddresses)
     {

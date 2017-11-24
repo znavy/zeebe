@@ -259,6 +259,7 @@ public class DeploymentClusteredTest
                 .count();
     }
 
+    // TODO: rewrite this
     private Broker startBroker(String configFile)
     {
         final InputStream config = this.getClass().getClassLoader().getResourceAsStream(configFile);

@@ -72,6 +72,19 @@ public class EventAcquisition<T extends EventSubscription<T>> implements Subscri
         }
     }
 
+    @Override
+    public boolean onTermination(int partitionId, long subscriberKey)
+    {
+        final T subscription = subscriptions.getSubscription(partitionId, subscriberKey);
+
+        if (subscription != null)
+        {
+            subscription.reopenAsync();
+        }
+
+        return true;
+    }
+
     public void activateSubscription(T subscription)
     {
         this.subscriptions.activate(subscription);

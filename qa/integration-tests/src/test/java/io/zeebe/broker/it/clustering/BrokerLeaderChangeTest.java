@@ -15,22 +15,24 @@
  */
 package io.zeebe.broker.it.clustering;
 
+import static io.zeebe.broker.it.clustering.Brokers.BROKER_1_CLIENT_ADDRESS;
+import static io.zeebe.broker.it.clustering.Brokers.BROKER_1_TOML;
+import static io.zeebe.broker.it.clustering.Brokers.BROKER_2_CLIENT_ADDRESS;
+import static io.zeebe.broker.it.clustering.Brokers.BROKER_2_RAFT_ADDRESS;
+import static io.zeebe.broker.it.clustering.Brokers.BROKER_2_TOML;
+import static io.zeebe.broker.it.clustering.Brokers.BROKER_3_CLIENT_ADDRESS;
+import static io.zeebe.broker.it.clustering.Brokers.BROKER_3_RAFT_ADDRESS;
+import static io.zeebe.broker.it.clustering.Brokers.BROKER_3_TOML;
 import static io.zeebe.test.util.TestUtil.doRepeatedly;
 import static io.zeebe.test.util.TestUtil.waitUntil;
-import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -39,7 +41,6 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.zeebe.broker.Broker;
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.client.TasksClient;
 import io.zeebe.client.TopicsClient;
@@ -49,6 +50,7 @@ import io.zeebe.client.event.TaskEvent;
 import io.zeebe.client.event.TopicSubscription;
 import io.zeebe.client.impl.ZeebeClientImpl;
 import io.zeebe.client.task.TaskSubscription;
+import io.zeebe.test.util.AutoCloseableRule;
 import io.zeebe.transport.SocketAddress;
 
 @Ignore("Unreliable cause of multiple problems: " +
@@ -61,23 +63,15 @@ public class BrokerLeaderChangeTest
     // TODO: remove logging after test becomes stable
     public static final Logger LOG = LoggerFactory.getLogger(BrokerLeaderChangeTest.class);
 
-    public static final String BROKER_1_TOML = "zeebe.cluster.1.cfg.toml";
-    public static final SocketAddress BROKER_1_CLIENT_ADDRESS = new SocketAddress("localhost", 51015);
-
-    public static final String BROKER_2_TOML = "zeebe.cluster.2.cfg.toml";
-    public static final SocketAddress BROKER_2_CLIENT_ADDRESS = new SocketAddress("localhost", 41015);
-    public static final SocketAddress BROKER_2_RAFT_ADDRESS = new SocketAddress("localhost", 41017);
-
-    public static final String BROKER_3_TOML = "zeebe.cluster.3.cfg.toml";
-    public static final SocketAddress BROKER_3_CLIENT_ADDRESS = new SocketAddress("localhost", 31015);
-    public static final SocketAddress BROKER_3_RAFT_ADDRESS = new SocketAddress("localhost", 31017);
-
     public static final String TASK_TYPE = "testTask";
 
     @Rule
     public ClientRule clientRule = new ClientRule();
 
-    protected final Map<SocketAddress, Broker> brokers = new HashMap<>();
+    @Rule
+    public AutoCloseableRule closeables = new AutoCloseableRule();
+
+    protected Brokers brokers;
 
     protected ZeebeClient client;
     protected TopicsClient topicClient;
@@ -90,26 +84,19 @@ public class BrokerLeaderChangeTest
     @Before
     public void setUp()
     {
+        brokers = new Brokers();
         client = clientRule.getClient();
         topicClient = clientRule.topics();
         taskClient = clientRule.tasks();
         partition = clientRule.getDefaultPartition();
-    }
-
-    @After
-    public void tearDown()
-    {
-        for (final Broker broker : brokers.values())
-        {
-            broker.close();
-        }
+        closeables.manage(brokers);
     }
 
     @Test
     public void test() throws Exception
     {
         // start first broker
-        startBroker(BROKER_1_CLIENT_ADDRESS, BROKER_1_TOML);
+        brokers.startBroker(BROKER_1_CLIENT_ADDRESS, BROKER_1_TOML);
 
         final TopologyObserver topologyObserver = new TopologyObserver(client);
         topologyObserver.waitForBroker(BROKER_1_CLIENT_ADDRESS);
@@ -117,12 +104,12 @@ public class BrokerLeaderChangeTest
         final RaftMemberObserver raftMemberObserver = new RaftMemberObserver();
 
         // start second broker
-        startBroker(BROKER_2_CLIENT_ADDRESS, BROKER_2_TOML);
+        brokers.startBroker(BROKER_2_CLIENT_ADDRESS, BROKER_2_TOML);
         topologyObserver.waitForBroker(BROKER_2_CLIENT_ADDRESS);
         raftMemberObserver.waitForRaftMember(BROKER_2_RAFT_ADDRESS);
 
         // start third broker
-        startBroker(BROKER_3_CLIENT_ADDRESS, BROKER_3_TOML);
+        brokers.startBroker(BROKER_3_CLIENT_ADDRESS, BROKER_3_TOML);
         topologyObserver.waitForBroker(BROKER_3_CLIENT_ADDRESS);
         raftMemberObserver.waitForRaftMember(BROKER_3_RAFT_ADDRESS);
 
@@ -130,7 +117,7 @@ public class BrokerLeaderChangeTest
         refreshTopologyNow();
 
         // wait for topic leader
-        SocketAddress leader = topologyObserver.waitForLeader(partition, brokers.keySet());
+        SocketAddress leader = topologyObserver.waitForLeader(partition, brokers.getBrokerAddresses());
 
         // create task on leader
         LOG.info("Creating task for type {}", TASK_TYPE);
@@ -144,11 +131,11 @@ public class BrokerLeaderChangeTest
         raftMemberObserver.close();
 
         // stop leader
-        brokers.remove(leader).close();
+        brokers.close(leader);
         LOG.info("Leader {} is shutdown", leader);
 
         // wait for other broker become leader
-        leader = topologyObserver.waitForLeader(partition, brokers.keySet());
+        leader = topologyObserver.waitForLeader(partition, brokers.getBrokerAddresses());
         LOG.info("Leader changed to {}", leader);
 
         // complete task and wait for completed event
@@ -164,21 +151,6 @@ public class BrokerLeaderChangeTest
         final ClientTopologyManager topologyManager = client.getTopologyManager();
         topologyManager.refreshNow().get();
         LOG.info("Topology refreshed: {}", topologyManager.getTopology());
-    }
-
-    protected void startBroker(final SocketAddress socketAddress, final String configFilePath)
-    {
-        LOG.info("starting broker {} with config {}", socketAddress, configFilePath);
-
-        try (InputStream config = BrokerLeaderChangeTest.class.getClassLoader().getResourceAsStream(configFilePath))
-        {
-            assertThat(config).isNotNull();
-            brokers.put(socketAddress, new Broker(config));
-        }
-        catch (final IOException e)
-        {
-            throw new RuntimeException("Unable to read configuration", e);
-        }
     }
 
     class RaftMemberObserver

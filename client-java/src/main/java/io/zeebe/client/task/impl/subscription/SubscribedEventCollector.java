@@ -90,21 +90,32 @@ public class SubscribedEventCollector implements ClientMessageHandler
 
             if (eventHandler != null)
             {
-                final long key = subscribedEventDecoder.key();
-                final long subscriberKey = subscribedEventDecoder.subscriberKey();
                 final long position = subscribedEventDecoder.position();
+                final long subscriberKey = subscribedEventDecoder.subscriberKey();
+                final boolean isSubscriptionTermination = position == 0;
+
+                final long key = subscribedEventDecoder.key();
                 final int partitionId = subscribedEventDecoder.partitionId();
-                final byte[] eventBuffer = readBytes(subscribedEventDecoder::getEvent, subscribedEventDecoder::eventLength);
 
-                final GeneralEventImpl event = new GeneralEventImpl(
-                        partitionId,
-                        key,
-                        position,
-                        EventTypeMapping.mapEventType(subscribedEventDecoder.eventType()),
-                        eventBuffer,
-                        converter);
+                if (isSubscriptionTermination)
+                {
+                    messageHandled = eventHandler.onTermination(partitionId, subscriberKey);
+                }
+                else
+                {
+                    final byte[] eventBuffer = readBytes(subscribedEventDecoder::getEvent, subscribedEventDecoder::eventLength);
 
-                messageHandled = eventHandler.onEvent(subscriberKey, event);
+                    final GeneralEventImpl event = new GeneralEventImpl(
+                            partitionId,
+                            key,
+                            position,
+                            EventTypeMapping.mapEventType(subscribedEventDecoder.eventType()),
+                            eventBuffer,
+                            converter);
+
+                    messageHandled = eventHandler.onEvent(subscriberKey, event);
+                }
+
             }
             else
             {

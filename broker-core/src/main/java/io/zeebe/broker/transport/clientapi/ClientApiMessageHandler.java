@@ -25,6 +25,7 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 
+import io.zeebe.broker.Loggers;
 import io.zeebe.broker.event.processor.TopicSubscriberEvent;
 import io.zeebe.broker.event.processor.TopicSubscriptionEvent;
 import io.zeebe.broker.system.log.TopicEvent;
@@ -102,6 +103,8 @@ public class ClientApiMessageHandler implements ServerMessageHandler, ServerRequ
         final int partitionId = executeCommandRequestDecoder.partitionId();
         final long key = executeCommandRequestDecoder.key();
 
+        Loggers.SYSTEM_LOGGER.debug("Got request for partition " + partitionId);
+
         final LogStream logStream = logStreams.get(partitionId);
 
         if (logStream == null)
@@ -162,6 +165,9 @@ public class ClientApiMessageHandler implements ServerMessageHandler, ServerRequ
                 .metadataWriter(eventMetadata)
                 .value(buffer, eventOffset, eventLength)
                 .tryWrite();
+
+
+        Loggers.SYSTEM_LOGGER.debug("Request written to log stream at position: {} ", eventPosition);
 
         return eventPosition >= 0;
     }

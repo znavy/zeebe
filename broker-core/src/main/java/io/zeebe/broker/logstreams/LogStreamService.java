@@ -17,6 +17,7 @@
  */
 package io.zeebe.broker.logstreams;
 
+import io.zeebe.logstreams.impl.Loggers;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.servicecontainer.Service;
 import io.zeebe.servicecontainer.ServiceStartContext;
@@ -34,6 +35,7 @@ public class LogStreamService implements Service<LogStream>
     @Override
     public void start(ServiceStartContext serviceContext)
     {
+        Loggers.LOGSTREAMS_LOGGER.debug("Log stream service for log {} started", logStream.getLogName());
     }
 
     @Override

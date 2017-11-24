@@ -94,6 +94,16 @@ public class TopicSubscriptionPushProcessor implements StreamProcessor, EventPro
         setToStartPosition(logReader);
     }
 
+    @Override
+    public void onClose()
+    {
+
+        // TODO: needs possibility for backpressure
+        channelWriter
+            .subscriptionTermination(logStreamPartitionId, subscriberKey)
+            .tryWriteMessage(clientStreamId);
+    }
+
     /**
      * @return the position at which this processor actually started. This may be different than the constructor argument
      */

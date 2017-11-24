@@ -23,8 +23,6 @@ import static io.zeebe.protocol.clientapi.SubscribedEventEncoder.partitionIdNull
 import static io.zeebe.protocol.clientapi.SubscribedEventEncoder.positionNullValue;
 import static io.zeebe.protocol.clientapi.SubscribedEventEncoder.subscriberKeyNullValue;
 
-import java.util.Objects;
-
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 
@@ -115,7 +113,7 @@ public class SubscribedEventWriter implements BufferWriter
         return MessageHeaderEncoder.ENCODED_LENGTH +
                 SubscribedEventEncoder.BLOCK_LENGTH +
                 eventHeaderLength() +
-                eventWriter.getLength();
+                (eventWriter != null ? eventWriter.getLength() : 0);
     }
 
     @Override
@@ -141,17 +139,19 @@ public class SubscribedEventWriter implements BufferWriter
 
         offset += SubscribedEventEncoder.BLOCK_LENGTH;
 
-        final int eventLength = eventWriter.getLength();
+        final int eventLength = eventWriter != null ? eventWriter.getLength() : 0;
         buffer.putShort(offset, (short) eventLength, Protocol.ENDIANNESS);
 
         offset += eventHeaderLength();
-        eventWriter.write(buffer, offset);
+
+        if (eventWriter != null)
+        {
+            eventWriter.write(buffer, offset);
+        }
     }
 
     public boolean tryWriteMessage(int remoteStreamId)
     {
-        Objects.requireNonNull(eventWriter);
-
         try
         {
             message.reset()
@@ -164,6 +164,18 @@ public class SubscribedEventWriter implements BufferWriter
         {
             reset();
         }
+    }
+
+    public SubscribedEventWriter subscriptionTermination(int partition, long subscriberKey)
+    {
+        reset();
+        partitionId(partition)
+            .eventType(EventType.NULL_VAL)
+            .key(0)
+            .position(0)
+            .subscriberKey(subscriberKey)
+            .subscriptionType(SubscriptionType.TOPIC_SUBSCRIPTION);
+        return this;
     }
 
     protected void reset()
