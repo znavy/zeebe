@@ -17,13 +17,15 @@ package io.zeebe.client.task.impl.subscription;
 
 import java.time.Duration;
 
+import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.clustering.impl.ClientTopologyManager;
-import io.zeebe.client.impl.TasksClientImpl;
 import io.zeebe.client.impl.data.MsgPackMapper;
 import io.zeebe.client.task.TaskHandler;
+import io.zeebe.client.task.TaskSubscription;
 import io.zeebe.client.task.TaskSubscriptionBuilder;
 import io.zeebe.util.EnsureUtil;
 
+// TODO: vll kan man die impls hier mal vereinheitlichen
 public class TaskSubscriptionBuilderImpl implements TaskSubscriptionBuilder
 {
     public static final int DEFAULT_TASK_FETCH_SIZE = 32;
@@ -34,33 +36,24 @@ public class TaskSubscriptionBuilderImpl implements TaskSubscriptionBuilder
     protected TaskHandler taskHandler;
     protected int taskFetchSize = DEFAULT_TASK_FETCH_SIZE;
 
-    protected final TasksClientImpl client;
-    protected final EventAcquisition<TaskSubscriptionImpl> taskAcquisition;
+    protected final ZeebeClient client;
+    protected final EventAcquisition taskAcquisition;
     protected final MsgPackMapper msgPackMapper;
     protected final String topic;
     protected final ClientTopologyManager topologyManager;
-    protected int partition;
 
     public TaskSubscriptionBuilderImpl(
-            TasksClientImpl client,
+            ZeebeClient client,
             ClientTopologyManager topologyManager,
             String topic,
-            EventAcquisition<TaskSubscriptionImpl> taskAcquisition,
+            EventAcquisition taskAcquisition,
             MsgPackMapper msgPackMapper)
     {
         this.client = client;
         this.topic = topic;
-        this.partition = -1;
         this.taskAcquisition = taskAcquisition;
         this.msgPackMapper = msgPackMapper;
         this.topologyManager = topologyManager;
-    }
-
-    @Override
-    public TaskSubscriptionBuilder partitionId(int partition)
-    {
-        this.partition = partition;
-        return this;
     }
 
     @Override
@@ -105,7 +98,7 @@ public class TaskSubscriptionBuilderImpl implements TaskSubscriptionBuilder
     }
 
     @Override
-    public TaskSubscriptionImpl open()
+    public TaskSubscription open()
     {
         EnsureUtil.ensureNotNull("taskHandler", taskHandler);
         EnsureUtil.ensureNotNullOrEmpty("lockOwner", lockOwner);
@@ -113,23 +106,21 @@ public class TaskSubscriptionBuilderImpl implements TaskSubscriptionBuilder
         EnsureUtil.ensureGreaterThan("lockTime", lockTime, 0L);
         EnsureUtil.ensureGreaterThan("taskFetchSize", taskFetchSize, 0);
 
-        final TaskSubscriptionImpl subscription = new TaskSubscriptionImpl(
+
+        final TaskSubscriptionSpec subscription =
+                new TaskSubscriptionSpec(topic, taskHandler, taskType, lockTime, lockOwner, taskFetchSize);
+
+        final TaskSubscriberGroup subscriberGroup = new TaskSubscriberGroup(
                 client,
-                topic,
-                partition,
-                taskHandler,
-                taskType,
-                lockTime,
-                lockOwner,
-                taskFetchSize,
-                msgPackMapper,
-                taskAcquisition);
+                taskAcquisition,
+                subscription,
+                msgPackMapper);
 
-        taskAcquisition.registerSubscriptionAsync(subscription);
+        taskAcquisition.registerSubscriptionAsync(subscriberGroup);
 
-        subscription.open();
+        subscriberGroup.open();
 
-        return subscription;
+        return subscriberGroup;
     }
 
 }

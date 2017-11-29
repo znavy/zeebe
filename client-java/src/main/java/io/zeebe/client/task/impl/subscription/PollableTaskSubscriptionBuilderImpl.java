@@ -17,8 +17,8 @@ package io.zeebe.client.task.impl.subscription;
 
 import java.time.Duration;
 
+import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.clustering.impl.ClientTopologyManager;
-import io.zeebe.client.impl.TasksClientImpl;
 import io.zeebe.client.impl.data.MsgPackMapper;
 import io.zeebe.client.task.PollableTaskSubscription;
 import io.zeebe.client.task.PollableTaskSubscriptionBuilder;
@@ -34,21 +34,21 @@ public class PollableTaskSubscriptionBuilderImpl implements PollableTaskSubscrip
 
     protected final String topic;
     protected int partition;
-    protected final TasksClientImpl taskClient;
+    protected final ZeebeClient client;
     protected final ClientTopologyManager topologyManager;
-    protected final EventAcquisition<TaskSubscriptionImpl> taskAcquisition;
+    protected final EventAcquisition taskAcquisition;
     protected final MsgPackMapper msgPackMapper;
 
     public PollableTaskSubscriptionBuilderImpl(
-            TasksClientImpl taskClient,
+            ZeebeClient client,
             ClientTopologyManager topologyManager,
             String topic,
-            EventAcquisition<TaskSubscriptionImpl> taskAcquisition,
+            EventAcquisition taskAcquisition,
             MsgPackMapper msgPackMapper)
     {
         this.topic = topic;
         this.partition = -1;
-        this.taskClient = taskClient;
+        this.client = client;
         this.taskAcquisition = taskAcquisition;
         this.msgPackMapper = msgPackMapper;
         this.topologyManager = topologyManager;
@@ -103,22 +103,19 @@ public class PollableTaskSubscriptionBuilderImpl implements PollableTaskSubscrip
         EnsureUtil.ensureNotNullOrEmpty("lockOwner", lockOwner);
         EnsureUtil.ensureGreaterThan("taskFetchSize", taskFetchSize, 0);
 
-        final TaskSubscriptionImpl subscription = new TaskSubscriptionImpl(
-                taskClient,
-                topic,
-                partition,
-                null,
-                taskType,
-                lockTime,
-                lockOwner,
-                taskFetchSize,
-                msgPackMapper,
-                taskAcquisition);
+        final TaskSubscriptionSpec subscription =
+                new TaskSubscriptionSpec(topic, null, taskType, lockTime, lockOwner, taskFetchSize);
 
-        taskAcquisition.registerSubscriptionAsync(subscription);
+        final TaskSubscriberGroup subscriberGroup = new TaskSubscriberGroup(
+                client,
+                taskAcquisition,
+                subscription,
+                msgPackMapper);
 
-        subscription.open();
+        taskAcquisition.registerSubscriptionAsync(subscriberGroup);
 
-        return subscription;
+        subscriberGroup.open();
+
+        return subscriberGroup;
     }
 }

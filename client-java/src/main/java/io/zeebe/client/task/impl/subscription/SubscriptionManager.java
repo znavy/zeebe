@@ -15,14 +15,12 @@
  */
 package io.zeebe.client.task.impl.subscription;
 
+import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.clustering.impl.ClientTopologyManager;
 import io.zeebe.client.event.PollableTopicSubscriptionBuilder;
 import io.zeebe.client.event.TopicSubscriptionBuilder;
 import io.zeebe.client.event.impl.PollableTopicSubscriptionBuilderImpl;
-import io.zeebe.client.event.impl.TopicClientImpl;
 import io.zeebe.client.event.impl.TopicSubscriptionBuilderImpl;
-import io.zeebe.client.event.impl.TopicSubscriptionImpl;
-import io.zeebe.client.impl.TasksClientImpl;
 import io.zeebe.client.impl.ZeebeClientImpl;
 import io.zeebe.client.impl.data.MsgPackMapper;
 import io.zeebe.client.task.PollableTaskSubscriptionBuilder;
@@ -37,8 +35,8 @@ import io.zeebe.util.actor.ActorSchedulerBuilder;
 
 public class SubscriptionManager implements TransportListener, Actor
 {
-    protected final EventAcquisition<TaskSubscriptionImpl> taskAcquisition;
-    protected final EventAcquisition<TopicSubscriptionImpl> topicSubscriptionAcquisition;
+    protected final EventAcquisition taskAcquisition;
+    protected final EventAcquisition topicSubscriptionAcquisition;
     protected final ClientInputMessageSubscription messageSubscription;
     protected final MsgPackMapper msgPackMapper;
     protected final ClientTopologyManager topologyManager;
@@ -51,8 +49,8 @@ public class SubscriptionManager implements TransportListener, Actor
 
     protected final int numExecutionThreads;
 
-    protected final EventSubscriptions<TaskSubscriptionImpl> taskSubscriptions;
-    protected final EventSubscriptions<TopicSubscriptionImpl> topicSubscriptions;
+    protected final EventSubscribers taskSubscriptions;
+    protected final EventSubscribers topicSubscriptions;
 
     // topic-subscription specific config
     protected final int topicSubscriptionPrefetchCapacity;
@@ -62,12 +60,12 @@ public class SubscriptionManager implements TransportListener, Actor
             int numExecutionThreads,
             int topicSubscriptionPrefetchCapacity)
     {
-        this.taskSubscriptions = new EventSubscriptions<>();
-        this.topicSubscriptions = new EventSubscriptions<>();
+        this.taskSubscriptions = new EventSubscribers();
+        this.topicSubscriptions = new EventSubscribers();
 
 
-        this.taskAcquisition = new EventAcquisition<>("task-acquisition", taskSubscriptions);
-        this.topicSubscriptionAcquisition = new EventAcquisition<>("topic-event-acquisition", topicSubscriptions);
+        this.taskAcquisition = new EventAcquisition("task-acquisition", taskSubscriptions);
+        this.topicSubscriptionAcquisition = new EventAcquisition("topic-event-acquisition", topicSubscriptions);
 
         final SubscribedEventCollector taskCollector = new SubscribedEventCollector(
                 taskAcquisition,
@@ -153,26 +151,26 @@ public class SubscriptionManager implements TransportListener, Actor
 
     public void closeAllSubscriptions()
     {
-        this.taskSubscriptions.closeAll();
-        this.topicSubscriptions.closeAll();
+        this.taskSubscriptions.closeAllGroups();
+        this.topicSubscriptions.closeAllGroups();
     }
 
-    public TaskSubscriptionBuilder newTaskSubscription(TasksClientImpl client, String topic)
+    public TaskSubscriptionBuilder newTaskSubscription(ZeebeClient client, String topic)
     {
         return new TaskSubscriptionBuilderImpl(client, topologyManager, topic, taskAcquisition, msgPackMapper);
     }
 
-    public PollableTaskSubscriptionBuilder newPollableTaskSubscription(TasksClientImpl client, String topic)
+    public PollableTaskSubscriptionBuilder newPollableTaskSubscription(ZeebeClient client, String topic)
     {
         return new PollableTaskSubscriptionBuilderImpl(client, topologyManager, topic, taskAcquisition, msgPackMapper);
     }
 
-    public TopicSubscriptionBuilder newTopicSubscription(TopicClientImpl client, String topic)
+    public TopicSubscriptionBuilder newTopicSubscription(ZeebeClient client, String topic)
     {
         return new TopicSubscriptionBuilderImpl(client, topologyManager, topic, topicSubscriptionAcquisition, msgPackMapper, topicSubscriptionPrefetchCapacity);
     }
 
-    public PollableTopicSubscriptionBuilder newPollableTopicSubscription(TopicClientImpl client, String topic)
+    public PollableTopicSubscriptionBuilder newPollableTopicSubscription(ZeebeClient client, String topic)
     {
         return new PollableTopicSubscriptionBuilderImpl(client, topologyManager, topic, topicSubscriptionAcquisition, topicSubscriptionPrefetchCapacity);
     }

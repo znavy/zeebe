@@ -24,6 +24,7 @@ public class ErrorResponseBuilder<R>
 {
     protected final Consumer<MessageBuilder<R>> registrationFunction;
     protected final ErrorResponseWriter<R> commandResponseWriter;
+    protected Runnable callback = null;
 
     public ErrorResponseBuilder(
             Consumer<MessageBuilder<R>> registrationFunction,
@@ -45,9 +46,16 @@ public class ErrorResponseBuilder<R>
         return this;
     }
 
+    public ErrorResponseBuilder<R> andDoBeforeResponding(Runnable r)
+    {
+        this.callback = r;
+        return this;
+    }
+
     public void register()
     {
-        registrationFunction.accept(commandResponseWriter);
+        final NotifyingMessageBuilder<R> notifyingBuilder = new NotifyingMessageBuilder<>(commandResponseWriter, callback);
+        registrationFunction.accept(notifyingBuilder);
     }
 
 }

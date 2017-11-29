@@ -36,7 +36,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.RuleChain;
 
 import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.event.impl.TopicSubscriptionImpl;
+import io.zeebe.client.event.impl.TopicSubscriberGroupImpl;
 import io.zeebe.client.util.ClientRule;
 import io.zeebe.protocol.clientapi.ControlMessageType;
 import io.zeebe.protocol.clientapi.EventType;
@@ -160,7 +160,7 @@ public class TopicSubscriptionTest
 
         // when
         clientRule.topics().newSubscription(clientRule.getDefaultTopicName())
-            .startAtPosition(654L)
+            .startAtPosition(clientRule.getDefaultPartitionId(), 654L)
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)
             .open();
@@ -275,8 +275,7 @@ public class TopicSubscriptionTest
         broker.pushTopicEvent(clientAddress, 123L, 1L, 2L);
 
         // then
-        TestUtil.waitUntil(() -> handler.numRecordedEvents() >= 3);
-        assertThat(subscription.isOpen()).isFalse();
+        waitUntil(() -> !subscription.isOpen());
         Thread.sleep(1000L); // wait an extra second as we might receive more events if this feature is broken
 
         assertThat(handler.getRecordedEvents()).hasSize(3);
@@ -400,7 +399,7 @@ public class TopicSubscriptionTest
         broker.stubTopicSubscriptionApi(123L);
         final ControllableHandler handler = new ControllableHandler();
 
-        final TopicSubscriptionImpl subscription = (TopicSubscriptionImpl) clientRule.topics().newSubscription(clientRule.getDefaultTopicName())
+        final TopicSubscriberGroupImpl subscription = (TopicSubscriberGroupImpl) clientRule.topics().newSubscription(clientRule.getDefaultTopicName())
             .startAtHeadOfTopic()
             .handler(handler)
             .name(SUBSCRIPTION_NAME)
@@ -412,7 +411,7 @@ public class TopicSubscriptionTest
         TestUtil.waitUntil(() -> handler.isWaiting());
 
         // when
-        final CompletableFuture<TopicSubscriptionImpl> closeFuture = subscription.closeAsync();
+        final CompletableFuture<?> closeFuture = subscription.closeAsync();
 
         // then
         Thread.sleep(1000L);
@@ -446,7 +445,7 @@ public class TopicSubscriptionTest
         // given
         broker.stubTopicSubscriptionApi(123L);
 
-        final TopicSubscriptionImpl subscription = (TopicSubscriptionImpl) clientRule.topics().newSubscription(clientRule.getDefaultTopicName())
+        final TopicSubscription subscription = clientRule.topics().newSubscription(clientRule.getDefaultTopicName())
             .startAtHeadOfTopic()
             .handler(DO_NOTHING)
             .name(SUBSCRIPTION_NAME)

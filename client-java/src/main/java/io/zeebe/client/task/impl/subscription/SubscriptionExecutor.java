@@ -21,9 +21,9 @@ public class SubscriptionExecutor implements Actor
 {
     public static final String ROLE_NAME = "subscription-executor";
 
-    protected final EventSubscriptions<?> subscriptions;
+    protected final EventSubscribers subscriptions;
 
-    public SubscriptionExecutor(EventSubscriptions<?> subscriptions)
+    public SubscriptionExecutor(EventSubscribers subscriptions)
     {
         this.subscriptions = subscriptions;
     }
