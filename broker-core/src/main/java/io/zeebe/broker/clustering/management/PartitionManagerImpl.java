@@ -19,36 +19,30 @@ package io.zeebe.broker.clustering.management;
 
 import java.util.Iterator;
 
-import org.agrona.DirectBuffer;
-
 import io.zeebe.broker.Loggers;
-import io.zeebe.broker.clustering.gossip.data.Peer;
-import io.zeebe.broker.clustering.gossip.data.PeerList;
-import io.zeebe.broker.clustering.gossip.data.PeerListIterator;
-import io.zeebe.broker.clustering.gossip.data.RaftMembership;
 import io.zeebe.broker.clustering.management.message.CreatePartitionMessage;
 import io.zeebe.broker.clustering.member.Member;
-import io.zeebe.clustering.gossip.RaftMembershipState;
 import io.zeebe.transport.ClientTransport;
 import io.zeebe.transport.RemoteAddress;
 import io.zeebe.transport.SocketAddress;
 import io.zeebe.transport.TransportMessage;
 import io.zeebe.util.buffer.BufferUtil;
 import io.zeebe.util.collection.IntIterator;
+import org.agrona.DirectBuffer;
 
 public class PartitionManagerImpl implements PartitionManager
 {
 
-    protected final PeerList peerList;
+    private final MemberListService memberListService;
     private final CreatePartitionMessage messageWriter = new CreatePartitionMessage();
     protected final TransportMessage message = new TransportMessage();
     protected final ClientTransport transport;
 
     protected final MemberIterator memberIterator = new MemberIterator();
 
-    public PartitionManagerImpl(PeerList peerList, ClientTransport transport)
+    public PartitionManagerImpl(MemberListService memberListService, ClientTransport transport)
     {
-        this.peerList = peerList;
+        this.memberListService = memberListService;
         this.transport = transport;
     }
 
@@ -86,71 +80,18 @@ public class PartitionManagerImpl implements PartitionManager
     @Override
     public Iterator<Member> getKnownMembers()
     {
-        final PeerList copy = peerList.copy();
-        memberIterator.wrap(copy);
+        memberIterator.wrap(memberListService);
         return memberIterator;
-    }
-
-    protected static class PartitionIterator implements IntIterator
-    {
-        protected int nextPartition = -1;
-
-        protected Iterator<Peer> peerIterator;
-        protected Iterator<RaftMembership> raftMemberIterator;
-        protected Peer currentPeer;
-
-        public void wrap(Iterator<RaftMembership> raftMemberIterator)
-        {
-            this.raftMemberIterator = raftMemberIterator;
-            this.currentPeer = null;
-            seekNextPartitionLeader();
-        }
-
-        @Override
-        public boolean hasNext()
-        {
-            return nextPartition >= 0;
-        }
-
-        protected void seekNextPartitionLeader()
-        {
-            while (raftMemberIterator.hasNext())
-            {
-                final RaftMembership membership = raftMemberIterator.next();
-
-                if (membership.state() == RaftMembershipState.LEADER)
-                {
-                    nextPartition = membership.partitionId();
-                    return;
-                }
-            }
-
-            nextPartition = -1;
-        }
-
-        @Override
-        public int nextInt()
-        {
-            final int partitionToReturn = nextPartition;
-            seekNextPartitionLeader();
-            return partitionToReturn;
-        }
-
-        @Override
-        public Integer next()
-        {
-            return nextInt();
-        }
     }
 
     protected static class MemberIterator implements Iterator<Member>
     {
-        protected PeerListIterator peerListIt;
+        protected Iterator<MemberRaftComposite> peerListIt;
         protected MemberImpl currentMember = new MemberImpl();
 
-        public void wrap(PeerList peerList)
+        public void wrap(MemberListService memberListService)
         {
-            this.peerListIt = peerList.iterator();
+            this.peerListIt = memberListService.iterator();
         }
 
         @Override
@@ -169,25 +110,23 @@ public class PartitionManagerImpl implements PartitionManager
 
     protected static class MemberImpl implements Member
     {
-        protected SocketAddress socketAddress;
-        protected PartitionIterator partitionIterator = new PartitionIterator();
+        protected MemberRaftComposite memberRaftComposite;
 
-        public void wrap(Peer peer)
+        public void wrap(MemberRaftComposite memberRaftComposite)
         {
-            this.socketAddress = peer.managementEndpoint();
-            this.partitionIterator.wrap(peer.raftMemberships().iterator());
+            this.memberRaftComposite = memberRaftComposite;
         }
 
         @Override
         public SocketAddress getManagementAddress()
         {
-            return socketAddress;
+            return memberRaftComposite.getManagementApi();
         }
 
         @Override
         public IntIterator getLeadingPartitions()
         {
-            return partitionIterator;
+            return memberRaftComposite.getLeadingPartitions();
         }
     }
 
