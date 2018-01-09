@@ -30,9 +30,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.zeebe.broker.Loggers;
+import io.zeebe.broker.clustering.handler.BrokerAddress;
+import io.zeebe.broker.clustering.handler.TopicLeader;
+import io.zeebe.broker.clustering.handler.Topology;
 import io.zeebe.broker.clustering.management.handler.ClusterManagerFragmentHandler;
 import io.zeebe.broker.clustering.management.message.CreatePartitionMessage;
 import io.zeebe.broker.clustering.management.message.InvitationRequest;
@@ -45,10 +49,11 @@ import io.zeebe.broker.transport.cfg.SocketBindingCfg;
 import io.zeebe.broker.transport.cfg.TransportComponentCfg;
 import io.zeebe.gossip.Gossip;
 import io.zeebe.gossip.GossipCustomEventListener;
-import io.zeebe.gossip.GossipMembershipListener;
 import io.zeebe.gossip.membership.Member;
 import io.zeebe.logstreams.impl.log.fs.FsLogStorage;
 import io.zeebe.logstreams.log.LogStream;
+import io.zeebe.msgpack.property.ArrayProperty;
+import io.zeebe.msgpack.value.ValueArray;
 import io.zeebe.protocol.Protocol;
 import io.zeebe.raft.Raft;
 import io.zeebe.raft.RaftPersistentStorage;
@@ -91,15 +96,12 @@ public class ClusterManager implements Actor
 
     private final LogStreamsManager logStreamsManager;
 
-    public ClusterManager(final ClusterManagerContext context,
-                          final ServiceContainer serviceContainer,
-                          final TransportComponentCfg transportComponentCfg)
+    public ClusterManager(final ClusterManagerContext context, final ServiceContainer serviceContainer, final TransportComponentCfg transportComponentCfg)
     {
         this.context = context;
         this.serviceContainer = serviceContainer;
         this.transportComponentCfg = transportComponentCfg;
         this.rafts = new CopyOnWriteArrayList<>();
-//        this.memberList = new ArrayList<>();
         this.startLogStreamServiceControllers = new CopyOnWriteArrayList<>();
         this.commandQueue = new DeferredCommandContext();
         this.activeRequestControllers = new CopyOnWriteArrayList<>();
@@ -107,20 +109,21 @@ public class ClusterManager implements Actor
         this.logStreamsManager = context.getLogStreamsManager();
 
         this.invitationResponse = new InvitationResponse();
-//        this.raftMemberships = new RaftMembershipList();
 
         final ClusterManagerFragmentHandler fragmentHandler = new ClusterManagerFragmentHandler(this, context.getWorkflowRequestMessageHandler());
         inputSubscription = context.getServerTransport()
                                    .openSubscription("cluster-management", fragmentHandler, fragmentHandler)
                                    .join();
 
+        final MemberListService memberListService = context.getMemberListService();
+        memberListService.add(new Member(transportComponentCfg.managementApi.toSocketAddress()));
+        memberListService.setApis(transportComponentCfg.clientApi.toSocketAddress(), transportComponentCfg.replicationApi.toSocketAddress(),
+                                  transportComponentCfg.managementApi.toSocketAddress());
 
-        context.getGossip().addMembershipListener(new MembershipListener());
-        context.getGossip().addCustomEventListener(TYPE_BUFFER, new CustomEventListener());
-        // TODO Erstmal nicht
-//        context.getPeers().registerListener(this::addPeer);
+        //        context.getGossip().addMembershipListener(new MembershipListener());
+        context.getGossip()
+               .addCustomEventListener(TYPE_BUFFER, new CustomEventListener());
     }
-
 
     private DirectBuffer createPayloadBuffer()
     {
@@ -130,12 +133,10 @@ public class ClusterManager implements Actor
         messageLength += managementApi.host.length(); // host
         messageLength += SIZE_OF_INT; // port
 
-
         final SocketBindingCfg clientApi = transportComponentCfg.clientApi;
         messageLength += SIZE_OF_INT; // length of host
         messageLength += clientApi.host.length(); // host
         messageLength += SIZE_OF_INT; // port
-
 
         final SocketBindingCfg replicationApi = transportComponentCfg.replicationApi;
         messageLength += SIZE_OF_INT; // length of host
@@ -143,7 +144,6 @@ public class ClusterManager implements Actor
         messageLength += SIZE_OF_INT; // port
 
         final MutableDirectBuffer directBuffer = new UnsafeBuffer(new byte[messageLength]);
-
 
         int offset = 0;
         // management
@@ -185,14 +185,14 @@ public class ClusterManager implements Actor
 
         final LogStreamsManager logStreamManager = context.getLogStreamsManager();
 
-
         final File storageDirectory = new File(transportComponentCfg.management.directory);
 
         if (!storageDirectory.exists())
         {
             try
             {
-                storageDirectory.getParentFile().mkdirs();
+                storageDirectory.getParentFile()
+                                .mkdirs();
                 Files.createDirectory(storageDirectory.toPath());
             }
             catch (final IOException e)
@@ -275,7 +275,8 @@ public class ClusterManager implements Actor
 
         for (int j = 0; j < startLogStreamServiceControllers.size(); j++)
         {
-            workcount += startLogStreamServiceControllers.get(j).doWork();
+            workcount += startLogStreamServiceControllers.get(j)
+                                                         .doWork();
         }
 
         return workcount;
@@ -288,14 +289,15 @@ public class ClusterManager implements Actor
         // the number of concurrent invitations.
         final List<SocketAddress> members = new ArrayList<>();
         members.add(raft.getSocketAddress());
-        raft.getMembers().forEach(raftMember -> members.add(raftMember.getRemoteAddress().getAddress()));
+        raft.getMembers()
+            .forEach(raftMember -> members.add(raftMember.getRemoteAddress()
+                                                         .getAddress()));
 
         final LogStream logStream = raft.getLogStream();
-        final InvitationRequest invitationRequest = new InvitationRequest()
-            .topicName(logStream.getTopicName())
-            .partitionId(logStream.getPartitionId())
-            .term(raft.getTerm())
-            .members(members);
+        final InvitationRequest invitationRequest = new InvitationRequest().topicName(logStream.getTopicName())
+                                                                           .partitionId(logStream.getPartitionId())
+                                                                           .term(raft.getTerm())
+                                                                           .members(members);
 
         LOG.debug("Send invitation request to {} for partition {} in term {}", member, logStream.getPartitionId(), raft.getTerm());
 
@@ -309,20 +311,27 @@ public class ClusterManager implements Actor
         // this must be determined before we cross the async boundary to avoid race conditions
         final boolean isRaftCreator = raft.getMemberSize() == 0;
 
-        commandQueue.runAsync(() ->
-        {
+        commandQueue.runAsync(() -> {
             rafts.add(raft);
 
-            context.getMemberListService().addRaft(raft);
+            context.getMemberListService()
+                   .addRaft(raft);
             startLogStreamServiceControllers.add(new StartLogStreamServiceController(raftServiceName, raft, serviceContainer));
 
             if (isRaftCreator)
             {
-                final Iterator<MemberRaftComposite> iterator = context.getMemberListService().iterator();
+                final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
+                                                                      .iterator();
                 while (iterator.hasNext())
                 {
                     final MemberRaftComposite next = iterator.next();
-                    inviteMemberToRaft(raft, next.getMember().getAddress());
+                    if (!next.getMember()
+                             .getAddress()
+                             .equals(transportComponentCfg.managementApi.toSocketAddress()))
+                    {
+                        inviteMemberToRaft(raft, next.getMember()
+                                                     .getAddress());
+                    }
                 }
             }
         });
@@ -333,8 +342,7 @@ public class ClusterManager implements Actor
         final LogStream logStream = raft.getLogStream();
         final int partitionId = logStream.getPartitionId();
 
-        commandQueue.runAsync(() ->
-        {
+        commandQueue.runAsync(() -> {
             for (int i = 0; i < rafts.size(); i++)
             {
                 final Raft r = rafts.get(i);
@@ -348,7 +356,8 @@ public class ClusterManager implements Actor
 
             for (int i = 0; i < startLogStreamServiceControllers.size(); i++)
             {
-                final Raft r = startLogStreamServiceControllers.get(i).getRaft();
+                final Raft r = startLogStreamServiceControllers.get(i)
+                                                               .getRaft();
                 final LogStream stream = r.getLogStream();
                 if (partitionId == stream.getPartitionId())
                 {
@@ -362,23 +371,20 @@ public class ClusterManager implements Actor
     public void createRaft(final SocketAddress socketAddress, final LogStream logStream, final List<SocketAddress> members)
     {
         final FsLogStorage logStorage = (FsLogStorage) logStream.getLogStorage();
-        final String path = logStorage.getConfig().getPath();
+        final String path = logStorage.getConfig()
+                                      .getPath();
 
         final String directory = transportComponentCfg.management.directory;
         final RaftPersistentFileStorage storage = new RaftPersistentFileStorage(String.format("%s%s.meta", directory, logStream.getLogName()));
-        storage
-            .setLogStream(logStream)
-            .setLogDirectory(path)
-            .save();
+        storage.setLogStream(logStream)
+               .setLogDirectory(path)
+               .save();
 
         createRaft(socketAddress, logStream, members, storage);
     }
 
-    public void createRaft(
-            final SocketAddress socketAddress,
-            final LogStream logStream,
-            final List<SocketAddress> members,
-            final RaftPersistentStorage persistentStorage)
+    public void createRaft(final SocketAddress socketAddress, final LogStream logStream, final List<SocketAddress> members,
+                           final RaftPersistentStorage persistentStorage)
     {
         final RaftService raftService = new RaftService(socketAddress, logStream, members, persistentStorage);
 
@@ -387,8 +393,10 @@ public class ClusterManager implements Actor
         serviceContainer.createService(raftServiceName, raftService)
                         .group(RAFT_SERVICE_GROUP)
                         .dependency(ACTOR_SCHEDULER_SERVICE, raftService.getActorSchedulerInjector())
-                        .dependency(TransportServiceNames.bufferingServerTransport(TransportServiceNames.REPLICATION_API_SERVER_NAME), raftService.getServerTransportInjector())
-                        .dependency(TransportServiceNames.clientTransport(TransportServiceNames.REPLICATION_API_CLIENT_NAME), raftService.getClientTransportInjector())
+                        .dependency(TransportServiceNames.bufferingServerTransport(TransportServiceNames.REPLICATION_API_SERVER_NAME),
+                                    raftService.getServerTransportInjector())
+                        .dependency(TransportServiceNames.clientTransport(TransportServiceNames.REPLICATION_API_CLIENT_NAME),
+                                    raftService.getClientTransportInjector())
                         .install();
     }
 
@@ -417,13 +425,8 @@ public class ClusterManager implements Actor
         createRaft(socketAddress, logStream, members);
     }
 
-    public boolean onInvitationRequest(
-        final DirectBuffer buffer,
-        final int offset,
-        final int length,
-        final ServerOutput output,
-        final RemoteAddress requestAddress,
-        final long requestId)
+    public boolean onInvitationRequest(final DirectBuffer buffer, final int offset, final int length, final ServerOutput output,
+                                       final RemoteAddress requestAddress, final long requestId)
     {
         invitationRequest.reset();
         invitationRequest.wrap(buffer, offset, length);
@@ -444,10 +447,7 @@ public class ClusterManager implements Actor
         return output.sendResponse(response);
     }
 
-    public void onCreatePartitionMessage(
-            final DirectBuffer buffer,
-            final int offset,
-            final int length)
+    public void onCreatePartitionMessage(final DirectBuffer buffer, final int offset, final int length)
     {
         createPartitionMessage.wrap(buffer, offset, length);
 
@@ -465,41 +465,85 @@ public class ClusterManager implements Actor
             LOG.debug("Partition {} exists already. Ignoring creation request.", createPartitionMessage.getPartitionId());
         }
     }
+    //
+    //
+    //    private class MembershipListener implements GossipMembershipListener
+    //    {
+    //        @Override
+    //        public void onAdd(Member member)
+    //        {
+    //            commandQueue.runAsync(() ->
+    //            {
+    //                context.getMemberListService().add(member);
+    //                for (Raft raft : rafts)
+    //                {
+    //                    if (raft.getState() == RaftState.LEADER)
+    //                    {
+    //                        inviteMemberToRaft(raft, member.getAddress());
+    //                    }
+    //                }
+    //            });
+    //        }
+    //
+    //        @Override
+    //        public void onRemove(Member member)
+    //        {
+    //            commandQueue.runAsync(() ->
+    //            {
+    //                context.getMemberListService().remove(member);
+    ////                for (Raft raft : rafts)
+    ////                {
+    //                // should check replication port?
+    ////                    if (raft.getSocketAddress().equals(member.getAddress()))
+    ////                    {
+    ////                        removeRaft(raft);
+    ////                    }
+    ////                }
+    //            });
+    //        }
+    //    }
 
-    private class MembershipListener implements GossipMembershipListener
+    public CompletableFuture<Topology> requestTopology()
     {
-        @Override
-        public void onAdd(Member member)
+        return commandQueue.runAsync((future) ->
         {
-            commandQueue.runAsync(() ->
+            final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
+                                                                  .iterator();
+            final Topology topology = new Topology();
+            while (iterator.hasNext())
             {
-                context.getMemberListService().add(member);
-                for (Raft raft : rafts)
+                final MemberRaftComposite next = iterator.next();
+
+                final ArrayProperty<BrokerAddress> brokers = topology.brokers();
+
+                final SocketAddress clientApi = next.getClientApi();
+                brokers.add()
+                       .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
+                       .setPort(clientApi.port());
+
+                final Iterator<Raft> raftIterator = next.getRaftIterator();
+                while (raftIterator.hasNext())
                 {
-                    if (raft.getState() == RaftState.LEADER)
+                    final Raft nextRaft = raftIterator.next();
+
+                    if (nextRaft.getState() == RaftState.LEADER)
                     {
-                        inviteMemberToRaft(raft, member.getAddress());
+                        final LogStream logStream = nextRaft.getLogStream();
+
+                        final DirectBuffer directBuffer = BufferUtil.cloneBuffer(logStream.getTopicName());
+
+                        topology.topicLeaders()
+                                .add()
+                                .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
+                                .setPort(clientApi.port())
+                                .setTopicName(directBuffer, 0, directBuffer.capacity())
+                                .setPartitionId(logStream.getPartitionId());
+
                     }
                 }
-            });
-        }
-
-        @Override
-        public void onRemove(Member member)
-        {
-            commandQueue.runAsync(() ->
-            {
-                context.getMemberListService().remove(member);
-//                for (Raft raft : rafts)
-//                {
-                // should check replication port?
-//                    if (raft.getSocketAddress().equals(member.getAddress()))
-//                    {
-//                        removeRaft(raft);
-//                    }
-//                }
-            });
-        }
+            }
+            future.complete(topology);
+        });
     }
 
     private final class CustomEventListener implements GossipCustomEventListener
@@ -509,8 +553,8 @@ public class ClusterManager implements Actor
         {
 
             final DirectBuffer savedBuffer = BufferUtil.cloneBuffer(directBuffer);
-            commandQueue.runAsync(() ->
-            {
+            final SocketAddress savedSocketAddress = new SocketAddress(socketAddress);
+            commandQueue.runAsync(() -> {
                 final SocketAddress managementApi = new SocketAddress();
                 final SocketAddress clientApi = new SocketAddress();
                 final SocketAddress replicationApi = new SocketAddress();
@@ -527,7 +571,7 @@ public class ClusterManager implements Actor
                 final int managementPort = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
                 offset += SIZE_OF_INT;
 
-                managementApi.host(savedBuffer, 0, managementHostLength);
+                managementApi.host(managementHost, 0, managementHostLength);
                 managementApi.port(managementPort);
 
                 // client
@@ -541,7 +585,7 @@ public class ClusterManager implements Actor
                 final int clientPort = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
                 offset += SIZE_OF_INT;
 
-                clientApi.host(savedBuffer, 0, clientHostLength);
+                clientApi.host(clientHost, 0, clientHostLength);
                 clientApi.port(clientPort);
 
                 // replication
@@ -554,16 +598,25 @@ public class ClusterManager implements Actor
 
                 final int replicationPort = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
 
-                replicationApi.host(savedBuffer, 0, replicationHostLength);
+                replicationApi.host(replicationHost, 0, replicationHostLength);
                 replicationApi.port(replicationPort);
 
-                context.getMemberListService().setApis(clientApi, replicationApi, managementApi);
+                context.getMemberListService()
+                       .add(new Member(savedSocketAddress));
+                context.getMemberListService()
+                       .setApis(clientApi, replicationApi, managementApi);
+
+                for (Raft raft : rafts)
+                {
+                    if (raft.getState() == RaftState.LEADER)
+                    {
+
+                        inviteMemberToRaft(raft, savedSocketAddress);
+                    }
+                }
             });
         }
 
-
     }
-
-
 
 }

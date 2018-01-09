@@ -109,8 +109,8 @@ public class TransportComponent implements Component
             .dependency(ACTOR_SCHEDULER_SERVICE, controlMessageHandlerManagerService.getActorSchedulerInjector())
             .dependency(TaskQueueServiceNames.TASK_QUEUE_SUBSCRIPTION_MANAGER, controlMessageHandlerManagerService.getTaskSubscriptionManagerInjector())
             .dependency(TopicSubscriptionServiceNames.TOPIC_SUBSCRIPTION_SERVICE, controlMessageHandlerManagerService.getTopicSubscriptionServiceInjector())
-            .dependency(ClusterServiceNames.MEMBER_LIST_SERVICE, controlMessageHandlerManagerService.getMemberListServiceInjector())
             .dependency(SystemServiceNames.SYSTEM_LOG_MANAGER, controlMessageHandlerManagerService.getSystemPartitionManagerInjector())
+            .dependency(ClusterServiceNames.CLUSTER_MANAGER_SERVICE, controlMessageHandlerManagerService.getClusterManagerInjector())
             .install();
 
         context.addRequiredStartAction(replactionApiFuture);

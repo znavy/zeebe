@@ -21,6 +21,7 @@ import io.zeebe.broker.clustering.management.ClusterManagerContext;
 import io.zeebe.broker.clustering.management.MemberListService;
 import io.zeebe.broker.logstreams.LogStreamsManager;
 import io.zeebe.broker.system.deployment.handler.WorkflowRequestMessageHandler;
+import io.zeebe.gossip.Gossip;
 import io.zeebe.servicecontainer.Injector;
 import io.zeebe.servicecontainer.Service;
 import io.zeebe.servicecontainer.ServiceStartContext;
@@ -39,6 +40,7 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
     private final Injector<LogStreamsManager> logStreamsManagerInjector = new Injector<>();
     private final Injector<WorkflowRequestMessageHandler> workflowRequestMessageHandlerInjector = new Injector<>();
     private final Injector<MemberListService> memberListServiceInjector = new Injector<>();
+    private final Injector<Gossip> gossipInjector = new Injector<>();
 
     private ClusterManagerContext context;
 
@@ -54,6 +56,7 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
         final WorkflowRequestMessageHandler workflowRequestMessageHandler = workflowRequestMessageHandlerInjector.getValue();
 
         context = new ClusterManagerContext();
+        context.setGossip(gossipInjector.getValue());
         context.setActorScheduler(actorScheduler);
 //        context.setLocalPeer(localPeer);
         context.setClientTransport(clientTransport);
@@ -78,6 +81,11 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
     public Injector<MemberListService> getMemberListServiceInjector()
     {
         return memberListServiceInjector;
+    }
+
+    public Injector<Gossip> getGossipInjector()
+    {
+        return gossipInjector;
     }
 
     //    public Injector<PeerList> getPeerListInjector()

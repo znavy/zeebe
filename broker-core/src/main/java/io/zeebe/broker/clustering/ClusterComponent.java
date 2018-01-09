@@ -78,6 +78,7 @@ public class ClusterComponent implements Component
             .dependency(ACTOR_SCHEDULER_SERVICE, clusterManagementContextService.getActorSchedulerInjector())
             .dependency(LOG_STREAMS_MANAGER_SERVICE, clusterManagementContextService.getLogStreamsManagerInjector())
             .dependency(WORKFLOW_REQUEST_MESSAGE_HANDLER_SERVICE, clusterManagementContextService.getWorkflowRequestMessageHandlerInjector())
+            .dependency(GOSSIP_SERVICE, clusterManagementContextService.getGossipInjector())
             .install();
 
         final ClusterManagerService clusterManagerService = new ClusterManagerService(serviceContainer, config);

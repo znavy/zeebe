@@ -21,7 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import io.zeebe.broker.clustering.handler.RequestTopologyHandler;
-import io.zeebe.broker.clustering.management.MemberListService;
+import io.zeebe.broker.clustering.management.ClusterManager;
 import io.zeebe.broker.event.handler.RemoveTopicSubscriptionHandler;
 import io.zeebe.broker.event.processor.TopicSubscriptionService;
 import io.zeebe.broker.system.log.RequestPartitionsMessageHandler;
@@ -44,7 +44,7 @@ public class ControlMessageHandlerManagerService implements Service<ControlMessa
     protected final Injector<TaskSubscriptionManager> taskSubscriptionManagerInjector = new Injector<>();
     protected final Injector<TopicSubscriptionService> topicSubscriptionServiceInjector = new Injector<>();
     protected final Injector<SystemPartitionManager> systemPartitionManagerInjector = new Injector<>();
-    private final Injector<MemberListService> memberListServiceInjector = new Injector<>();
+    private final Injector<ClusterManager> clusterManagerInjector = new Injector<>();
 
     protected final long controlMessageRequestTimeoutInMillis;
 
@@ -74,7 +74,7 @@ public class ControlMessageHandlerManagerService implements Service<ControlMessa
             new IncreaseTaskSubscriptionCreditsHandler(output, taskSubscriptionManager),
             new RemoveTaskSubscriptionHandler(output, taskSubscriptionManager),
             new RemoveTopicSubscriptionHandler(output, topicSubscriptionService),
-            new RequestTopologyHandler(output, memberListServiceInjector.getValue()),
+            new RequestTopologyHandler(output, clusterManagerInjector.getValue()),
             new RequestPartitionsMessageHandler(output, systemPartitionManager)
         );
 
@@ -130,8 +130,8 @@ public class ControlMessageHandlerManagerService implements Service<ControlMessa
         return systemPartitionManagerInjector;
     }
 
-    public Injector<MemberListService> getMemberListServiceInjector()
+    public Injector<ClusterManager> getClusterManagerInjector()
     {
-        return memberListServiceInjector;
+        return clusterManagerInjector;
     }
 }

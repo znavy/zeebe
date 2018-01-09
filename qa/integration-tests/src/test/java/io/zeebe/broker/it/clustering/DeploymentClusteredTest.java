@@ -23,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import io.zeebe.broker.Broker;
 import io.zeebe.broker.it.ClientRule;
@@ -33,10 +32,12 @@ import io.zeebe.client.event.DeploymentEvent;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
 import io.zeebe.test.util.AutoCloseableRule;
-import org.junit.*;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
-import org.junit.rules.Timeout;
 
 public class DeploymentClusteredTest
 {
@@ -53,8 +54,8 @@ public class DeploymentClusteredTest
     @Rule
     public ClientRule clientRule = new ClientRule(false);
 
-    @Rule
-    public Timeout timeout = new Timeout(30, TimeUnit.SECONDS);
+//    @Rule
+//    public Timeout timeout = new Timeout(30, TimeUnit.SECONDS);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();

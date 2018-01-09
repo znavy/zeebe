@@ -52,7 +52,7 @@ public class GossipService implements Service<Gossip>
     public void start(ServiceStartContext startContext)
     {
         final ActorScheduler actorScheduler = actorSchedulerInjector.getValue();
-        final SocketAddress host = SocketAddress.from(transportComponentCfg.host);
+        final SocketAddress host = new SocketAddress(transportComponentCfg.managementApi.host, transportComponentCfg.managementApi.port);
 
         this.gossip = new Gossip(host, bufferingServerTransportInjector.getValue(),
                                  clientTransportInjector.getValue(), transportComponentCfg.gossip);
