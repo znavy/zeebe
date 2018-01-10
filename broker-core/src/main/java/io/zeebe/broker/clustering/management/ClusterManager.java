@@ -26,21 +26,15 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.zeebe.broker.Loggers;
 import io.zeebe.broker.clustering.handler.BrokerAddress;
-import io.zeebe.broker.clustering.handler.TopicLeader;
 import io.zeebe.broker.clustering.handler.Topology;
 import io.zeebe.broker.clustering.management.handler.ClusterManagerFragmentHandler;
-import io.zeebe.broker.clustering.management.message.CreatePartitionMessage;
-import io.zeebe.broker.clustering.management.message.InvitationRequest;
-import io.zeebe.broker.clustering.management.message.InvitationResponse;
+import io.zeebe.broker.clustering.management.message.*;
 import io.zeebe.broker.clustering.raft.RaftPersistentFileStorage;
 import io.zeebe.broker.clustering.raft.RaftService;
 import io.zeebe.broker.logstreams.LogStreamsManager;
@@ -53,10 +47,8 @@ import io.zeebe.gossip.membership.Member;
 import io.zeebe.logstreams.impl.log.fs.FsLogStorage;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.msgpack.property.ArrayProperty;
-import io.zeebe.msgpack.value.ValueArray;
 import io.zeebe.protocol.Protocol;
-import io.zeebe.raft.Raft;
-import io.zeebe.raft.RaftPersistentStorage;
+import io.zeebe.raft.*;
 import io.zeebe.raft.state.RaftState;
 import io.zeebe.servicecontainer.ServiceContainer;
 import io.zeebe.servicecontainer.ServiceName;
@@ -69,10 +61,12 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
 
-public class ClusterManager implements Actor
+public class ClusterManager implements Actor, RaftStateListener
 {
 
     public static final DirectBuffer TYPE_BUFFER = BufferUtil.wrapString("apis");
+    public static final DirectBuffer PARTITION_TYPE = BufferUtil.wrapString("partition");
+
     public static final Logger LOG = Loggers.CLUSTERING_LOGGER;
 
     private final ClusterManagerContext context;
@@ -311,17 +305,20 @@ public class ClusterManager implements Actor
         // this must be determined before we cross the async boundary to avoid race conditions
         final boolean isRaftCreator = raft.getMemberSize() == 0;
 
-        commandQueue.runAsync(() -> {
+        raft.registerRaftStateListener(this);
+
+        commandQueue.runAsync(() ->
+        {
             rafts.add(raft);
 
-            context.getMemberListService()
-                   .addRaft(raft);
+            // add raft only when member or candidate
+            // context.getMemberListService().addRaft(raft);
+
             startLogStreamServiceControllers.add(new StartLogStreamServiceController(raftServiceName, raft, serviceContainer));
 
             if (isRaftCreator)
             {
-                final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
-                                                                      .iterator();
+                final Iterator<MemberRaftComposite> iterator = context.getMemberListService().iterator();
                 while (iterator.hasNext())
                 {
                     final MemberRaftComposite next = iterator.next();
@@ -329,8 +326,8 @@ public class ClusterManager implements Actor
                              .getAddress()
                              .equals(transportComponentCfg.managementApi.toSocketAddress()))
                     {
-                        inviteMemberToRaft(raft, next.getMember()
-                                                     .getAddress());
+                        // TODO don't invite all members to raft
+                        inviteMemberToRaft(raft, next.getMember().getAddress());
                     }
                 }
             }
@@ -342,7 +339,8 @@ public class ClusterManager implements Actor
         final LogStream logStream = raft.getLogStream();
         final int partitionId = logStream.getPartitionId();
 
-        commandQueue.runAsync(() -> {
+        commandQueue.runAsync(() ->
+        {
             for (int i = 0; i < rafts.size(); i++)
             {
                 final Raft r = rafts.get(i);
@@ -554,7 +552,8 @@ public class ClusterManager implements Actor
 
             final DirectBuffer savedBuffer = BufferUtil.cloneBuffer(directBuffer);
             final SocketAddress savedSocketAddress = new SocketAddress(socketAddress);
-            commandQueue.runAsync(() -> {
+            commandQueue.runAsync(() ->
+            {
                 final SocketAddress managementApi = new SocketAddress();
                 final SocketAddress clientApi = new SocketAddress();
                 final SocketAddress replicationApi = new SocketAddress();
@@ -610,13 +609,35 @@ public class ClusterManager implements Actor
                 {
                     if (raft.getState() == RaftState.LEADER)
                     {
-
+                        // TODO don't invite all members
                         inviteMemberToRaft(raft, savedSocketAddress);
                     }
                 }
             });
         }
 
+    }
+
+    @Override
+    public void onStateChange(int partitionId, SocketAddress socketAddress, RaftState raftState)
+    {
+        switch (raftState)
+        {
+            case LEADER:
+            case FOLLOWER:
+            {
+                // TODO update raft state in member list
+
+                // TODO send complete list of partition where I'm a follower or
+                // leader
+
+                context.getGossip().publishEvent(PARTITION_TYPE, BufferUtil.wrapString(""));
+
+                break;
+            }
+            default:
+                break;
+        }
     }
 
 }
