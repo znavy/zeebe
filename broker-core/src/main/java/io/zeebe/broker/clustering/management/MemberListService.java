@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import io.zeebe.broker.Loggers;
 import io.zeebe.gossip.membership.Member;
 import io.zeebe.raft.Raft;
 import io.zeebe.raft.state.RaftState;
@@ -28,7 +29,7 @@ import io.zeebe.servicecontainer.Service;
 import io.zeebe.servicecontainer.ServiceStartContext;
 import io.zeebe.servicecontainer.ServiceStopContext;
 import io.zeebe.transport.SocketAddress;
-import io.zeebe.util.collection.IntTuple;
+import org.agrona.DirectBuffer;
 
 /**
  *
@@ -50,10 +51,13 @@ public class MemberListService implements Service<MemberListService>
             {
                 final int partitionId = raft.getLogStream()
                                             .getPartitionId();
+                final DirectBuffer topicName = raft.getLogStream().getTopicName();
                 final RaftState raftState = raft.getState();
-                memberRaftComposite.addRaft(partitionId, raftState);
+                memberRaftComposite.updateRaft(partitionId, topicName, raftState);
             }
         }
+
+        Loggers.CLUSTERING_LOGGER.debug("Add raft - state: {}", this);
     }
 
     public MemberRaftComposite getMember(SocketAddress socketAddress)
@@ -69,7 +73,7 @@ public class MemberListService implements Service<MemberListService>
         return null;
     }
 
-    public List<IntTuple<RaftState>> getRafts(SocketAddress socketAddress)
+    public List<RaftStateComposite> getRafts(SocketAddress socketAddress)
     {
         for (MemberRaftComposite memberRaftComposite : compositeList)
         {
@@ -125,5 +129,14 @@ public class MemberListService implements Service<MemberListService>
         return this;
     }
 
-
+    @Override
+    public String toString()
+    {
+        final StringBuilder builder = new StringBuilder();
+        for (MemberRaftComposite memberRaftComposite : compositeList)
+        {
+            builder.append(memberRaftComposite.toString()).append("\n");
+        }
+        return builder.toString();
+    }
 }

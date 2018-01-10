@@ -65,8 +65,8 @@ import io.zeebe.util.DeferredCommandContext;
 import io.zeebe.util.actor.Actor;
 import io.zeebe.util.buffer.BufferReader;
 import io.zeebe.util.buffer.BufferUtil;
-import io.zeebe.util.collection.IntTuple;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
@@ -329,6 +329,8 @@ public class ClusterManager implements Actor, RaftStateListener
 
         commandQueue.runAsync(() ->
         {
+
+            LOG.debug("ADD raft {} for partition {} state {}.", raft.getSocketAddress(), raft.getLogStream().getPartitionId(), raft.getState());
             rafts.add(raft);
 
             // add raft only when member or candidate
@@ -539,27 +541,27 @@ public class ClusterManager implements Actor, RaftStateListener
                        .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
                        .setPort(clientApi.port());
 
-                final Iterator<IntTuple<RaftState>> raftTupleIt = next.getRaftIterator();
+                final Iterator<RaftStateComposite> raftTupleIt = next.getRaftIterator();
                 while (raftTupleIt.hasNext())
                 {
-                    final IntTuple<RaftState> nextRaftState = raftTupleIt.next();
+                    final RaftStateComposite nextRaftState = raftTupleIt.next();
 
-                    if (nextRaftState.getRight() == RaftState.LEADER)
+                    if (nextRaftState.getRaftState() == RaftState.LEADER)
                     {
-//                        final LogStream logStream = nextRaft.getLogStream();
-
-                        final DirectBuffer directBuffer = BufferUtil.wrapString("test");
+                        final DirectBuffer directBuffer = BufferUtil.cloneBuffer(nextRaftState.getTopicName());
 
                         topology.topicLeaders()
                                 .add()
                                 .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
                                 .setPort(clientApi.port())
                                 .setTopicName(directBuffer, 0, directBuffer.capacity())
-                                .setPartitionId(nextRaftState.getInt());
+                                .setPartitionId(nextRaftState.getPartition());
 
                     }
                 }
             }
+
+
             future.complete(topology);
         });
     }
@@ -646,9 +648,14 @@ public class ClusterManager implements Actor, RaftStateListener
             final SocketAddress savedSocketAddress = new SocketAddress(socketAddress);
             commandQueue.runAsync(() ->
             {
-
                 final MemberRaftComposite member = context.getMemberListService()
                                                           .getMember(savedSocketAddress);
+
+//                if (member == null)
+//                {
+//                    member = new MemberRaftComposite(new Member(savedSocketAddress));
+//                    context.getMemberListService().add(member);
+//                }
                 int offset = 0;
                 final int count = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
                 offset += SIZE_OF_INT;
@@ -658,61 +665,86 @@ public class ClusterManager implements Actor, RaftStateListener
                     final int partition = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
                     offset += SIZE_OF_INT;
 
+                    final int topicNameLength = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
+                    offset += SIZE_OF_INT;
+
+                    final MutableDirectBuffer topicBuffer = new UnsafeBuffer(new byte[topicNameLength]);
+                    savedBuffer.getBytes(offset, topicBuffer, 0, topicNameLength);
+                    offset += topicNameLength;
+
                     final byte state = savedBuffer.getByte(offset);
                     offset += SIZE_OF_BYTE;
 
-                    member.updateRaft(partition, state == 1 ? RaftState.LEADER : RaftState.FOLLOWER);
+                    member.updateRaft(partition, topicBuffer, state == (byte) 1 ? RaftState.LEADER : RaftState.FOLLOWER);
                 }
+
+                LOG.debug("On raft state change event for {} - state: {}", savedSocketAddress, context.getMemberListService());
             });
         }
     }
 
     @Override
-    public void onStateChange(int partitionId, SocketAddress socketAddress, RaftState raftState)
+    public void onStateChange(int partitionId, DirectBuffer topicName, SocketAddress socketAddress, RaftState raftState)
     {
-        switch (raftState)
+        final DirectBuffer savedTopicName = BufferUtil.cloneBuffer(topicName);
+        commandQueue.runAsync(() ->
         {
-            case LEADER:
-            case FOLLOWER:
+            switch (raftState)
             {
-
-                final MemberRaftComposite member = context.getMemberListService()
-                                                          .getMember(transportComponentCfg.managementApi.toSocketAddress());
-
-                final List<IntTuple<RaftState>> rafts = member.getRafts();
-
-                // TODO update raft state in member list
-                member.updateRaft(partitionId, raftState);
-
-                // TODO send complete list of partition where I'm a follower or
-                // leader
-                final int count = rafts.size();
-                final int size = SIZE_OF_INT + (count * (SIZE_OF_INT + SIZE_OF_BYTE));
-                final MutableDirectBuffer directBuffer = new UnsafeBuffer(new byte[size]);
-
-                int offset = 0;
-                directBuffer.putInt(offset, count, ByteOrder.LITTLE_ENDIAN);
-                offset += SIZE_OF_INT;
-
-                for (int i = 0; i < count; i++)
+                case LEADER:
+                case FOLLOWER:
                 {
-                    final IntTuple<RaftState> raftTuple = rafts.get(i);
 
-                    directBuffer.putInt(offset, raftTuple.getInt(), ByteOrder.LITTLE_ENDIAN);
+                    final MemberRaftComposite member = context.getMemberListService()
+                                                              .getMember(transportComponentCfg.managementApi.toSocketAddress());
+
+                    final List<RaftStateComposite> rafts = member.getRafts();
+
+                    // TODO update raft state in member list
+                    member.updateRaft(partitionId, savedTopicName, raftState);
+
+                    LOG.debug("On state change for {} - state: {}", socketAddress, context.getMemberListService());
+
+                    // TODO send complete list of partition where I'm a follower or
+                    // leader
+                    final int count = rafts.size();
+                    final ExpandableArrayBuffer directBuffer = new ExpandableArrayBuffer();
+
+                    int offset = 0;
+                    directBuffer.putInt(offset, count, ByteOrder.LITTLE_ENDIAN);
                     offset += SIZE_OF_INT;
 
-                    directBuffer.putByte(offset, raftTuple.getRight() == RaftState.LEADER ? (byte) 1 : (byte) 0);
-                    offset += SIZE_OF_BYTE;
+                    for (int i = 0; i < count; i++)
+                    {
+                        final RaftStateComposite raft = rafts.get(i);
+
+                        directBuffer.putInt(offset, raft.getPartition(), ByteOrder.LITTLE_ENDIAN);
+                        offset += SIZE_OF_INT;
+
+                        final DirectBuffer currentTopicName = raft.getTopicName();
+                        directBuffer.putInt(offset, currentTopicName.capacity(), ByteOrder.LITTLE_ENDIAN);
+                        offset += SIZE_OF_INT;
+
+                        directBuffer.putBytes(offset, currentTopicName, 0, currentTopicName.capacity());
+                        offset += currentTopicName.capacity();
+
+                        directBuffer.putByte(offset, raft.getRaftState() == RaftState.LEADER ? (byte) 1 : (byte) 0);
+                        offset += SIZE_OF_BYTE;
+                    }
+
+                    LOG.debug("Publish event for partition {} state change {}", partitionId, raftState);
+
+                    context.getGossip()
+                           .publishEvent(PARTITION_TYPE, directBuffer);
+
+                    break;
                 }
-
-
-                context.getGossip().publishEvent(PARTITION_TYPE, directBuffer);
-
-                break;
+                default:
+                    break;
             }
-            default:
-                break;
-        }
+
+
+        });
     }
 
 }

@@ -8,9 +8,9 @@
   </Appenders>
 
   <Loggers>
-    <Logger name="io.zeebe" level="debug"/>
-    <Logger name="io.zeebe.raft" level="trace"/>
-    <Logger name="io.zeebe.gossip" level="trace"/>
+    <Logger name="io.zeebe" level="error"/>
+    <!--<Logger name="io.zeebe.raft" level="trace"/>-->
+    <!--<Logger name="io.zeebe.gossip" level="trace"/>-->
 
     <Root level="info">
       <AppenderRef ref="Console"/>

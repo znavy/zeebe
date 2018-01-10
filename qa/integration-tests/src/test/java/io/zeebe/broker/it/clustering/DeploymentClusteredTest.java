@@ -90,6 +90,8 @@ public class DeploymentClusteredTest
         // given
         client.topics().create("test", PARTITION_COUNT).execute();
 
+        System.out.println(client.requestTopology().execute());
+
         waitUntil(() -> getLeadersOfTopic("test") == 3);
 
         // when
