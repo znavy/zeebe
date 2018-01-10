@@ -22,11 +22,11 @@ import java.util.Iterator;
 import java.util.List;
 
 import io.zeebe.gossip.membership.Member;
-import io.zeebe.raft.Raft;
 import io.zeebe.raft.state.RaftState;
 import io.zeebe.transport.SocketAddress;
 import io.zeebe.util.collection.IntArrayListIterator;
 import io.zeebe.util.collection.IntIterator;
+import io.zeebe.util.collection.IntTuple;
 import org.agrona.collections.IntArrayList;
 
 /**
@@ -39,12 +39,12 @@ public class MemberRaftComposite
     private SocketAddress replicationApi;
     private SocketAddress managementApi;
 
-    private final List<Raft> raftList;
+    private final List<IntTuple<RaftState>> rafts;
 
     MemberRaftComposite(Member member)
     {
         this.member = member;
-        this.raftList = new ArrayList<>();
+        this.rafts = new ArrayList<>();
     }
 
     public Member getMember()
@@ -52,24 +52,44 @@ public class MemberRaftComposite
         return member;
     }
 
-    public void addRaft(Raft raft)
+    public void addRaft(int partition, RaftState raftState)
     {
-        raftList.add(raft);
+        rafts.add(new IntTuple<>(partition, raftState));
     }
 
-    public void removeRaft(Raft raft)
+    public void updateRaft(int partition, RaftState raftState)
     {
-        raftList.remove(raft);
+        boolean updated = false;
+        for (IntTuple<RaftState> tuple : rafts)
+        {
+            if (tuple.getInt() == partition)
+            {
+                // set tuple.getLeft()
+                tuple.setRight(raftState);
+                updated = true;
+                break;
+            }
+        }
+
+        if (!updated)
+        {
+            rafts.add(new IntTuple<>(partition, raftState));
+        }
+    }
+
+    public List<IntTuple<RaftState>> getRafts()
+    {
+        return rafts;
     }
 
     public IntIterator getLeadingPartitions()
     {
         final IntArrayList intArrayList = new IntArrayList();
-        for (Raft raft : raftList)
+        for (IntTuple<RaftState> raft : rafts)
         {
-            if (raft.getState() == RaftState.LEADER)
+            if (raft.getRight() == RaftState.LEADER)
             {
-                intArrayList.add(raft.getLogStream().getPartitionId());
+                intArrayList.add(raft.getInt());
             }
         }
         final IntArrayListIterator intArrayListIterator = new IntArrayListIterator();
@@ -77,9 +97,9 @@ public class MemberRaftComposite
         return intArrayListIterator;
     }
 
-    public Iterator<Raft> getRaftIterator()
+    public Iterator<IntTuple<RaftState>> getRaftIterator()
     {
-        return raftList.iterator();
+        return rafts.iterator();
     }
 
     public SocketAddress getClientApi()

@@ -23,10 +23,12 @@ import java.util.List;
 
 import io.zeebe.gossip.membership.Member;
 import io.zeebe.raft.Raft;
+import io.zeebe.raft.state.RaftState;
 import io.zeebe.servicecontainer.Service;
 import io.zeebe.servicecontainer.ServiceStartContext;
 import io.zeebe.servicecontainer.ServiceStopContext;
 import io.zeebe.transport.SocketAddress;
+import io.zeebe.util.collection.IntTuple;
 
 /**
  *
@@ -46,9 +48,38 @@ public class MemberListService implements Service<MemberListService>
         {
             if (memberRaftComposite.getReplicationApi().equals(raft.getSocketAddress()))
             {
-                memberRaftComposite.addRaft(raft);
+                final int partitionId = raft.getLogStream()
+                                            .getPartitionId();
+                final RaftState raftState = raft.getState();
+                memberRaftComposite.addRaft(partitionId, raftState);
             }
         }
+    }
+
+    public MemberRaftComposite getMember(SocketAddress socketAddress)
+    {
+        for (MemberRaftComposite memberRaftComposite : compositeList)
+        {
+            if (memberRaftComposite.getManagementApi()
+                                   .equals(socketAddress))
+            {
+                return memberRaftComposite;
+            }
+        }
+        return null;
+    }
+
+    public List<IntTuple<RaftState>> getRafts(SocketAddress socketAddress)
+    {
+        for (MemberRaftComposite memberRaftComposite : compositeList)
+        {
+            if (memberRaftComposite.getManagementApi()
+                                   .equals(socketAddress))
+            {
+                return memberRaftComposite.getRafts();
+            }
+        }
+        return null;
     }
 
     public void setApis(SocketAddress clientApi,
