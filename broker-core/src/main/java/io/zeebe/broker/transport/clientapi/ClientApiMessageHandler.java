@@ -20,6 +20,7 @@ package io.zeebe.broker.transport.clientapi;
 import java.util.EnumMap;
 import java.util.function.Consumer;
 
+import io.zeebe.logstreams.impl.Loggers;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.Int2ObjectHashMap;
@@ -161,6 +162,8 @@ public class ClientApiMessageHandler implements ServerMessageHandler, ServerRequ
                 .metadataWriter(eventMetadata)
                 .value(buffer, eventOffset, eventLength)
                 .tryWrite();
+
+        Loggers.LOGSTREAMS_LOGGER.info("Wrote event {} to position {}", event, eventPosition);
 
         return eventPosition >= 0;
     }
