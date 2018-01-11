@@ -187,6 +187,11 @@ public class ClusterManager implements Actor
             final RequestResponseController requestController = activeRequestControllers.get(i);
             workCount += requestController.doWork();
 
+            if (requestController.isFailed())
+            {
+                LOG.debug("Invitation request failed");
+            }
+
             if (requestController.isFailed() || requestController.isResponseAvailable())
             {
                 requestController.close();
@@ -246,7 +251,7 @@ public class ClusterManager implements Actor
 
         LOG.debug("Send invitation request to {} for partition {} in term {}", member, logStream.getPartitionId(), raft.getTerm());
 
-        final RequestResponseController requestController = new RequestResponseController(context.getClientTransport());
+        final RequestResponseController requestController = new RequestResponseController(context.getManagementClient());
 
         requestController.open(member, invitationRequest, (buffer, offset, length) ->
             LOG.debug("Got invitation response from {} for partition id {}.",

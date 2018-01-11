@@ -64,6 +64,7 @@ public class PartitionManagerImpl implements PartitionManager
 
         Loggers.SYSTEM_LOGGER.info("Creating partition {}/{} at {}", BufferUtil.bufferAsString(topicName), partitionId, remote);
 
+        // TODO: das hier muss auch resilient funktionieren, damit das klappt, wenn gerade keine Connection offen ist
         return transport.getOutput().sendMessage(message);
     }
 

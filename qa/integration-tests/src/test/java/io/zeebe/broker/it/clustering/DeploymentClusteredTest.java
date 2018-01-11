@@ -17,17 +17,18 @@ package io.zeebe.broker.it.clustering;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.RuleChain;
+
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.event.DeploymentEvent;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
 import io.zeebe.test.util.AutoCloseableRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
 
 public class DeploymentClusteredTest
 {
@@ -100,5 +101,4 @@ public class DeploymentClusteredTest
         assertThat(deploymentEvent.getDeployedWorkflows().size()).isEqualTo(1);
         assertThat(deploymentEvent.getErrorMessage()).isEmpty();
     }
-
 }

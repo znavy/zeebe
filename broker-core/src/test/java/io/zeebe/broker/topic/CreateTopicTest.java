@@ -169,7 +169,7 @@ public class CreateTopicTest
     {
         // given
         final ClientTransport transport = apiRule.getTransport();
-        final RemoteAddress remoteAddress = transport.registerRemoteAddress(BROKER_MGMT_ADDRESS);
+        final RemoteAddress remoteAddress = transport.registerRemoteAndAwaitChannel(BROKER_MGMT_ADDRESS);
         final ClientOutput output = transport.getOutput();
 
         final TransportMessage message = new TransportMessage();

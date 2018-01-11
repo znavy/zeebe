@@ -742,6 +742,12 @@ public class CreateTopicStreamProcessorTest
         fail("stronger assertion? e.g. that they are ascending?");
     }
 
+    @Test
+    public void reminder()
+    {
+        fail("Partition requests sollen resilient ausgeführt werden");
+    }
+
     protected Stream<PartitionEvent> partitionEventsInState(PartitionState state)
     {
         return streams.events(STREAM_NAME)
