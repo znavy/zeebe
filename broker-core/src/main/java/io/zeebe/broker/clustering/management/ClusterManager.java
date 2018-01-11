@@ -49,6 +49,8 @@ import io.zeebe.broker.transport.cfg.SocketBindingCfg;
 import io.zeebe.broker.transport.cfg.TransportComponentCfg;
 import io.zeebe.gossip.Gossip;
 import io.zeebe.gossip.GossipCustomEventListener;
+import io.zeebe.gossip.GossipSyncRequestHandler;
+import io.zeebe.gossip.dissemination.GossipSyncRequest;
 import io.zeebe.gossip.membership.Member;
 import io.zeebe.logstreams.impl.log.fs.FsLogStorage;
 import io.zeebe.logstreams.log.LogStream;
@@ -126,9 +128,10 @@ public class ClusterManager implements Actor, RaftStateListener
 
         //        context.getGossip().addMembershipListener(new MembershipListener());
         context.getGossip()
-               .addCustomEventListener(TYPE_BUFFER, new CustomEventListener());
+               .addCustomEventListener(TYPE_BUFFER, new APIEventListener());
         context.getGossip()
                .addCustomEventListener(PARTITION_TYPE, new RaftUpdateListener());
+        context.getGossip().registerSyncRequestHandler(TYPE_BUFFER, new APISyncHandler());
     }
 
     private DirectBuffer createPayloadBuffer()
@@ -330,7 +333,7 @@ public class ClusterManager implements Actor, RaftStateListener
         commandQueue.runAsync(() ->
         {
 
-            LOG.debug("ADD raft {} for partition {} state {}.", raft.getSocketAddress(), raft.getLogStream().getPartitionId(), raft.getState());
+            LOG.trace("ADD raft {} for partition {} state {}.", raft.getSocketAddress(), raft.getLogStream().getPartitionId(), raft.getState());
             rafts.add(raft);
 
             // add raft only when member or candidate
@@ -486,7 +489,6 @@ public class ClusterManager implements Actor, RaftStateListener
         }
     }
     //
-    //
     //    private class MembershipListener implements GossipMembershipListener
     //    {
     //        @Override
@@ -561,12 +563,11 @@ public class ClusterManager implements Actor, RaftStateListener
                 }
             }
 
-
             future.complete(topology);
         });
     }
 
-    private final class CustomEventListener implements GossipCustomEventListener
+    private final class APIEventListener implements GossipCustomEventListener
     {
         @Override
         public void onEvent(SocketAddress socketAddress, DirectBuffer directBuffer)
@@ -651,11 +652,6 @@ public class ClusterManager implements Actor, RaftStateListener
                 final MemberRaftComposite member = context.getMemberListService()
                                                           .getMember(savedSocketAddress);
 
-//                if (member == null)
-//                {
-//                    member = new MemberRaftComposite(new Member(savedSocketAddress));
-//                    context.getMemberListService().add(member);
-//                }
                 int offset = 0;
                 final int count = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
                 offset += SIZE_OF_INT;
@@ -678,7 +674,7 @@ public class ClusterManager implements Actor, RaftStateListener
                     member.updateRaft(partition, topicBuffer, state == (byte) 1 ? RaftState.LEADER : RaftState.FOLLOWER);
                 }
 
-                LOG.debug("On raft state change event for {} - state: {}", savedSocketAddress, context.getMemberListService());
+                LOG.trace("Received raft state change event for member {} - local member state: {}", savedSocketAddress, context.getMemberListService());
             });
         }
     }
@@ -700,13 +696,12 @@ public class ClusterManager implements Actor, RaftStateListener
 
                     final List<RaftStateComposite> rafts = member.getRafts();
 
-                    // TODO update raft state in member list
+                    // update raft state in member list
                     member.updateRaft(partitionId, savedTopicName, raftState);
 
-                    LOG.debug("On state change for {} - state: {}", socketAddress, context.getMemberListService());
+                    LOG.trace("On raft state change for {} - local member states: {}", socketAddress, context.getMemberListService());
 
-                    // TODO send complete list of partition where I'm a follower or
-                    // leader
+                    // send complete list of partition where I'm a follower or leader
                     final int count = rafts.size();
                     final ExpandableArrayBuffer directBuffer = new ExpandableArrayBuffer();
 
@@ -732,7 +727,7 @@ public class ClusterManager implements Actor, RaftStateListener
                         offset += SIZE_OF_BYTE;
                     }
 
-                    LOG.debug("Publish event for partition {} state change {}", partitionId, raftState);
+                    LOG.trace("Publish event for partition {} state change {}", partitionId, raftState);
 
                     context.getGossip()
                            .publishEvent(PARTITION_TYPE, directBuffer);
@@ -745,6 +740,75 @@ public class ClusterManager implements Actor, RaftStateListener
 
 
         });
+    }
+
+    private final class APISyncHandler implements GossipSyncRequestHandler
+    {
+        @Override
+        public void onSyncRequest(GossipSyncRequest request)
+        {
+            final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
+                                                                  .iterator();
+
+            while (iterator.hasNext())
+            {
+                final MemberRaftComposite next = iterator.next();
+
+                // build payload from apis
+                // next.getManagementApi()
+                // replication
+                // client
+
+                // request.addPayload(next.getMember().getAddress(), payload)
+            }
+            request.done();
+        }
+    }
+
+    private final class RaftStateSyncHandler implements GossipSyncRequestHandler
+    {
+        @Override
+        public void onSyncRequest(GossipSyncRequest request)
+        {
+            final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
+                                                                  .iterator();
+            while (iterator.hasNext())
+            {
+                final MemberRaftComposite next = iterator.next();
+
+                // build payload from rafts
+                //
+//                next.getRafts()
+//                final int count = rafts.size();
+//                final ExpandableArrayBuffer directBuffer = new ExpandableArrayBuffer();
+//
+//                int offset = 0;
+//                directBuffer.putInt(offset, count, ByteOrder.LITTLE_ENDIAN);
+//                offset += SIZE_OF_INT;
+//
+//                for (int i = 0; i < count; i++)
+//                {
+//                    final RaftStateComposite raft = rafts.get(i);
+//
+//                    directBuffer.putInt(offset, raft.getPartition(), ByteOrder.LITTLE_ENDIAN);
+//                    offset += SIZE_OF_INT;
+//
+//                    final DirectBuffer currentTopicName = raft.getTopicName();
+//                    directBuffer.putInt(offset, currentTopicName.capacity(), ByteOrder.LITTLE_ENDIAN);
+//                    offset += SIZE_OF_INT;
+//
+//                    directBuffer.putBytes(offset, currentTopicName, 0, currentTopicName.capacity());
+//                    offset += currentTopicName.capacity();
+//
+//                    directBuffer.putByte(offset, raft.getRaftState() == RaftState.LEADER ? (byte) 1 : (byte) 0);
+//                    offset += SIZE_OF_BYTE;
+//                }
+//
+
+                // request.addPayload(next.getMember().getAddress(), payload)
+            }
+            request.done();
+        }
     }
 
 }

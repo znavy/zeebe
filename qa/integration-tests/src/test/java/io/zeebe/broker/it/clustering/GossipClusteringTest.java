@@ -93,6 +93,8 @@ public class GossipClusteringTest
 
     // TODO test if broker dies topology has one broker less
 
+    // TODO test sync - if node comes later to the cluster
+
     private Broker startBroker(String configFile)
     {
         final InputStream config = this.getClass().getClassLoader().getResourceAsStream(configFile);
