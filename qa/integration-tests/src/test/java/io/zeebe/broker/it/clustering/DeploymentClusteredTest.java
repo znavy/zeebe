@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.zeebe.broker.Broker;
 import io.zeebe.broker.it.ClientRule;
@@ -38,6 +39,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.Timeout;
 
 public class DeploymentClusteredTest
 {
@@ -54,8 +56,8 @@ public class DeploymentClusteredTest
     @Rule
     public ClientRule clientRule = new ClientRule(false);
 
-//    @Rule
-//    public Timeout timeout = new Timeout(30, TimeUnit.SECONDS);
+    @Rule
+    public Timeout timeout = new Timeout(30, TimeUnit.SECONDS);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -77,7 +79,7 @@ public class DeploymentClusteredTest
 
         // wait until cluster is ready
         doRepeatedly(() -> client.requestTopology().execute().getBrokers())
-            .until(brokers -> brokers.size() == brokers.size());
+            .until(topologyBroker -> topologyBroker.size() == brokers.size());
 
         Thread.sleep(1000);
     }
@@ -89,8 +91,6 @@ public class DeploymentClusteredTest
     {
         // given
         client.topics().create("test", PARTITION_COUNT).execute();
-
-        System.out.println(client.requestTopology().execute());
 
         waitUntil(() -> getLeadersOfTopic("test") == 3);
 
