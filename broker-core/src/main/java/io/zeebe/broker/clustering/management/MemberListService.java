@@ -38,9 +38,17 @@ public class MemberListService implements Service<MemberListService>
 {
     private final List<MemberRaftComposite> compositeList = new ArrayList<>();
 
-    public void add(Member member)
+    public MemberRaftComposite add(Member member)
     {
-        compositeList.add(new MemberRaftComposite(member));
+        final MemberRaftComposite memberRaftComposite = new MemberRaftComposite(member);
+        compositeList.add(memberRaftComposite);
+        return memberRaftComposite;
+    }
+
+
+    public void add(MemberRaftComposite member)
+    {
+        compositeList.add(member);
     }
 
     public void addRaft(Raft raft)
@@ -64,7 +72,7 @@ public class MemberListService implements Service<MemberListService>
     {
         for (MemberRaftComposite memberRaftComposite : compositeList)
         {
-            if (memberRaftComposite.getManagementApi()
+            if (memberRaftComposite.getMember().getAddress()
                                    .equals(socketAddress))
             {
                 return memberRaftComposite;
@@ -86,10 +94,11 @@ public class MemberListService implements Service<MemberListService>
         return null;
     }
 
-    public void setApis(SocketAddress clientApi,
+    public boolean setApis(SocketAddress clientApi,
                         SocketAddress replicationApi,
                         SocketAddress managementApi)
     {
+        boolean success = false;
         for (MemberRaftComposite memberRaftComposite : compositeList)
         {
             if (memberRaftComposite.getMember().getAddress().equals(managementApi))
@@ -97,13 +106,27 @@ public class MemberListService implements Service<MemberListService>
                 memberRaftComposite.setManagementApi(managementApi);
                 memberRaftComposite.setReplicationApi(replicationApi);
                 memberRaftComposite.setClientApi(clientApi);
+                success = true;
+                break;
             }
         }
+        return success;
     }
 
-    public void remove(Member member)
+    public MemberRaftComposite remove(SocketAddress memberAddress)
     {
-        compositeList.remove(member);
+        MemberRaftComposite memberRaftComposite = null;
+        for (int i = 0; i < compositeList.size(); i++)
+        {
+            final MemberRaftComposite member = compositeList.get(i);
+            if (member.getMember().getAddress().equals(memberAddress))
+            {
+                memberRaftComposite = member;
+                compositeList.remove(i);
+                break;
+            }
+        }
+        return memberRaftComposite;
     }
 
     public Iterator<MemberRaftComposite> iterator()

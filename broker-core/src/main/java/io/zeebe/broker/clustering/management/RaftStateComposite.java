@@ -64,4 +64,10 @@ public class RaftStateComposite
     {
         this.raftState = raftState;
     }
+
+    @Override
+    public String toString()
+    {
+        return "RaftStateComposite{" + "partition=" + partition + ", raftState=" + raftState + '}';
+    }
 }

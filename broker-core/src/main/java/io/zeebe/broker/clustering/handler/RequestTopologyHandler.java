@@ -19,6 +19,7 @@ package io.zeebe.broker.clustering.handler;
 
 import java.util.concurrent.CompletableFuture;
 
+import io.zeebe.broker.Loggers;
 import io.zeebe.broker.clustering.management.ClusterManager;
 import io.zeebe.broker.transport.clientapi.ErrorResponseWriter;
 import io.zeebe.broker.transport.controlmessage.ControlMessageHandler;
@@ -71,6 +72,7 @@ public class RequestTopologyHandler implements ControlMessageHandler
             }
             else
             {
+                Loggers.CLUSTERING_LOGGER.debug("Problem on requesting topology. Exception {}", throwable);
                 errorResponseWriter.errorCode(ErrorCode.REQUEST_PROCESSING_FAILURE)
                                    .errorMessage("Cannot request topology!")
                                    .failedRequest(buffer, 0, buffer.capacity())

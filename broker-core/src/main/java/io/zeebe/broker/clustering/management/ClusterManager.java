@@ -19,6 +19,7 @@ package io.zeebe.broker.clustering.management;
 
 import static io.zeebe.broker.clustering.ClusterServiceNames.RAFT_SERVICE_GROUP;
 import static io.zeebe.broker.clustering.ClusterServiceNames.raftServiceName;
+import static io.zeebe.broker.clustering.management.ClusteringHelper.*;
 import static io.zeebe.broker.system.SystemServiceNames.ACTOR_SCHEDULER_SERVICE;
 import static org.agrona.BitUtil.SIZE_OF_BYTE;
 import static org.agrona.BitUtil.SIZE_OF_INT;
@@ -49,6 +50,7 @@ import io.zeebe.broker.transport.cfg.SocketBindingCfg;
 import io.zeebe.broker.transport.cfg.TransportComponentCfg;
 import io.zeebe.gossip.Gossip;
 import io.zeebe.gossip.GossipCustomEventListener;
+import io.zeebe.gossip.GossipMembershipListener;
 import io.zeebe.gossip.GossipSyncRequestHandler;
 import io.zeebe.gossip.dissemination.GossipSyncRequest;
 import io.zeebe.gossip.membership.Member;
@@ -68,7 +70,6 @@ import io.zeebe.util.actor.Actor;
 import io.zeebe.util.buffer.BufferReader;
 import io.zeebe.util.buffer.BufferUtil;
 import org.agrona.DirectBuffer;
-import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.slf4j.Logger;
@@ -101,6 +102,7 @@ public class ClusterManager implements Actor, RaftStateListener
     private final ServerInputSubscription inputSubscription;
 
     private final LogStreamsManager logStreamsManager;
+    private final List<MemberRaftComposite> deadMembers;
 
     public ClusterManager(final ClusterManagerContext context, final ServiceContainer serviceContainer, final TransportComponentCfg transportComponentCfg)
     {
@@ -126,71 +128,26 @@ public class ClusterManager implements Actor, RaftStateListener
         memberListService.setApis(transportComponentCfg.clientApi.toSocketAddress(), transportComponentCfg.replicationApi.toSocketAddress(),
                                   transportComponentCfg.managementApi.toSocketAddress());
 
-        //        context.getGossip().addMembershipListener(new MembershipListener());
+        deadMembers = new ArrayList<>();
+
+        context.getGossip().addMembershipListener(new MembershipListener());
         context.getGossip()
                .addCustomEventListener(TYPE_BUFFER, new APIEventListener());
         context.getGossip()
                .addCustomEventListener(PARTITION_TYPE, new RaftUpdateListener());
+
+        // sync handlers
         context.getGossip().registerSyncRequestHandler(TYPE_BUFFER, new APISyncHandler());
-    }
-
-    private DirectBuffer createPayloadBuffer()
-    {
-        int messageLength = 0;
-        final SocketBindingCfg managementApi = transportComponentCfg.managementApi;
-        messageLength += SIZE_OF_INT; // length of host
-        messageLength += managementApi.host.length(); // host
-        messageLength += SIZE_OF_INT; // port
-
-        final SocketBindingCfg clientApi = transportComponentCfg.clientApi;
-        messageLength += SIZE_OF_INT; // length of host
-        messageLength += clientApi.host.length(); // host
-        messageLength += SIZE_OF_INT; // port
-
-        final SocketBindingCfg replicationApi = transportComponentCfg.replicationApi;
-        messageLength += SIZE_OF_INT; // length of host
-        messageLength += replicationApi.host.length(); // host
-        messageLength += SIZE_OF_INT; // port
-
-        final MutableDirectBuffer directBuffer = new UnsafeBuffer(new byte[messageLength]);
-
-        int offset = 0;
-        // management
-        directBuffer.putInt(offset, managementApi.host.length(), ByteOrder.LITTLE_ENDIAN);
-        offset += SIZE_OF_INT;
-
-        directBuffer.putBytes(offset, managementApi.host.getBytes());
-        offset += managementApi.host.length();
-
-        directBuffer.putInt(offset, managementApi.port, ByteOrder.LITTLE_ENDIAN);
-        offset += SIZE_OF_INT;
-
-        // client
-        directBuffer.putInt(offset, clientApi.host.length(), ByteOrder.LITTLE_ENDIAN);
-        offset += SIZE_OF_INT;
-
-        directBuffer.putBytes(offset, clientApi.host.getBytes());
-        offset += clientApi.host.length();
-
-        directBuffer.putInt(offset, clientApi.port, ByteOrder.LITTLE_ENDIAN);
-        offset += SIZE_OF_INT;
-
-        // replication
-        directBuffer.putInt(offset, replicationApi.host.length(), ByteOrder.LITTLE_ENDIAN);
-        offset += SIZE_OF_INT;
-
-        directBuffer.putBytes(offset, replicationApi.host.getBytes());
-        offset += replicationApi.host.length();
-
-        directBuffer.putInt(offset, replicationApi.port, ByteOrder.LITTLE_ENDIAN);
-
-        return directBuffer;
+        context.getGossip().registerSyncRequestHandler(PARTITION_TYPE, new RaftStateSyncHandler());
     }
 
     public void open()
     {
         final Gossip gossip = context.getGossip();
-        gossip.publishEvent(TYPE_BUFFER, createPayloadBuffer());
+        final DirectBuffer payload = writeAPIAddressesIntoBuffer(transportComponentCfg.managementApi.toSocketAddress(),
+                                                                 transportComponentCfg.replicationApi.toSocketAddress(),
+                                                                 transportComponentCfg.clientApi.toSocketAddress());
+        gossip.publishEvent(TYPE_BUFFER, payload);
 
         final LogStreamsManager logStreamManager = context.getLogStreamsManager();
 
@@ -488,47 +445,79 @@ public class ClusterManager implements Actor, RaftStateListener
             LOG.debug("Partition {} exists already. Ignoring creation request.", createPartitionMessage.getPartitionId());
         }
     }
-    //
-    //    private class MembershipListener implements GossipMembershipListener
-    //    {
-    //        @Override
-    //        public void onAdd(Member member)
-    //        {
-    //            commandQueue.runAsync(() ->
-    //            {
-    //                context.getMemberListService().add(member);
-    //                for (Raft raft : rafts)
-    //                {
-    //                    if (raft.getState() == RaftState.LEADER)
-    //                    {
-    //                        inviteMemberToRaft(raft, member.getAddress());
-    //                    }
-    //                }
-    //            });
-    //        }
-    //
-    //        @Override
-    //        public void onRemove(Member member)
-    //        {
-    //            commandQueue.runAsync(() ->
-    //            {
-    //                context.getMemberListService().remove(member);
-    ////                for (Raft raft : rafts)
-    ////                {
-    //                // should check replication port?
-    ////                    if (raft.getSocketAddress().equals(member.getAddress()))
-    ////                    {
-    ////                        removeRaft(raft);
-    ////                    }
-    ////                }
-    //            });
-    //        }
-    //    }
+//
+//    public MemberRaftComposite resolveMember(SocketAddress memberAddress)
+//    {
+//        MemberRaftComposite memberRaftComposite = new MemberRaftComposite(new Member(memberAddress));
+//        final int indexOfDeadMember = deadMembers.indexOf(memberRaftComposite);
+//        if (indexOfDeadMember == -1)
+//        {
+//            memberRaftComposite = context.getMemberListService().getMember(memberAddress);
+//        }
+//        else
+//        {
+//            memberRaftComposite = deadMembers.get(indexOfDeadMember);
+//        }
+//        return memberRaftComposite;
+//    }
+
+    private class MembershipListener implements GossipMembershipListener
+    {
+        @Override
+        public void onAdd(Member member)
+        {
+            final MemberRaftComposite newMember = new MemberRaftComposite(member);
+            commandQueue.runAsync(() ->
+            {
+                LOG.debug("Add member {} to member list.", newMember);
+                MemberRaftComposite memberRaftComposite = newMember;
+                final int indexOfDeadMember = deadMembers.indexOf(newMember);
+
+                if (indexOfDeadMember > -1)
+                {
+                    memberRaftComposite = deadMembers.remove(indexOfDeadMember);
+                    LOG.debug("Re-add dead member {} to member list", memberRaftComposite);
+                }
+                context.getMemberListService().add(memberRaftComposite);
+
+//                for (Raft raft : rafts)
+//                {
+//                    if (raft.getState() == RaftState.LEADER)
+//                    {
+//                        inviteMemberToRaft(raft, member.getAddress());
+//                    }
+//                }
+            });
+        }
+
+        @Override
+        public void onRemove(Member member)
+        {
+            final SocketAddress memberAddress = member.getAddress();
+            commandQueue.runAsync(() ->
+            {
+                final MemberRaftComposite removedMember = context.getMemberListService()
+                                                                 .remove(memberAddress);
+                LOG.debug("Remove member {} from member list.", removedMember);
+                deadMembers.add(removedMember);
+                //                for (Raft raft : rafts)
+//                {
+                // should check replication port?
+//                    if (raft.getSocketAddress().equals(member.getAddress()))
+//                    {
+//                        removeRaft(raft);
+//                    }
+//                }
+            });
+        }
+    }
+
 
     public CompletableFuture<Topology> requestTopology()
     {
         return commandQueue.runAsync((future) ->
         {
+            LOG.debug("Received topology request.");
             final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
                                                                   .iterator();
             final Topology topology = new Topology();
@@ -563,6 +552,7 @@ public class ClusterManager implements Actor, RaftStateListener
                 }
             }
 
+            LOG.debug("Send topology {} as response.", topology);
             future.complete(topology);
         });
     }
@@ -577,57 +567,27 @@ public class ClusterManager implements Actor, RaftStateListener
             final SocketAddress savedSocketAddress = new SocketAddress(socketAddress);
             commandQueue.runAsync(() ->
             {
+                LOG.debug("Received API event from member {}.", savedSocketAddress);
+
                 final SocketAddress managementApi = new SocketAddress();
                 final SocketAddress clientApi = new SocketAddress();
                 final SocketAddress replicationApi = new SocketAddress();
 
                 int offset = 0;
                 // management
-                final int managementHostLength = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
-                offset += SIZE_OF_INT;
-
-                final byte[] managementHost = new byte[managementHostLength];
-                savedBuffer.getBytes(offset, managementHost);
-                offset += managementHostLength;
-
-                final int managementPort = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
-                offset += SIZE_OF_INT;
-
-                managementApi.host(managementHost, 0, managementHostLength);
-                managementApi.port(managementPort);
-
+                offset = readFromBufferIntoSocketAddress(offset, savedBuffer, managementApi);
                 // client
-                final int clientHostLength = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
-                offset += SIZE_OF_INT;
-
-                final byte[] clientHost = new byte[clientHostLength];
-                savedBuffer.getBytes(offset, clientHost);
-                offset += clientHostLength;
-
-                final int clientPort = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
-                offset += SIZE_OF_INT;
-
-                clientApi.host(clientHost, 0, clientHostLength);
-                clientApi.port(clientPort);
-
+                offset = readFromBufferIntoSocketAddress(offset, savedBuffer, clientApi);
                 // replication
-                final int replicationHostLength = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
-                offset += SIZE_OF_INT;
+                readFromBufferIntoSocketAddress(offset, savedBuffer, replicationApi);
 
-                final byte[] replicationHost = new byte[replicationHostLength];
-                savedBuffer.getBytes(offset, replicationHost);
-                offset += replicationHostLength;
+//                context.getMemberListService()
+//                       .add(new Member(savedSocketAddress));
+                final boolean success = context.getMemberListService()
+                                         .setApis(clientApi, replicationApi, managementApi);
 
-                final int replicationPort = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
-
-                replicationApi.host(replicationHost, 0, replicationHostLength);
-                replicationApi.port(replicationPort);
-
-                context.getMemberListService()
-                       .add(new Member(savedSocketAddress));
-                context.getMemberListService()
-                       .setApis(clientApi, replicationApi, managementApi);
-
+                LOG.debug("Setting API's for member {} was {}successful.", savedSocketAddress, success ? "" : "not ");
+                LOG.debug("Send raft invitations to member {}.", savedSocketAddress);
                 for (Raft raft : rafts)
                 {
                     if (raft.getState() == RaftState.LEADER)
@@ -649,8 +609,15 @@ public class ClusterManager implements Actor, RaftStateListener
             final SocketAddress savedSocketAddress = new SocketAddress(socketAddress);
             commandQueue.runAsync(() ->
             {
+                LOG.debug("Received raft state change event for member {}", savedSocketAddress);
                 final MemberRaftComposite member = context.getMemberListService()
                                                           .getMember(savedSocketAddress);
+
+                if (member == null)
+                {
+                    LOG.debug("Member {} does not exist. Maybe dead? List of dead members: {}", savedSocketAddress, deadMembers);
+                    return;
+                }
 
                 int offset = 0;
                 final int count = savedBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
@@ -674,7 +641,7 @@ public class ClusterManager implements Actor, RaftStateListener
                     member.updateRaft(partition, topicBuffer, state == (byte) 1 ? RaftState.LEADER : RaftState.FOLLOWER);
                 }
 
-                LOG.trace("Received raft state change event for member {} - local member state: {}", savedSocketAddress, context.getMemberListService());
+                LOG.debug("Handled raft state change event for member {} - local member state: {}", savedSocketAddress, context.getMemberListService());
             });
         }
     }
@@ -702,43 +669,18 @@ public class ClusterManager implements Actor, RaftStateListener
                     LOG.trace("On raft state change for {} - local member states: {}", socketAddress, context.getMemberListService());
 
                     // send complete list of partition where I'm a follower or leader
-                    final int count = rafts.size();
-                    final ExpandableArrayBuffer directBuffer = new ExpandableArrayBuffer();
-
-                    int offset = 0;
-                    directBuffer.putInt(offset, count, ByteOrder.LITTLE_ENDIAN);
-                    offset += SIZE_OF_INT;
-
-                    for (int i = 0; i < count; i++)
-                    {
-                        final RaftStateComposite raft = rafts.get(i);
-
-                        directBuffer.putInt(offset, raft.getPartition(), ByteOrder.LITTLE_ENDIAN);
-                        offset += SIZE_OF_INT;
-
-                        final DirectBuffer currentTopicName = raft.getTopicName();
-                        directBuffer.putInt(offset, currentTopicName.capacity(), ByteOrder.LITTLE_ENDIAN);
-                        offset += SIZE_OF_INT;
-
-                        directBuffer.putBytes(offset, currentTopicName, 0, currentTopicName.capacity());
-                        offset += currentTopicName.capacity();
-
-                        directBuffer.putByte(offset, raft.getRaftState() == RaftState.LEADER ? (byte) 1 : (byte) 0);
-                        offset += SIZE_OF_BYTE;
-                    }
+                    final DirectBuffer payload = writeRaftsIntoBuffer(rafts);
 
                     LOG.trace("Publish event for partition {} state change {}", partitionId, raftState);
 
                     context.getGossip()
-                           .publishEvent(PARTITION_TYPE, directBuffer);
+                           .publishEvent(PARTITION_TYPE, payload);
 
                     break;
                 }
                 default:
                     break;
             }
-
-
         });
     }
 
@@ -747,21 +689,26 @@ public class ClusterManager implements Actor, RaftStateListener
         @Override
         public void onSyncRequest(GossipSyncRequest request)
         {
-            final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
-                                                                  .iterator();
-
-            while (iterator.hasNext())
+            commandQueue.runAsync(() ->
             {
-                final MemberRaftComposite next = iterator.next();
+                LOG.debug("Got API sync request.");
+                final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
+                                                                      .iterator();
 
-                // build payload from apis
-                // next.getManagementApi()
-                // replication
-                // client
+                while (iterator.hasNext())
+                {
+                    final MemberRaftComposite next = iterator.next();
 
-                // request.addPayload(next.getMember().getAddress(), payload)
-            }
-            request.done();
+                    if (next.hasApis())
+                    {
+                        final DirectBuffer payload = writeAPIAddressesIntoBuffer(next.getManagementApi(), next.getReplicationApi(), next.getClientApi());
+                        request.addPayload(next.getMember()
+                                               .getAddress(), payload);
+                    }
+                }
+                request.done();
+                LOG.debug("Send API sync response.");
+            });
         }
     }
 
@@ -770,44 +717,23 @@ public class ClusterManager implements Actor, RaftStateListener
         @Override
         public void onSyncRequest(GossipSyncRequest request)
         {
-            final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
-                                                                  .iterator();
-            while (iterator.hasNext())
+            commandQueue.runAsync(() ->
             {
-                final MemberRaftComposite next = iterator.next();
+                LOG.debug("Got RAFT state sync request.");
+                final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
+                                                                      .iterator();
+                while (iterator.hasNext())
+                {
+                    final MemberRaftComposite next = iterator.next();
 
-                // build payload from rafts
-                //
-//                next.getRafts()
-//                final int count = rafts.size();
-//                final ExpandableArrayBuffer directBuffer = new ExpandableArrayBuffer();
-//
-//                int offset = 0;
-//                directBuffer.putInt(offset, count, ByteOrder.LITTLE_ENDIAN);
-//                offset += SIZE_OF_INT;
-//
-//                for (int i = 0; i < count; i++)
-//                {
-//                    final RaftStateComposite raft = rafts.get(i);
-//
-//                    directBuffer.putInt(offset, raft.getPartition(), ByteOrder.LITTLE_ENDIAN);
-//                    offset += SIZE_OF_INT;
-//
-//                    final DirectBuffer currentTopicName = raft.getTopicName();
-//                    directBuffer.putInt(offset, currentTopicName.capacity(), ByteOrder.LITTLE_ENDIAN);
-//                    offset += SIZE_OF_INT;
-//
-//                    directBuffer.putBytes(offset, currentTopicName, 0, currentTopicName.capacity());
-//                    offset += currentTopicName.capacity();
-//
-//                    directBuffer.putByte(offset, raft.getRaftState() == RaftState.LEADER ? (byte) 1 : (byte) 0);
-//                    offset += SIZE_OF_BYTE;
-//                }
-//
+                    final DirectBuffer payload = writeRaftsIntoBuffer(next.getRafts());
+                    request.addPayload(next.getMember()
+                                           .getAddress(), payload);
+                }
+                request.done();
 
-                // request.addPayload(next.getMember().getAddress(), payload)
-            }
-            request.done();
+                LOG.debug("Send RAFT state sync response.");
+            });
         }
     }
 

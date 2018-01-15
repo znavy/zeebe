@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -12,10 +13,12 @@ import io.zeebe.broker.Broker;
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.clustering.impl.TopologyResponse;
+import io.zeebe.gossip.Loggers;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
 import io.zeebe.test.util.AutoCloseableRule;
 import io.zeebe.transport.SocketAddress;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -28,20 +31,33 @@ public class GossipClusteringTest
 {
     private static final int PARTITION_COUNT = 5;
 
-    @Rule
-    public AutoCloseableRule closeables = new AutoCloseableRule();
+//    @Rule
+//    public AutoCloseableRule closeables = new AutoCloseableRule();
 
     @Rule
     public ClientRule clientRule = new ClientRule(false);
 
-    @Rule
-    public Timeout timeout = new Timeout(30, TimeUnit.SECONDS);
+//    @Rule
+//    public Timeout timeout = new Timeout(30, TimeUnit.SECONDS);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
     private ZeebeClient client;
     private List<Broker> brokers;
+
+    @After
+    public void tearDown()
+    {
+        Loggers.GOSSIP_LOGGER.debug("Close client and brokers!");
+        client.close();
+
+        Collections.reverse(brokers);
+        for (Broker broker : brokers)
+        {
+            broker.close();
+        }
+    }
 
     @Test
     public void shouldStartCluster()
@@ -56,8 +72,20 @@ public class GossipClusteringTest
         brokers.add(startBroker("zeebe.cluster.3.cfg.toml"));
 
         // then wait until cluster is ready
-        doRepeatedly(() -> client.requestTopology().execute().getBrokers())
-            .until(topologyBroker -> topologyBroker.size() == brokers.size());
+        Loggers.GOSSIP_LOGGER.debug("request topology repeatedly!");
+        doRepeatedly(() -> {
+            final TopologyResponse execute = client.requestTopology()
+                                                   .execute();
+            Loggers.GOSSIP_LOGGER.debug("Topology brokers {}", execute);
+            return execute.getBrokers();
+        })
+            .until(topologyBroker -> {
+                if (topologyBroker == null)
+                    return false;
+                Loggers.GOSSIP_LOGGER.debug("Recevied brokers: {} ", topologyBroker);
+                Loggers.GOSSIP_LOGGER.debug("Have broker: {} ", brokers);
+                return topologyBroker.size() == this.brokers.size();
+            } );
     }
 
 
@@ -99,7 +127,7 @@ public class GossipClusteringTest
     {
         final InputStream config = this.getClass().getClassLoader().getResourceAsStream(configFile);
         final Broker broker = new Broker(config);
-        closeables.manage(broker);
+//        closeables.manage(broker);
 
         return broker;
     }

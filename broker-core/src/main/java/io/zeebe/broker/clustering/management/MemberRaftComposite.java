@@ -20,6 +20,7 @@ package io.zeebe.broker.clustering.management;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 import io.zeebe.gossip.membership.Member;
 import io.zeebe.raft.state.RaftState;
@@ -102,6 +103,11 @@ public class MemberRaftComposite
         return rafts.iterator();
     }
 
+    public boolean hasApis()
+    {
+        return clientApi != null && replicationApi != null && managementApi != null;
+    }
+
     public SocketAddress getClientApi()
     {
         return clientApi;
@@ -136,5 +142,27 @@ public class MemberRaftComposite
     public String toString()
     {
         return "MemberRaftComposite{" + "member=" + member + ", rafts=" + rafts + '}';
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+        final MemberRaftComposite that = (MemberRaftComposite) o;
+        return Objects.equals(member, that.member);
+    }
+
+    @Override
+    public int hashCode()
+    {
+
+        return Objects.hash(member);
     }
 }
