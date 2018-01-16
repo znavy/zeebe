@@ -9,20 +9,33 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.zeebe.broker.Broker;
+import io.zeebe.broker.clustering.handler.Topology;
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.client.ZeebeClient;
+import io.zeebe.client.clustering.impl.TopicLeader;
 import io.zeebe.client.clustering.impl.TopologyResponse;
+import io.zeebe.client.impl.data.MsgPackConverter;
 import io.zeebe.gossip.Loggers;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
 import io.zeebe.test.util.AutoCloseableRule;
 import io.zeebe.transport.SocketAddress;
+import io.zeebe.util.buffer.BufferUtil;
+import org.agrona.DirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.io.DirectBufferInputStream;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
+import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 /**
  *
@@ -31,8 +44,8 @@ public class GossipClusteringTest
 {
     private static final int PARTITION_COUNT = 5;
 
-//    @Rule
-//    public AutoCloseableRule closeables = new AutoCloseableRule();
+    @Rule
+    public AutoCloseableRule closeables = new AutoCloseableRule();
 
     @Rule
     public ClientRule clientRule = new ClientRule(false);
@@ -46,25 +59,30 @@ public class GossipClusteringTest
     private ZeebeClient client;
     private List<Broker> brokers;
 
-    @After
-    public void tearDown()
+    @Before
+    public void startUp()
     {
-        Loggers.GOSSIP_LOGGER.debug("Close client and brokers!");
-        client.close();
-
-        Collections.reverse(brokers);
-        for (Broker broker : brokers)
-        {
-            broker.close();
-        }
+        client = clientRule.getClient();
+        brokers = new ArrayList<>();
     }
+
+//    @After
+//    public void tearDown()
+//    {
+//        Loggers.GOSSIP_LOGGER.debug("Close client and brokers!");
+//        client.close();
+//
+//        Collections.reverse(brokers);
+//        for (Broker broker : brokers)
+//        {
+//            broker.close();
+//        }
+//    }
 
     @Test
     public void shouldStartCluster()
     {
         // given
-        client = clientRule.getClient();
-        brokers = new ArrayList<>();
 
         // when
         brokers.add(startBroker("zeebe.cluster.1.cfg.toml"));
@@ -72,20 +90,13 @@ public class GossipClusteringTest
         brokers.add(startBroker("zeebe.cluster.3.cfg.toml"));
 
         // then wait until cluster is ready
-        Loggers.GOSSIP_LOGGER.debug("request topology repeatedly!");
-        doRepeatedly(() -> {
-            final TopologyResponse execute = client.requestTopology()
-                                                   .execute();
-            Loggers.GOSSIP_LOGGER.debug("Topology brokers {}", execute);
-            return execute.getBrokers();
-        })
-            .until(topologyBroker -> {
-                if (topologyBroker == null)
-                    return false;
-                Loggers.GOSSIP_LOGGER.debug("Recevied brokers: {} ", topologyBroker);
-                Loggers.GOSSIP_LOGGER.debug("Have broker: {} ", brokers);
-                return topologyBroker.size() == this.brokers.size();
-            } );
+        final List<SocketAddress> topologyBrokers =
+            doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+                .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 3);
+
+        assertThat(topologyBrokers).containsExactly(new SocketAddress("localhost", 51015),
+                                                    new SocketAddress("localhost", 41015),
+                                                    new SocketAddress("localhost", 31015));
     }
 
 
@@ -93,41 +104,78 @@ public class GossipClusteringTest
     public void shouldDistributePartitionsAndLeaderInformationInCluster()
     {
         // given
-        client = clientRule.getClient();
-
-        brokers = new ArrayList<>();
         brokers.add(startBroker("zeebe.cluster.1.cfg.toml"));
         brokers.add(startBroker("zeebe.cluster.2.cfg.toml"));
         brokers.add(startBroker("zeebe.cluster.3.cfg.toml"));
 
         doRepeatedly(() -> client.requestTopology().execute().getBrokers())
-            .until(topologyBroker -> topologyBroker.size() == brokers.size());
+            .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 3);
 
         // when
         client.topics().create("test", PARTITION_COUNT).execute();
 
         // then
-        final TopologyResponse topology = client.requestTopology()
-                                                .execute();
-
-        assertThat(topology.getBrokers().size()).isEqualTo(brokers.size());
-        final long partitionLeaderCount = topology.getTopicLeaders()
-                                  .stream()
-                                  .filter((leader) -> leader.getTopicName()
-                                                            .equals("test"))
-                                  .count();
+        final List<TopicLeader> topicLeaders = doRepeatedly(() -> client.requestTopology()
+                                                                 .execute()
+                                                                 .getTopicLeaders()).until(leaders -> leaders != null && leaders.size() >= 5);
+        final long partitionLeaderCount = topicLeaders.stream()
+                                                      .filter((leader) -> leader.getTopicName().equals("test"))
+                                                      .count();
         assertThat(partitionLeaderCount).isEqualTo(PARTITION_COUNT);
     }
 
-    // TODO test if broker dies topology has one broker less
+    @Test
+    public void shouldRemoveMemberFromTopology()
+    {
+        // given
+        brokers.add(startBroker("zeebe.cluster.1.cfg.toml"));
+        brokers.add(startBroker("zeebe.cluster.2.cfg.toml"));
+        brokers.add(startBroker("zeebe.cluster.3.cfg.toml"));
 
-    // TODO test sync - if node comes later to the cluster
+        doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+            .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 3);
+
+        // when
+        final Broker removedBroker = brokers.remove(2);
+        removedBroker.close();
+
+        // then
+        final List<SocketAddress> topologyBrokers =
+            doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+                .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 2);
+
+        assertThat(topologyBrokers).containsExactly(new SocketAddress("localhost", 51015),
+                                                    new SocketAddress("localhost", 41015));
+    }
+
+    @Test
+    public void shouldAddLaterToCluster()
+    {
+        // given
+        brokers.add(startBroker("zeebe.cluster.1.cfg.toml"));
+        brokers.add(startBroker("zeebe.cluster.2.cfg.toml"));
+
+        doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+            .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 2);
+
+        // when
+        brokers.add(startBroker("zeebe.cluster.3.cfg.toml"));
+
+        // then
+        final List<SocketAddress> topologyBrokers =
+            doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+                .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 3);
+
+        assertThat(topologyBrokers).containsExactly(new SocketAddress("localhost", 51015),
+                                                    new SocketAddress("localhost", 41015),
+                                                    new SocketAddress("localhost", 31015));
+    }
 
     private Broker startBroker(String configFile)
     {
         final InputStream config = this.getClass().getClassLoader().getResourceAsStream(configFile);
         final Broker broker = new Broker(config);
-//        closeables.manage(broker);
+        closeables.manage(broker);
 
         return broker;
     }

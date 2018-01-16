@@ -57,6 +57,7 @@ import io.zeebe.gossip.membership.Member;
 import io.zeebe.logstreams.impl.log.fs.FsLogStorage;
 import io.zeebe.logstreams.log.LogStream;
 import io.zeebe.msgpack.property.ArrayProperty;
+import io.zeebe.msgpack.value.ValueArray;
 import io.zeebe.protocol.Protocol;
 import io.zeebe.raft.Raft;
 import io.zeebe.raft.RaftPersistentStorage;
@@ -525,34 +526,38 @@ public class ClusterManager implements Actor, RaftStateListener
             {
                 final MemberRaftComposite next = iterator.next();
 
-                final ArrayProperty<BrokerAddress> brokers = topology.brokers();
+                final ValueArray<BrokerAddress> brokers = topology.brokers();
 
                 final SocketAddress clientApi = next.getClientApi();
-                brokers.add()
-                       .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
-                       .setPort(clientApi.port());
 
-                final Iterator<RaftStateComposite> raftTupleIt = next.getRaftIterator();
-                while (raftTupleIt.hasNext())
+                if (clientApi != null)
                 {
-                    final RaftStateComposite nextRaftState = raftTupleIt.next();
+                    brokers.add()
+                           .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
+                           .setPort(clientApi.port());
 
-                    if (nextRaftState.getRaftState() == RaftState.LEADER)
+                    final Iterator<RaftStateComposite> raftTupleIt = next.getRaftIterator();
+                    while (raftTupleIt.hasNext())
                     {
-                        final DirectBuffer directBuffer = BufferUtil.cloneBuffer(nextRaftState.getTopicName());
+                        final RaftStateComposite nextRaftState = raftTupleIt.next();
 
-                        topology.topicLeaders()
-                                .add()
-                                .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
-                                .setPort(clientApi.port())
-                                .setTopicName(directBuffer, 0, directBuffer.capacity())
-                                .setPartitionId(nextRaftState.getPartition());
+                        if (nextRaftState.getRaftState() == RaftState.LEADER)
+                        {
+                            final DirectBuffer directBuffer = BufferUtil.cloneBuffer(nextRaftState.getTopicName());
 
+                            topology.topicLeaders()
+                                    .add()
+                                    .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
+                                    .setPort(clientApi.port())
+                                    .setTopicName(directBuffer, 0, directBuffer.capacity())
+                                    .setPartitionId(nextRaftState.getPartition());
+
+                        }
                     }
                 }
             }
 
-            LOG.debug("Send topology {} as response.", topology);
+//            LOG.debug("Send topology {} as response.", topology);
             future.complete(topology);
         });
     }
