@@ -88,24 +88,24 @@ public class PartitionManagerImpl implements PartitionManager
 
     protected static class MemberIterator implements Iterator<Member>
     {
-        protected Iterator<MemberRaftComposite> peerListIt;
+        protected Iterator<MemberRaftComposite> memberListIterator;
         protected MemberImpl currentMember = new MemberImpl();
 
         public void wrap(MemberListService memberListService)
         {
-            this.peerListIt = memberListService.iterator();
+            this.memberListIterator = memberListService.iterator();
         }
 
         @Override
         public boolean hasNext()
         {
-            return peerListIt.hasNext();
+            return memberListIterator.hasNext();
         }
 
         @Override
         public Member next()
         {
-            currentMember.wrap(peerListIt.next());
+            currentMember.wrap(memberListIterator.next());
             return currentMember;
         }
     }

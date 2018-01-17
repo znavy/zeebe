@@ -29,7 +29,6 @@ import io.zeebe.transport.ClientTransport;
 public class PartitionManagerService implements Service<PartitionManager>
 {
     private final Injector<MemberListService> memberListServiceInjector = new Injector<>();
-//    private final Injector<PeerList> peerListInjector = new Injector<>();
     private final Injector<ClientTransport> managementClientInjector = new Injector<>();
 
     private PartitionManager service;
@@ -37,7 +36,6 @@ public class PartitionManagerService implements Service<PartitionManager>
     @Override
     public void start(ServiceStartContext startContext)
     {
-//        final PeerList peerList = peerListInjector.getValue();
         final ClientTransport managementClient = managementClientInjector.getValue();
 
         service = new PartitionManagerImpl(memberListServiceInjector.getValue(), managementClient);

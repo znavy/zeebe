@@ -32,12 +32,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.zeebe.broker.Loggers;
-import io.zeebe.broker.clustering.handler.BrokerAddress;
 import io.zeebe.broker.clustering.handler.Topology;
+import io.zeebe.broker.clustering.management.handler.ClusterManagerFragmentHandler;
 import io.zeebe.broker.clustering.management.memberList.ClusterMemberListManager;
 import io.zeebe.broker.clustering.management.memberList.MemberRaftComposite;
-import io.zeebe.broker.clustering.management.memberList.RaftStateComposite;
-import io.zeebe.broker.clustering.management.handler.ClusterManagerFragmentHandler;
 import io.zeebe.broker.clustering.management.message.CreatePartitionMessage;
 import io.zeebe.broker.clustering.management.message.InvitationRequest;
 import io.zeebe.broker.clustering.management.message.InvitationResponse;
@@ -49,7 +47,6 @@ import io.zeebe.broker.transport.cfg.SocketBindingCfg;
 import io.zeebe.broker.transport.cfg.TransportComponentCfg;
 import io.zeebe.logstreams.impl.log.fs.FsLogStorage;
 import io.zeebe.logstreams.log.LogStream;
-import io.zeebe.msgpack.value.ValueArray;
 import io.zeebe.protocol.Protocol;
 import io.zeebe.raft.Raft;
 import io.zeebe.raft.RaftPersistentStorage;
@@ -59,7 +56,6 @@ import io.zeebe.servicecontainer.ServiceName;
 import io.zeebe.transport.*;
 import io.zeebe.util.DeferredCommandContext;
 import io.zeebe.util.actor.Actor;
-import io.zeebe.util.buffer.BufferUtil;
 import org.agrona.DirectBuffer;
 import org.slf4j.Logger;
 
@@ -359,51 +355,7 @@ public class ClusterManager implements Actor
 
     public CompletableFuture<Topology> requestTopology()
     {
-        return commandQueue.runAsync((future) ->
-        {
-            LOG.debug("Received topology request.");
-            final Iterator<MemberRaftComposite> iterator = context.getMemberListService()
-                                                                  .iterator();
-            final Topology topology = new Topology();
-            while (iterator.hasNext())
-            {
-                final MemberRaftComposite next = iterator.next();
-
-                final ValueArray<BrokerAddress> brokers = topology.brokers();
-
-                final SocketAddress clientApi = next.getClientApi();
-
-                if (clientApi != null)
-                {
-                    brokers.add()
-                           .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
-                           .setPort(clientApi.port());
-
-                    final Iterator<RaftStateComposite> raftTupleIt = next.getRaftIterator();
-                    while (raftTupleIt.hasNext())
-                    {
-                        final RaftStateComposite nextRaftState = raftTupleIt.next();
-
-                        if (nextRaftState.getRaftState() == RaftState.LEADER)
-                        {
-                            final DirectBuffer directBuffer = BufferUtil.cloneBuffer(nextRaftState.getTopicName());
-
-                            topology.topicLeaders()
-                                    .add()
-                                    .setHost(clientApi.getHostBuffer(), 0, clientApi.hostLength())
-                                    .setPort(clientApi.port())
-                                    .setTopicName(directBuffer, 0, directBuffer.capacity())
-                                    .setPartitionId(nextRaftState.getPartition());
-
-                        }
-                    }
-                }
-            }
-
-            // DO NOT LOG TOPOLOGY SEE https://github.com/zeebe-io/zeebe/issues/616
-            // LOG.debug("Send topology {} as response.", topology);
-            future.complete(topology);
-        });
+        return clusterMemberListManager.createTopology();
     }
 
     /**
