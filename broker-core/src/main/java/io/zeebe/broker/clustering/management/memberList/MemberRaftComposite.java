@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package io.zeebe.broker.clustering.management;
+package io.zeebe.broker.clustering.management.memberList;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,9 +30,6 @@ import io.zeebe.util.collection.IntIterator;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntArrayList;
 
-/**
- *
- */
 public class MemberRaftComposite
 {
     private final Member member;
@@ -53,11 +50,6 @@ public class MemberRaftComposite
         return member;
     }
 
-//    public void addRaft(int partition, RaftState raftState)
-//    {
-//        rafts.add(new IntTuple<>(partition, raftState));
-//    }
-
     public void updateRaft(int partition, DirectBuffer topicName, RaftState raftState)
     {
         boolean updated = false;
@@ -65,7 +57,6 @@ public class MemberRaftComposite
         {
             if (raft.getPartition() == partition)
             {
-                // set tuple.getLeft()
                 raft.setRaftState(raftState);
                 updated = true;
                 break;

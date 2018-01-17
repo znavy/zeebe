@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package io.zeebe.broker.clustering.management.gossip;
+package io.zeebe.broker.clustering.management.memberList;
 
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
@@ -24,8 +24,6 @@ import io.zeebe.broker.Loggers;
 import io.zeebe.broker.clustering.handler.BrokerAddress;
 import io.zeebe.broker.clustering.handler.Topology;
 import io.zeebe.broker.clustering.management.ClusterManagerContext;
-import io.zeebe.broker.clustering.management.MemberRaftComposite;
-import io.zeebe.broker.clustering.management.RaftStateComposite;
 import io.zeebe.msgpack.value.ValueArray;
 import io.zeebe.raft.state.RaftState;
 import io.zeebe.transport.SocketAddress;

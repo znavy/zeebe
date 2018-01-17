@@ -17,6 +17,7 @@
  */
 package io.zeebe.broker.clustering.management;
 
+import io.zeebe.broker.clustering.management.memberList.MemberListService;
 import io.zeebe.broker.logstreams.LogStreamsManager;
 import io.zeebe.broker.system.deployment.handler.WorkflowRequestMessageHandler;
 import io.zeebe.gossip.Gossip;

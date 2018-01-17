@@ -17,7 +17,7 @@
  */
 package io.zeebe.broker.system.log;
 
-import io.zeebe.broker.clustering.management.MemberListService;
+import io.zeebe.broker.clustering.management.memberList.MemberListService;
 import io.zeebe.broker.clustering.management.PartitionManager;
 import io.zeebe.broker.clustering.management.PartitionManagerImpl;
 import io.zeebe.servicecontainer.Injector;

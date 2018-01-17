@@ -1,4 +1,4 @@
-package io.zeebe.broker.clustering.management.gossip;
+package io.zeebe.broker.clustering.management.memberList;
 
 import static io.zeebe.broker.clustering.management.ClusteringHelper.*;
 
@@ -8,9 +8,6 @@ import java.util.function.Consumer;
 
 import io.zeebe.broker.Loggers;
 import io.zeebe.broker.clustering.management.ClusterManagerContext;
-import io.zeebe.broker.clustering.management.MemberListService;
-import io.zeebe.broker.clustering.management.MemberRaftComposite;
-import io.zeebe.broker.clustering.management.RaftStateComposite;
 import io.zeebe.broker.transport.cfg.TransportComponentCfg;
 import io.zeebe.gossip.Gossip;
 import io.zeebe.gossip.GossipCustomEventListener;

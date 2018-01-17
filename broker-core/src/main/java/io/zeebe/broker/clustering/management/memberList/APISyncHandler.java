@@ -15,29 +15,28 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package io.zeebe.broker.clustering.management.gossip;
+package io.zeebe.broker.clustering.management.memberList;
 
-import static io.zeebe.broker.clustering.management.ClusteringHelper.writeRaftsIntoBuffer;
+import static io.zeebe.broker.clustering.management.ClusteringHelper.writeAPIAddressesIntoBuffer;
 
 import java.util.Iterator;
 
 import io.zeebe.broker.Loggers;
 import io.zeebe.broker.clustering.management.ClusterManagerContext;
-import io.zeebe.broker.clustering.management.MemberRaftComposite;
 import io.zeebe.gossip.GossipSyncRequestHandler;
 import io.zeebe.gossip.dissemination.GossipSyncRequest;
 import io.zeebe.util.DeferredCommandContext;
 import org.agrona.DirectBuffer;
 import org.slf4j.Logger;
 
-public final class RaftStateSyncHandler implements GossipSyncRequestHandler
+public final class APISyncHandler implements GossipSyncRequestHandler
 {
     public static final Logger LOG = Loggers.CLUSTERING_LOGGER;
 
     private final DeferredCommandContext clusterManagerCmdQueue;
     private final ClusterManagerContext clusterManagerContext;
 
-    public RaftStateSyncHandler(DeferredCommandContext clusterManagerCmdQueue, ClusterManagerContext clusterManagerContext)
+    public APISyncHandler(DeferredCommandContext clusterManagerCmdQueue, ClusterManagerContext clusterManagerContext)
     {
         this.clusterManagerCmdQueue = clusterManagerCmdQueue;
         this.clusterManagerContext = clusterManagerContext;
@@ -46,22 +45,24 @@ public final class RaftStateSyncHandler implements GossipSyncRequestHandler
     @Override
     public void onSyncRequest(GossipSyncRequest request)
     {
-        clusterManagerCmdQueue.runAsync(() ->
-        {
-            LOG.debug("Got RAFT state sync request.");
+        clusterManagerCmdQueue.runAsync(() -> {
+            LOG.debug("Got API sync request.");
             final Iterator<MemberRaftComposite> iterator = clusterManagerContext.getMemberListService()
                                                                                 .iterator();
+
             while (iterator.hasNext())
             {
                 final MemberRaftComposite next = iterator.next();
 
-                final DirectBuffer payload = writeRaftsIntoBuffer(next.getRafts());
-                request.addPayload(next.getMember()
-                                       .getAddress(), payload);
+                if (next.hasApis())
+                {
+                    final DirectBuffer payload = writeAPIAddressesIntoBuffer(next.getManagementApi(), next.getReplicationApi(), next.getClientApi());
+                    request.addPayload(next.getMember()
+                                           .getAddress(), payload);
+                }
             }
             request.done();
-
-            LOG.debug("Send RAFT state sync response.");
+            LOG.debug("Send API sync response.");
         });
     }
 }

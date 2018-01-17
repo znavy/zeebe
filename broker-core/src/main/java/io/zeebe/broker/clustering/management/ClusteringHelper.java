@@ -23,6 +23,8 @@ import static org.agrona.BitUtil.SIZE_OF_INT;
 import java.nio.ByteOrder;
 import java.util.List;
 
+import io.zeebe.broker.clustering.management.memberList.MemberRaftComposite;
+import io.zeebe.broker.clustering.management.memberList.RaftStateComposite;
 import io.zeebe.raft.state.RaftState;
 import io.zeebe.transport.SocketAddress;
 import org.agrona.DirectBuffer;

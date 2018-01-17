@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package io.zeebe.broker.clustering.management;
+package io.zeebe.broker.clustering.management.memberList;
 
 import io.zeebe.raft.state.RaftState;
 import io.zeebe.util.buffer.BufferUtil;
@@ -28,15 +28,7 @@ public class RaftStateComposite
 {
     private final int partition;
     private final DirectBuffer topicName;
-
     private RaftState raftState;
-
-    public RaftStateComposite(int partition, DirectBuffer topicName)
-    {
-        this.partition = partition;
-        this.topicName = BufferUtil.cloneBuffer(topicName);
-    }
-
 
     public RaftStateComposite(int partition, DirectBuffer topicName, RaftState raftState)
     {

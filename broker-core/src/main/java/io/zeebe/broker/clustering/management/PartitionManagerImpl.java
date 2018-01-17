@@ -20,6 +20,8 @@ package io.zeebe.broker.clustering.management;
 import java.util.Iterator;
 
 import io.zeebe.broker.Loggers;
+import io.zeebe.broker.clustering.management.memberList.MemberListService;
+import io.zeebe.broker.clustering.management.memberList.MemberRaftComposite;
 import io.zeebe.broker.clustering.management.message.CreatePartitionMessage;
 import io.zeebe.broker.clustering.member.Member;
 import io.zeebe.transport.ClientTransport;

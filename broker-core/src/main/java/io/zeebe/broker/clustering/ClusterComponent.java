@@ -25,7 +25,7 @@ import static io.zeebe.broker.transport.TransportServiceNames.MANAGEMENT_API_CLI
 import static io.zeebe.broker.transport.TransportServiceNames.MANAGEMENT_API_SERVER_NAME;
 
 import io.zeebe.broker.clustering.gossip.service.GossipService;
-import io.zeebe.broker.clustering.management.MemberListService;
+import io.zeebe.broker.clustering.management.memberList.MemberListService;
 import io.zeebe.broker.clustering.management.service.ClusterManagerContextService;
 import io.zeebe.broker.clustering.management.service.ClusterManagerService;
 import io.zeebe.broker.system.Component;
