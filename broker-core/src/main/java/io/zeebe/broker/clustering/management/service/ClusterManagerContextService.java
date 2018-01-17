@@ -34,8 +34,6 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
 {
     private final Injector<ClientTransport> clientTransportInjector = new Injector<>();
     private final Injector<BufferingServerTransport> managementApiTransportInjector = new Injector<>();
-//    private final Injector<PeerList> peerListInjector = new Injector<>();
-//    private final Injector<Peer> localPeerInjector = new Injector<>();
     private final Injector<ActorScheduler> actorSchedulerInjector = new Injector<>();
     private final Injector<LogStreamsManager> logStreamsManagerInjector = new Injector<>();
     private final Injector<WorkflowRequestMessageHandler> workflowRequestMessageHandlerInjector = new Injector<>();
@@ -49,8 +47,6 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
     {
         final ClientTransport clientTransport = clientTransportInjector.getValue();
         final BufferingServerTransport serverTransport = managementApiTransportInjector.getValue();
-//        final PeerList peers = peerListInjector.getValue();
-//        final Peer localPeer = localPeerInjector.getValue();
         final ActorScheduler actorScheduler = actorSchedulerInjector.getValue();
         final LogStreamsManager logStreamsManager = logStreamsManagerInjector.getValue();
         final WorkflowRequestMessageHandler workflowRequestMessageHandler = workflowRequestMessageHandlerInjector.getValue();
@@ -58,11 +54,9 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
         context = new ClusterManagerContext();
         context.setGossip(gossipInjector.getValue());
         context.setActorScheduler(actorScheduler);
-//        context.setLocalPeer(localPeer);
         context.setClientTransport(clientTransport);
         context.setServerTransport(serverTransport);
         context.setMemberListService(memberListServiceInjector.getValue());
-//        context.setPeers(peers);
         context.setLogStreamsManager(logStreamsManager);
         context.setWorkflowRequestMessageHandler(workflowRequestMessageHandler);
     }
@@ -87,16 +81,6 @@ public class ClusterManagerContextService implements Service<ClusterManagerConte
     {
         return gossipInjector;
     }
-
-    //    public Injector<PeerList> getPeerListInjector()
-//    {
-//        return peerListInjector;
-//    }
-//
-//    public Injector<Peer> getLocalPeerInjector()
-//    {
-//        return localPeerInjector;
-//    }
 
     public Injector<ActorScheduler> getActorSchedulerInjector()
     {

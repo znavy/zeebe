@@ -45,7 +45,6 @@ public class MemberListService implements Service<MemberListService>
         return memberRaftComposite;
     }
 
-
     public void add(MemberRaftComposite member)
     {
         compositeList.add(member);
@@ -76,19 +75,6 @@ public class MemberListService implements Service<MemberListService>
                                    .equals(socketAddress))
             {
                 return memberRaftComposite;
-            }
-        }
-        return null;
-    }
-
-    public List<RaftStateComposite> getRafts(SocketAddress socketAddress)
-    {
-        for (MemberRaftComposite memberRaftComposite : compositeList)
-        {
-            if (memberRaftComposite.getManagementApi()
-                                   .equals(socketAddress))
-            {
-                return memberRaftComposite.getRafts();
             }
         }
         return null;

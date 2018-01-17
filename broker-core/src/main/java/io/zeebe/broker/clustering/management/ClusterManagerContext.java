@@ -27,8 +27,6 @@ import io.zeebe.util.actor.ActorScheduler;
 public class ClusterManagerContext
 {
     private ActorScheduler actorScheduler;
-//    private Peer localPeer;
-//    private PeerList peers;
     private LogStreamsManager logStreamsManager;
     private WorkflowRequestMessageHandler workflowRequestMessageHandler;
     private ClientTransport clientTransport;
@@ -66,16 +64,6 @@ public class ClusterManagerContext
         this.memberListService = memberListService;
     }
 
-    //    public Peer getLocalPeer()
-//    {
-//        return localPeer;
-//    }
-//
-//    public void setLocalPeer(Peer localPeer)
-//    {
-//        this.localPeer = localPeer;
-//    }
-
     public BufferingServerTransport getServerTransport()
     {
         return serverTransport;
@@ -95,16 +83,6 @@ public class ClusterManagerContext
     {
         this.clientTransport = clientTransport;
     }
-
-//    public PeerList getPeers()
-//    {
-//        return peers;
-//    }
-//
-//    public void setPeers(PeerList peers)
-//    {
-//        this.peers = peers;
-//    }
 
     public LogStreamsManager getLogStreamsManager()
     {

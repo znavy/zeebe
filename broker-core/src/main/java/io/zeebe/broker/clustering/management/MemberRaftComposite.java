@@ -42,7 +42,7 @@ public class MemberRaftComposite
 
     private final List<RaftStateComposite> rafts;
 
-    MemberRaftComposite(Member member)
+    public MemberRaftComposite(Member member)
     {
         this.member = member;
         this.rafts = new ArrayList<>();
