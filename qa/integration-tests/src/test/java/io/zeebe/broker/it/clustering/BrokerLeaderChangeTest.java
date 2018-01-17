@@ -19,36 +19,27 @@ import static io.zeebe.test.util.TestUtil.doRepeatedly;
 import static io.zeebe.test.util.TestUtil.waitUntil;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.zeebe.client.clustering.impl.TopicLeader;
-import io.zeebe.test.util.AutoCloseableRule;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.zeebe.broker.Broker;
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.client.TasksClient;
 import io.zeebe.client.TopicsClient;
 import io.zeebe.client.ZeebeClient;
-import io.zeebe.client.clustering.impl.ClientTopologyManager;
+import io.zeebe.client.clustering.impl.TopicLeader;
 import io.zeebe.client.event.TaskEvent;
 import io.zeebe.client.event.TopicSubscription;
-import io.zeebe.client.impl.ZeebeClientImpl;
 import io.zeebe.client.task.TaskSubscription;
+import io.zeebe.test.util.AutoCloseableRule;
 import io.zeebe.transport.SocketAddress;
+import org.junit.*;
+import org.junit.rules.Timeout;
 
 public class BrokerLeaderChangeTest
 {
@@ -117,7 +108,7 @@ public class BrokerLeaderChangeTest
                                                                                         .filter((leader) -> leader.getPartitionId() == partition)
                                                                                         .findAny();
 
-        SocketAddress leaderAddress = topicLeader.get().getSocketAddress();
+        final SocketAddress leaderAddress = topicLeader.get().getSocketAddress();
         final TaskEvent taskEvent = taskClient.create(clientRule.getDefaultTopic(), TASK_TYPE)
                                               .execute();
 

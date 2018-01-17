@@ -23,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import io.zeebe.broker.Broker;
@@ -32,7 +31,6 @@ import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.clustering.impl.TopicLeader;
 import io.zeebe.client.event.DeploymentEvent;
 import io.zeebe.client.event.Event;
-import io.zeebe.client.topic.Topics;
 import io.zeebe.gossip.Loggers;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
@@ -41,7 +39,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
@@ -175,21 +172,17 @@ public class DeploymentClusteredTest
               .handler((event -> {
                   events.add(event);
               }))
-              .workflowEventHandler(e ->
-                                    {
-                                        workflowStates.add(e.getState());
-                                    }).open();
+              .workflowEventHandler(e -> workflowStates.add(e.getState()))
+              .open();
 
         // when
         brokers.get(2).close();
 
         // then
-        assertThatThrownBy(() ->
-                           {
-                               client.workflows().deploy("test")
-                                     .addWorkflowModel(WORKFLOW, "workflow.bpmn")
-                                     .execute();
-                           }).hasMessageContaining("Deployment was rejected");
+        assertThatThrownBy(() -> client.workflows().deploy("test")
+                                       .addWorkflowModel(WORKFLOW, "workflow.bpmn")
+                                       .execute())
+            .hasMessageContaining("Deployment was rejected");
 
         waitUntil(() -> {
             final long deleted = workflowStates.stream()
