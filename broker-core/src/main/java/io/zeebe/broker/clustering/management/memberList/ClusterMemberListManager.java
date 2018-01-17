@@ -17,7 +17,7 @@
  */
 package io.zeebe.broker.clustering.management.memberList;
 
-import static io.zeebe.broker.clustering.management.ClusteringHelper.*;
+import static io.zeebe.broker.clustering.management.memberList.GossipEventCreationHelper.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,13 +38,14 @@ import io.zeebe.transport.SocketAddress;
 import io.zeebe.util.DeferredCommandContext;
 import io.zeebe.util.buffer.BufferUtil;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
 import org.slf4j.Logger;
 
 public class ClusterMemberListManager implements RaftStateListener
 {
     public static final Logger LOG = Loggers.CLUSTERING_LOGGER;
     public static final DirectBuffer API_EVENT_TYPE = BufferUtil.wrapString("apis");
-    public static final DirectBuffer PARTITION_EVENT_TYPE = BufferUtil.wrapString("partition");
+    public static final DirectBuffer MEMBER_RAFT_STATES_EVENT_TYPE = BufferUtil.wrapString("memberRaftStates");
 
     private final ClusterManagerContext context;
     private TransportComponentCfg transportComponentCfg;
@@ -52,6 +53,10 @@ public class ClusterMemberListManager implements RaftStateListener
     private final List<MemberRaftComposite> deadMembers;
     private final Consumer<SocketAddress> updatedMemberConsumer;
     private final TopologyCreator topologyCreator;
+
+    // buffers
+    private final ExpandableArrayBuffer apiAddressBuffer;
+    private final ExpandableArrayBuffer memberRaftStatesBuffer;
 
     public ClusterMemberListManager(ClusterManagerContext context, TransportComponentCfg transportComponentCfg, Consumer<SocketAddress> updatedMemberConsumer)
     {
@@ -71,15 +76,18 @@ public class ClusterMemberListManager implements RaftStateListener
         context.getGossip()
                .addCustomEventListener(API_EVENT_TYPE, new APIEventListener());
         context.getGossip()
-               .addCustomEventListener(PARTITION_EVENT_TYPE, new PartitionEventListener());
+               .addCustomEventListener(MEMBER_RAFT_STATES_EVENT_TYPE, new MemberRaftStatesEventListener());
 
         // sync handlers
         context.getGossip()
                .registerSyncRequestHandler(API_EVENT_TYPE, new APISyncHandler(commandQueue, context));
         context.getGossip()
-               .registerSyncRequestHandler(PARTITION_EVENT_TYPE, new RaftStateSyncHandler(commandQueue, context));
+               .registerSyncRequestHandler(MEMBER_RAFT_STATES_EVENT_TYPE, new MemberRaftStatesSyncHandler(commandQueue, context));
 
         topologyCreator = new TopologyCreator(context);
+
+        this.apiAddressBuffer = new ExpandableArrayBuffer();
+        this.memberRaftStatesBuffer = new ExpandableArrayBuffer();
     }
 
     public int doWork()
@@ -92,7 +100,8 @@ public class ClusterMemberListManager implements RaftStateListener
         final Gossip gossip = context.getGossip();
         final DirectBuffer payload = writeAPIAddressesIntoBuffer(transportComponentCfg.managementApi.toSocketAddress(),
                                                                  transportComponentCfg.replicationApi.toSocketAddress(),
-                                                                 transportComponentCfg.clientApi.toSocketAddress());
+                                                                 transportComponentCfg.clientApi.toSocketAddress(),
+                                                                 apiAddressBuffer);
         gossip.publishEvent(API_EVENT_TYPE, payload);
     }
 
@@ -143,7 +152,6 @@ public class ClusterMemberListManager implements RaftStateListener
         @Override
         public void onEvent(SocketAddress socketAddress, DirectBuffer directBuffer)
         {
-
             final DirectBuffer savedBuffer = BufferUtil.cloneBuffer(directBuffer);
             final SocketAddress savedSocketAddress = new SocketAddress(socketAddress);
             commandQueue.runAsync(() ->
@@ -172,7 +180,7 @@ public class ClusterMemberListManager implements RaftStateListener
         }
     }
 
-    private final class PartitionEventListener implements GossipCustomEventListener
+    private final class MemberRaftStatesEventListener implements GossipCustomEventListener
     {
         @Override
         public void onEvent(SocketAddress socketAddress, DirectBuffer directBuffer)
@@ -222,12 +230,12 @@ public class ClusterMemberListManager implements RaftStateListener
                     LOG.trace("On raft state change for {} - local member states: {}", socketAddress, context.getMemberListService());
 
                     // send complete list of partition where I'm a follower or leader
-                    final DirectBuffer payload = writeRaftsIntoBuffer(rafts);
+                    final DirectBuffer payload = writeRaftsIntoBuffer(rafts, memberRaftStatesBuffer);
 
                     LOG.trace("Publish event for partition {} state change {}", partitionId, raftState);
 
                     context.getGossip()
-                           .publishEvent(PARTITION_EVENT_TYPE, payload);
+                           .publishEvent(MEMBER_RAFT_STATES_EVENT_TYPE, payload);
 
                     break;
                 }

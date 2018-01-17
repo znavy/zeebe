@@ -175,17 +175,17 @@ public class ClusterManager implements Actor
     @Override
     public int doWork()
     {
-        int workcount = 0;
+        int workCount = 0;
 
-        workcount += commandQueue.doWork();
-        workcount += clusterMemberListManager.doWork();
-        workcount += inputSubscription.poll();
+        workCount += commandQueue.doWork();
+        workCount += clusterMemberListManager.doWork();
+        workCount += inputSubscription.poll();
 
         int i = 0;
         while (i < activeRequestControllers.size())
         {
             final RequestResponseController requestController = activeRequestControllers.get(i);
-            workcount += requestController.doWork();
+            workCount += requestController.doWork();
 
             if (requestController.isFailed() || requestController.isResponseAvailable())
             {
@@ -204,11 +204,11 @@ public class ClusterManager implements Actor
 
         for (int j = 0; j < startLogStreamServiceControllers.size(); j++)
         {
-            workcount += startLogStreamServiceControllers.get(j)
+            workCount += startLogStreamServiceControllers.get(j)
                                                          .doWork();
         }
 
-        return workcount;
+        return workCount;
     }
 
     private void inviteUpdatedMember(SocketAddress updatedMember)

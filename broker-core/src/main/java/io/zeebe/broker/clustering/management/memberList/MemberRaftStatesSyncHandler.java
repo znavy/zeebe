@@ -17,7 +17,7 @@
  */
 package io.zeebe.broker.clustering.management.memberList;
 
-import static io.zeebe.broker.clustering.management.ClusteringHelper.writeRaftsIntoBuffer;
+import static io.zeebe.broker.clustering.management.memberList.GossipEventCreationHelper.writeRaftsIntoBuffer;
 
 import java.util.Iterator;
 
@@ -27,19 +27,22 @@ import io.zeebe.gossip.GossipSyncRequestHandler;
 import io.zeebe.gossip.dissemination.GossipSyncRequest;
 import io.zeebe.util.DeferredCommandContext;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
 import org.slf4j.Logger;
 
-public final class RaftStateSyncHandler implements GossipSyncRequestHandler
+public final class MemberRaftStatesSyncHandler implements GossipSyncRequestHandler
 {
     public static final Logger LOG = Loggers.CLUSTERING_LOGGER;
 
     private final DeferredCommandContext clusterManagerCmdQueue;
     private final ClusterManagerContext clusterManagerContext;
+    private final ExpandableArrayBuffer memberRaftStatesBuffer;
 
-    public RaftStateSyncHandler(DeferredCommandContext clusterManagerCmdQueue, ClusterManagerContext clusterManagerContext)
+    public MemberRaftStatesSyncHandler(DeferredCommandContext clusterManagerCmdQueue, ClusterManagerContext clusterManagerContext)
     {
         this.clusterManagerCmdQueue = clusterManagerCmdQueue;
         this.clusterManagerContext = clusterManagerContext;
+        this.memberRaftStatesBuffer = new ExpandableArrayBuffer();
     }
 
     @Override
@@ -54,7 +57,7 @@ public final class RaftStateSyncHandler implements GossipSyncRequestHandler
             {
                 final MemberRaftComposite next = iterator.next();
 
-                final DirectBuffer payload = writeRaftsIntoBuffer(next.getRafts());
+                final DirectBuffer payload = writeRaftsIntoBuffer(next.getRafts(), memberRaftStatesBuffer);
                 request.addPayload(next.getMember()
                                        .getAddress(), payload);
             }

@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package io.zeebe.broker.clustering.management;
+package io.zeebe.broker.clustering.management.memberList;
 
 import static org.agrona.BitUtil.SIZE_OF_BYTE;
 import static org.agrona.BitUtil.SIZE_OF_INT;
@@ -35,27 +35,13 @@ import org.agrona.concurrent.UnsafeBuffer;
 /**
  *
  */
-public final class ClusteringHelper
+public final class GossipEventCreationHelper
 {
     public static DirectBuffer writeAPIAddressesIntoBuffer(SocketAddress managementApi,
                                                            SocketAddress replicationApi,
-                                                           SocketAddress clientApi)
+                                                           SocketAddress clientApi,
+                                                           MutableDirectBuffer directBuffer)
     {
-        int messageLength = 0;
-        messageLength += SIZE_OF_INT; // length of host
-        messageLength += managementApi.hostLength(); // host
-        messageLength += SIZE_OF_INT; // port
-
-        messageLength += SIZE_OF_INT; // length of host
-        messageLength += clientApi.hostLength(); // host
-        messageLength += SIZE_OF_INT; // port
-
-        messageLength += SIZE_OF_INT; // length of host
-        messageLength += replicationApi.hostLength(); // host
-        messageLength += SIZE_OF_INT; // port
-
-        final MutableDirectBuffer directBuffer = new UnsafeBuffer(new byte[messageLength]);
-
         int offset = 0;
         offset = writeApiAddressIntoBuffer(offset, managementApi, directBuffer);
         offset = writeApiAddressIntoBuffer(offset, clientApi, directBuffer);
@@ -95,10 +81,9 @@ public final class ClusteringHelper
         return offset;
     }
 
-    public static DirectBuffer writeRaftsIntoBuffer(List<RaftStateComposite> rafts)
+    public static DirectBuffer writeRaftsIntoBuffer(List<RaftStateComposite> rafts, MutableDirectBuffer directBuffer)
     {
         final int raftCount = rafts.size();
-        final ExpandableArrayBuffer directBuffer = new ExpandableArrayBuffer();
 
         int offset = 0;
         directBuffer.putInt(offset, raftCount, ByteOrder.LITTLE_ENDIAN);
@@ -125,25 +110,25 @@ public final class ClusteringHelper
         return directBuffer;
     }
 
-    public static void updateMemberWithNewRaftState(MemberRaftComposite memberRaftComposite, DirectBuffer raftStateBuffer)
+    public static void updateMemberWithNewRaftState(MemberRaftComposite memberRaftComposite, DirectBuffer memberRaftStatesBuffer)
     {
         int offset = 0;
-        final int count = raftStateBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
+        final int count = memberRaftStatesBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
         offset += SIZE_OF_INT;
 
         for (int i = 0; i < count; i++)
         {
-            final int partition = raftStateBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
+            final int partition = memberRaftStatesBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
             offset += SIZE_OF_INT;
 
-            final int topicNameLength = raftStateBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
+            final int topicNameLength = memberRaftStatesBuffer.getInt(offset, ByteOrder.LITTLE_ENDIAN);
             offset += SIZE_OF_INT;
 
             final MutableDirectBuffer topicBuffer = new UnsafeBuffer(new byte[topicNameLength]);
-            raftStateBuffer.getBytes(offset, topicBuffer, 0, topicNameLength);
+            memberRaftStatesBuffer.getBytes(offset, topicBuffer, 0, topicNameLength);
             offset += topicNameLength;
 
-            final byte state = raftStateBuffer.getByte(offset);
+            final byte state = memberRaftStatesBuffer.getByte(offset);
             offset += SIZE_OF_BYTE;
 
             memberRaftComposite.updateRaft(partition, topicBuffer, state == (byte) 1 ? RaftState.LEADER : RaftState.FOLLOWER);

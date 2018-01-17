@@ -17,7 +17,7 @@
  */
 package io.zeebe.broker.clustering.management.memberList;
 
-import static io.zeebe.broker.clustering.management.ClusteringHelper.writeAPIAddressesIntoBuffer;
+import static io.zeebe.broker.clustering.management.memberList.GossipEventCreationHelper.writeAPIAddressesIntoBuffer;
 
 import java.util.Iterator;
 
@@ -27,25 +27,28 @@ import io.zeebe.gossip.GossipSyncRequestHandler;
 import io.zeebe.gossip.dissemination.GossipSyncRequest;
 import io.zeebe.util.DeferredCommandContext;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
 import org.slf4j.Logger;
 
 public final class APISyncHandler implements GossipSyncRequestHandler
 {
     public static final Logger LOG = Loggers.CLUSTERING_LOGGER;
 
-    private final DeferredCommandContext clusterManagerCmdQueue;
+    private final DeferredCommandContext commandQueue;
     private final ClusterManagerContext clusterManagerContext;
+    private final ExpandableArrayBuffer apiAddressBuffer;
 
-    public APISyncHandler(DeferredCommandContext clusterManagerCmdQueue, ClusterManagerContext clusterManagerContext)
+    public APISyncHandler(DeferredCommandContext commandQueue, ClusterManagerContext clusterManagerContext)
     {
-        this.clusterManagerCmdQueue = clusterManagerCmdQueue;
+        this.commandQueue = commandQueue;
         this.clusterManagerContext = clusterManagerContext;
+        this.apiAddressBuffer = new ExpandableArrayBuffer();
     }
 
     @Override
     public void onSyncRequest(GossipSyncRequest request)
     {
-        clusterManagerCmdQueue.runAsync(() -> {
+        commandQueue.runAsync(() -> {
             LOG.debug("Got API sync request.");
             final Iterator<MemberRaftComposite> iterator = clusterManagerContext.getMemberListService()
                                                                                 .iterator();
@@ -56,7 +59,10 @@ public final class APISyncHandler implements GossipSyncRequestHandler
 
                 if (next.hasApis())
                 {
-                    final DirectBuffer payload = writeAPIAddressesIntoBuffer(next.getManagementApi(), next.getReplicationApi(), next.getClientApi());
+                    final DirectBuffer payload = writeAPIAddressesIntoBuffer(next.getManagementApi(),
+                                                                             next.getReplicationApi(),
+                                                                             next.getClientApi(),
+                                                                             apiAddressBuffer);
                     request.addPayload(next.getMember()
                                            .getAddress(), payload);
                 }
