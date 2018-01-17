@@ -29,10 +29,7 @@ import io.zeebe.util.buffer.BufferUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.io.DirectBufferInputStream;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
@@ -50,8 +47,8 @@ public class GossipClusteringTest
     @Rule
     public ClientRule clientRule = new ClientRule(false);
 
-//    @Rule
-//    public Timeout timeout = new Timeout(30, TimeUnit.SECONDS);
+    @Rule
+    public Timeout timeout = new Timeout(15, TimeUnit.SECONDS);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -65,19 +62,6 @@ public class GossipClusteringTest
         client = clientRule.getClient();
         brokers = new ArrayList<>();
     }
-
-//    @After
-//    public void tearDown()
-//    {
-//        Loggers.GOSSIP_LOGGER.debug("Close client and brokers!");
-//        client.close();
-//
-//        Collections.reverse(brokers);
-//        for (Broker broker : brokers)
-//        {
-//            broker.close();
-//        }
-//    }
 
     @Test
     public void shouldStartCluster()
@@ -98,7 +82,6 @@ public class GossipClusteringTest
                                                     new SocketAddress("localhost", 41015),
                                                     new SocketAddress("localhost", 31015));
     }
-
 
     @Test
     public void shouldDistributePartitionsAndLeaderInformationInCluster()
@@ -149,11 +132,66 @@ public class GossipClusteringTest
     }
 
     @Test
+    @Ignore("https://github.com/zeebe-io/zeebe/issues/617")
+    public void shouldRemoveLeaderFromCluster()
+    {
+        // given
+        brokers.add(startBroker("zeebe.cluster.1.cfg.toml"));
+        brokers.add(startBroker("zeebe.cluster.2.cfg.toml"));
+        brokers.add(startBroker("zeebe.cluster.3.cfg.toml"));
+
+        doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+            .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 3);
+
+        // when
+        final Broker removedBroker = brokers.remove(0);
+        removedBroker.close();
+
+        // then
+        final List<SocketAddress> topologyBrokers =
+            doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+                .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 2);
+
+        assertThat(topologyBrokers).containsExactly(new SocketAddress("localhost", 51015),
+                                                    new SocketAddress("localhost", 41015));
+    }
+
+    @Test
     public void shouldAddLaterToCluster()
     {
         // given
         brokers.add(startBroker("zeebe.cluster.1.cfg.toml"));
         brokers.add(startBroker("zeebe.cluster.2.cfg.toml"));
+
+        doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+            .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 2);
+
+        // when
+        brokers.add(startBroker("zeebe.cluster.3.cfg.toml"));
+
+        // then
+        final List<SocketAddress> topologyBrokers =
+            doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+                .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 3);
+
+        assertThat(topologyBrokers).containsExactly(new SocketAddress("localhost", 51015),
+                                                    new SocketAddress("localhost", 41015),
+                                                    new SocketAddress("localhost", 31015));
+    }
+
+    @Test
+    public void shouldReAddToCluster()
+    {
+        // given
+        brokers.add(startBroker("zeebe.cluster.1.cfg.toml"));
+        brokers.add(startBroker("zeebe.cluster.2.cfg.toml"));
+        brokers.add(startBroker("zeebe.cluster.3.cfg.toml"));
+
+        doRepeatedly(() -> client.requestTopology().execute().getBrokers())
+            .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 3);
+
+        final Broker removedBroker = brokers.remove(2);
+        removedBroker.close();
 
         doRepeatedly(() -> client.requestTopology().execute().getBrokers())
             .until(topologyBroker -> topologyBroker != null && topologyBroker.size() == 2);

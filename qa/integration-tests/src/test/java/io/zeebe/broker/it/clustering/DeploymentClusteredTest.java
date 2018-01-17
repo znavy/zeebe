@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import io.zeebe.broker.Broker;
@@ -30,6 +31,9 @@ import io.zeebe.broker.it.ClientRule;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.clustering.impl.TopicLeader;
 import io.zeebe.client.event.DeploymentEvent;
+import io.zeebe.client.event.Event;
+import io.zeebe.client.topic.Topics;
+import io.zeebe.gossip.Loggers;
 import io.zeebe.model.bpmn.Bpmn;
 import io.zeebe.model.bpmn.instance.WorkflowDefinition;
 import io.zeebe.test.util.AutoCloseableRule;
@@ -68,7 +72,7 @@ public class DeploymentClusteredTest
     private List<Broker> brokers;
 
     @Before
-    public void init() throws InterruptedException
+    public void init()
     {
         client = clientRule.getClient();
 
@@ -78,21 +82,17 @@ public class DeploymentClusteredTest
         brokers.add(startBroker("zeebe.cluster.3.cfg.toml"));
 
         // wait until cluster is ready
-        doRepeatedly(() -> client.requestTopology().execute().getBrokers())
-            .until(topologyBroker -> topologyBroker.size() == brokers.size());
-
-        Thread.sleep(1000);
+        doRepeatedly(() -> client.requestTopology().execute())
+            .until(topology -> topology.getBrokers().size() == 3 && topology.getTopicLeaders().size() == 1);
     }
 
     @Test
-    // FIXME: https://github.com/zeebe-io/zeebe/issues/557
-    @Category(io.zeebe.UnstableTest.class)
     public void shouldDeployWorkflowAndCreateInstances()
     {
         // given
         client.topics().create("test", PARTITION_COUNT).execute();
 
-        waitUntil(() -> getLeadersOfTopic("test") == 3);
+        waitUntil(() -> getLeadersOfTopic("test") >= 3);
 
         // when
         client.workflows().deploy("test")
@@ -108,19 +108,16 @@ public class DeploymentClusteredTest
         }
     }
 
-    @Ignore
     @Test
-    public void shouldRejectDeployment() throws InterruptedException
+    public void shouldRejectDeployment()
     {
         // given
         client.topics().create("test", PARTITION_COUNT).execute();
 
-        waitUntil(() -> getLeadersOfTopic("test") == 3);
+        waitUntil(() -> getLeadersOfTopic("test") >= 3);
 
         // when
         brokers.get(2).close();
-
-        Thread.sleep(3000);
 
         // then
         assertThatThrownBy(() ->
@@ -131,56 +128,88 @@ public class DeploymentClusteredTest
         }).hasMessageContaining("Deployment was rejected");
     }
 
-    @Ignore
     @Test
-    public void shouldDeleteWorkflowsIfRejected() throws InterruptedException
+    public void shouldDeployOnRemainingBrokers() throws InterruptedException
     {
+        // given
         client.topics().create("test", PARTITION_COUNT).execute();
 
-        waitUntil(() -> getLeadersOfTopic("test") == 3);
+        waitUntil(() -> getLeadersOfTopic("test") >= 3);
 
         // when
         brokers.get(2).close();
-        Thread.sleep(3000);
+        Thread.sleep(3000); // new leader is chosen for partition
+
+        doRepeatedly(() -> client.requestTopology()
+                                 .execute()
+                                 .getTopicLeaders()).until(leaders -> leaders != null && leaders.size() >= PARTITION_COUNT);
 
         // then
-        assertThatThrownBy(() ->
-        {
-            client.workflows().deploy("test")
-                .addWorkflowModel(WORKFLOW, "workflow.bpmn")
-                .execute();
-        }).hasMessageContaining("Deployment was rejected");
+        final DeploymentEvent deploymentEvent = client.workflows()
+                                           .deploy("test")
+                                           .addWorkflowModel(WORKFLOW, "workflow.bpmn")
+                                           .execute();
 
+        assertThat(deploymentEvent.getDeployedWorkflows().size()).isEqualTo(1);
+        assertThat(deploymentEvent.getErrorMessage()).isEmpty();
+    }
 
-        // TODO response should come after delete request is sent
-        Thread.sleep(3000);
+    @Test
+    @Ignore
+    public void shouldDeleteWorkflowsIfRejected() throws Exception
+    {
+        // given
+        client.topics().create("test", PARTITION_COUNT).execute();
+        waitUntil(() -> getLeadersOfTopic("test") >= 3);
+
+        doRepeatedly(() -> client.topics()
+                                 .getTopics()
+                                 .execute())
+            .until((topics -> topics.getTopics().size() == 1));
 
         final List<String> workflowStates = new ArrayList<>();
-
+        final List<Event> events = new ArrayList<>();
         client.topics().newSubscription("test")
-            .name("test")
-            .startAtHeadOfTopic()
-            .workflowEventHandler(e ->
-            {
-                workflowStates.add(e.getState());
-            }).open();
-
-        waitUntil(() -> workflowStates.stream().filter(s -> s.equals("DELETED")).count() == PARTITION_COUNT);
-    }
-
-    @Ignore
-    @Test
-    public void shouldFailToCreateWorkflowInstanceIfRejected() throws InterruptedException
-    {
-        // given
-        client.topics().create("test", PARTITION_COUNT).execute();
-
-        waitUntil(() -> getLeadersOfTopic("test") == 3);
+              .name("test")
+              .startAtHeadOfTopic()
+              .handler((event -> {
+                  events.add(event);
+              }))
+              .workflowEventHandler(e ->
+                                    {
+                                        workflowStates.add(e.getState());
+                                    }).open();
 
         // when
         brokers.get(2).close();
 
-        Thread.sleep(3000);
+        // then
+        assertThatThrownBy(() ->
+                           {
+                               client.workflows().deploy("test")
+                                     .addWorkflowModel(WORKFLOW, "workflow.bpmn")
+                                     .execute();
+                           }).hasMessageContaining("Deployment was rejected");
+
+        waitUntil(() -> {
+            final long deleted = workflowStates.stream()
+                                               .filter(s -> s.equals("DELETED"))
+                                               .count();
+            Loggers.GOSSIP_LOGGER.debug("Deleted count {}", deleted);
+            return deleted == PARTITION_COUNT;
+
+        });
+    }
+
+    @Test
+    public void shouldFailToCreateWorkflowInstanceIfRejected()
+    {
+        // given
+        client.topics().create("test", PARTITION_COUNT).execute();
+        waitUntil(() -> getLeadersOfTopic("test") >= 3);
+
+        // when
+        brokers.get(2).close();
 
         // then
         assertThatThrownBy(() ->
@@ -189,9 +218,6 @@ public class DeploymentClusteredTest
                 .addWorkflowModel(WORKFLOW, "workflow.bpmn")
                 .execute();
         }).hasMessageContaining("Deployment was rejected");
-
-        // TODO response should come after delete request is sent
-        Thread.sleep(3000);
 
         for (int p = 0; p < PARTITION_COUNT; p++)
         {
@@ -210,13 +236,10 @@ public class DeploymentClusteredTest
     {
         // given
         client.topics().create("test", PARTITION_COUNT).execute();
-
-        waitUntil(() -> getLeadersOfTopic("test") == 3);
+        waitUntil(() -> getLeadersOfTopic("test") >= 3);
 
         // when
         brokers.get(2).close();
-
-        Thread.sleep(3000);
 
         // then
         assertThatThrownBy(() ->
@@ -226,27 +249,12 @@ public class DeploymentClusteredTest
                 .execute();
         }).hasMessageContaining("Deployment was rejected");
 
-
-        // TODO repair cluster
-
         final DeploymentEvent deploymentEvent = client.workflows().deploy("test")
             .addWorkflowModel(WORKFLOW, "workflow.bpmn")
             .execute();
 
         final int version = deploymentEvent.getDeployedWorkflows().get(0).getVersion();
         assertThat(version).isEqualTo(1);
-    }
-
-    private void printClusterState()
-    {
-        System.out.println("----");
-
-        clientRule.getClient().requestTopology().execute().getTopicLeaders().stream().forEach(tl ->
-        {
-            System.out.printf("%s : %s > %d\n", tl.getSocketAddress(), tl.getTopicName(), tl.getPartitionId());
-        });
-
-        System.out.println("====");
     }
 
     private long getLeadersOfTopic(final String topic)

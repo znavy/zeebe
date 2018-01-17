@@ -557,7 +557,8 @@ public class ClusterManager implements Actor, RaftStateListener
                 }
             }
 
-//            LOG.debug("Send topology {} as response.", topology);
+            // DO NOT LOG TOPOLOGY SEE https://github.com/zeebe-io/zeebe/issues/616
+            // LOG.debug("Send topology {} as response.", topology);
             future.complete(topology);
         });
     }
