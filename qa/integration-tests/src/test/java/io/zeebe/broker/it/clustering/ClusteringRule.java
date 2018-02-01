@@ -28,10 +28,15 @@ import io.zeebe.broker.system.ConfigurationManagerImpl;
 import io.zeebe.broker.system.SystemContext;
 import io.zeebe.broker.system.SystemServiceNames;
 import io.zeebe.broker.system.threads.ActorSchedulerService;
+import io.zeebe.broker.transport.ServerTransportService;
 import io.zeebe.broker.transport.TransportServiceNames;
 import io.zeebe.client.topic.Topics;
+import io.zeebe.servicecontainer.Service;
 import io.zeebe.servicecontainer.ServiceName;
 import io.zeebe.servicecontainer.impl.ServiceContainerImpl;
+import io.zeebe.transport.BufferingServerTransport;
+import io.zeebe.transport.ClientTransport;
+import io.zeebe.transport.ServerTransport;
 import io.zeebe.util.actor.ActorScheduler;
 import org.junit.rules.ExternalResource;
 
@@ -304,14 +309,36 @@ public class ClusteringRule extends ExternalResource
         {
             final SystemContext brokerContext = broker.getBrokerContext();
             final ServiceContainerImpl serviceContainer = (ServiceContainerImpl) brokerContext.getServiceContainer();
-            serviceContainer.removeServiceForce(ACTOR_SCHEDULER_SERVICE).get();
-            final List<ServiceName> names = serviceContainer.getServiceNamesWith("transport");
-            for (ServiceName name : names)
-            {
-                serviceContainer.removeServiceForce(name);
-            }
+//            serviceContainer.removeServiceForce(ACTOR_SCHEDULER_SERVICE).get();
 
-            waitForNewLeaderOfPartitions(brokersLeadingPartitions, socketAddress);
+            final ServiceName<BufferingServerTransport> bufferingServerTransportServiceName = TransportServiceNames.bufferingServerTransport(
+                TransportServiceNames.MANAGEMENT_API_SERVER_NAME);
+
+            final ServiceName<ClientTransport> clientTransportServiceName = TransportServiceNames.clientTransport(
+                TransportServiceNames.MANAGEMENT_API_CLIENT_NAME);
+
+            final AutoCloseable serverClosable = (AutoCloseable) serviceContainer.getService(bufferingServerTransportServiceName)
+                                                                                .get();
+            serverClosable.close();
+
+            final AutoCloseable clientClosable = (AutoCloseable) serviceContainer.getService(clientTransportServiceName)
+                                                                                .get();
+            clientClosable.close();
+//
+//            final List<ServiceName> names = serviceContainer.getServiceNamesWith("");
+//            for (ServiceName name : names)
+//            {
+//                final Object o = serviceContainer.getService(name)
+//                                                 .get();
+//                if (o instanceof AutoCloseable)
+//                {
+//                    final AutoCloseable closeable = (AutoCloseable) o;
+//                    closeable.close();
+//
+//                }
+
+//            }?
+
         } catch (Exception ex)
         {
             ex.printStackTrace();
@@ -320,6 +347,8 @@ public class ClusteringRule extends ExternalResource
         {
             broker.close();
         }
+
+        waitForNewLeaderOfPartitions(brokersLeadingPartitions, socketAddress);
     }
 
     private void waitForNewLeaderOfPartitions(List<Integer> partitions, SocketAddress oldLeader)
