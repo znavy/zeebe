@@ -17,11 +17,24 @@ package io.zeebe.broker.it.clustering;
 
 import static io.zeebe.test.util.TestUtil.doRepeatedly;
 import static io.zeebe.test.util.TestUtil.waitUntil;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import io.zeebe.broker.Broker;
+import io.zeebe.broker.Loggers;
+import io.zeebe.broker.system.SystemContext;
+import io.zeebe.broker.transport.TransportServiceNames;
+import io.zeebe.client.clustering.impl.TopologyResponse;
+import io.zeebe.servicecontainer.ServiceContainer;
+import io.zeebe.servicecontainer.ServiceName;
+import io.zeebe.servicecontainer.impl.ServiceContainerImpl;
+import io.zeebe.transport.ClientTransport;
+import io.zeebe.transport.ServerTransport;
+import io.zeebe.util.actor.ActorScheduler;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,7 +56,7 @@ public class BrokerLeaderChangeTest
     public static final String TASK_TYPE = "testTask";
 
     public AutoCloseableRule closeables = new AutoCloseableRule();
-    public Timeout testTimeout = Timeout.seconds(30);
+    public Timeout testTimeout = Timeout.seconds(180);
     public ClientRule clientRule = new ClientRule(false);
     public ClusteringRule clusteringRule = new ClusteringRule(closeables, clientRule);
 
@@ -65,7 +78,49 @@ public class BrokerLeaderChangeTest
     }
 
     @Test
-    public void shouldChangeLeaderAfterLeaderDies()
+    public void shouldForceStopLeaderAndTriggerLeaderChange()
+    {
+        // given
+        final SocketAddress oldLeader = ClusteringRule.BROKER_1_CLIENT_ADDRESS;
+
+        // when
+        clusteringRule.killBroker(oldLeader);
+
+        // then
+        final TopologyBroker leaderForPartition = clusteringRule.getLeaderForPartition(0);
+        assertThat(leaderForPartition.getSocketAddress()).isNotEqualTo(oldLeader);
+
+
+        final List<SocketAddress> topologyBrokers = clusteringRule.getBrokersInCluster();
+        assertThat(topologyBrokers).containsExactlyInAnyOrder(ClusteringRule.BROKER_3_CLIENT_ADDRESS,
+                                                              ClusteringRule.BROKER_2_CLIENT_ADDRESS);
+    }
+
+    @Test
+    public void shouldCompleteTaskAfterLeaderIsKilled()
+    {
+        // given
+        clusteringRule.createTopic(clientRule.getDefaultTopic(), 2);
+
+        final TopologyBroker leaderForPartition = clusteringRule.getLeaderForPartition(1);
+        final SocketAddress leaderAddress = leaderForPartition.getSocketAddress();
+
+        final TaskEvent taskEvent = taskClient.create(clientRule.getDefaultTopic(), TASK_TYPE)
+                                              .execute();
+
+        // when
+        clusteringRule.killBroker(leaderAddress);
+        final TaskCompleter taskCompleter = new TaskCompleter(taskEvent);
+
+        // then
+        taskCompleter.waitForTaskCompletion();
+
+        taskCompleter.close();
+    }
+
+
+    @Test
+    public void shouldChangeLeaderAfterLeaderIsShutdown()
     {
         // given
         clusteringRule.createTopic(clientRule.getDefaultTopic(), 2);

@@ -15,6 +15,7 @@
  */
 package io.zeebe.broker.it.clustering;
 
+import static io.zeebe.broker.system.SystemServiceNames.ACTOR_SCHEDULER_SERVICE;
 import static io.zeebe.test.util.TestUtil.doRepeatedly;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,7 +23,16 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import io.zeebe.broker.system.ConfigurationManager;
+import io.zeebe.broker.system.ConfigurationManagerImpl;
+import io.zeebe.broker.system.SystemContext;
+import io.zeebe.broker.system.SystemServiceNames;
+import io.zeebe.broker.system.threads.ActorSchedulerService;
+import io.zeebe.broker.transport.TransportServiceNames;
 import io.zeebe.client.topic.Topics;
+import io.zeebe.servicecontainer.ServiceName;
+import io.zeebe.servicecontainer.impl.ServiceContainerImpl;
+import io.zeebe.util.actor.ActorScheduler;
 import org.junit.rules.ExternalResource;
 
 import io.zeebe.broker.Broker;
@@ -282,6 +292,34 @@ public class ClusteringRule extends ExternalResource
         brokers.remove(socketAddress).close();
 
         waitForNewLeaderOfPartitions(brokersLeadingPartitions, socketAddress);
+    }
+
+    public void killBroker(SocketAddress socketAddress)
+    {
+        final List<Integer> brokersLeadingPartitions = getBrokersLeadingPartitions(socketAddress);
+
+
+        final Broker broker = brokers.remove(socketAddress);
+        try
+        {
+            final SystemContext brokerContext = broker.getBrokerContext();
+            final ServiceContainerImpl serviceContainer = (ServiceContainerImpl) brokerContext.getServiceContainer();
+            serviceContainer.removeServiceForce(ACTOR_SCHEDULER_SERVICE).get();
+            final List<ServiceName> names = serviceContainer.getServiceNamesWith("transport");
+            for (ServiceName name : names)
+            {
+                serviceContainer.removeServiceForce(name);
+            }
+
+            waitForNewLeaderOfPartitions(brokersLeadingPartitions, socketAddress);
+        } catch (Exception ex)
+        {
+            ex.printStackTrace();
+        }
+        finally
+        {
+            broker.close();
+        }
     }
 
     private void waitForNewLeaderOfPartitions(List<Integer> partitions, SocketAddress oldLeader)
