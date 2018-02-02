@@ -15,40 +15,33 @@
  */
 package io.zeebe.broker.it.clustering;
 
-import static io.zeebe.broker.system.SystemServiceNames.ACTOR_SCHEDULER_SERVICE;
 import static io.zeebe.test.util.TestUtil.doRepeatedly;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.InputStream;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
-
-import io.zeebe.broker.system.ConfigurationManager;
-import io.zeebe.broker.system.ConfigurationManagerImpl;
-import io.zeebe.broker.system.SystemContext;
-import io.zeebe.broker.system.SystemServiceNames;
-import io.zeebe.broker.system.threads.ActorSchedulerService;
-import io.zeebe.broker.transport.ServerTransportService;
-import io.zeebe.broker.transport.TransportServiceNames;
-import io.zeebe.client.topic.Topics;
-import io.zeebe.servicecontainer.Service;
-import io.zeebe.servicecontainer.ServiceName;
-import io.zeebe.servicecontainer.impl.ServiceContainerImpl;
-import io.zeebe.transport.BufferingServerTransport;
-import io.zeebe.transport.ClientTransport;
-import io.zeebe.transport.ServerTransport;
-import io.zeebe.util.actor.ActorScheduler;
-import org.junit.rules.ExternalResource;
 
 import io.zeebe.broker.Broker;
 import io.zeebe.broker.it.ClientRule;
+import io.zeebe.broker.system.SystemContext;
+import io.zeebe.broker.transport.TransportServiceNames;
 import io.zeebe.client.ZeebeClient;
 import io.zeebe.client.clustering.impl.BrokerPartitionState;
 import io.zeebe.client.clustering.impl.TopologyBroker;
 import io.zeebe.client.event.Event;
 import io.zeebe.client.topic.Topic;
+import io.zeebe.client.topic.Topics;
+import io.zeebe.servicecontainer.ServiceName;
+import io.zeebe.servicecontainer.impl.ServiceContainerImpl;
 import io.zeebe.test.util.AutoCloseableRule;
+import io.zeebe.transport.BufferingServerTransport;
+import io.zeebe.transport.ClientTransport;
 import io.zeebe.transport.SocketAddress;
+import org.junit.rules.ExternalResource;
 
 public class ClusteringRule extends ExternalResource
 {
@@ -198,6 +191,19 @@ public class ClusteringRule extends ExternalResource
     {
         final InputStream config = this.getClass().getClassLoader().getResourceAsStream(configFile);
         final Broker broker = new Broker(config);
+
+        // close transport
+
+        // create new transport with own channel factory
+
+        // install transport
+
+        // restart
+
+
+
+
+
         autoCloseableRule.manage(broker);
         return broker;
     }
@@ -339,7 +345,8 @@ public class ClusteringRule extends ExternalResource
 
 //            }?
 
-        } catch (Exception ex)
+        }
+        catch (Exception ex)
         {
             ex.printStackTrace();
         }

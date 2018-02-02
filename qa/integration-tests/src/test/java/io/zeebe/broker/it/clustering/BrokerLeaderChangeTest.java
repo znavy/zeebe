@@ -24,23 +24,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.zeebe.broker.Broker;
-import io.zeebe.broker.Loggers;
-import io.zeebe.broker.system.SystemContext;
-import io.zeebe.broker.transport.TransportServiceNames;
-import io.zeebe.client.clustering.impl.TopologyResponse;
-import io.zeebe.servicecontainer.ServiceContainer;
-import io.zeebe.servicecontainer.ServiceName;
-import io.zeebe.servicecontainer.impl.ServiceContainerImpl;
-import io.zeebe.transport.ClientTransport;
-import io.zeebe.transport.ServerTransport;
-import io.zeebe.util.actor.ActorScheduler;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.Timeout;
-
 import io.zeebe.broker.it.ClientRule;
 import io.zeebe.client.TasksClient;
 import io.zeebe.client.TopicsClient;
@@ -50,6 +33,11 @@ import io.zeebe.client.event.TopicSubscription;
 import io.zeebe.client.task.TaskSubscription;
 import io.zeebe.test.util.AutoCloseableRule;
 import io.zeebe.transport.SocketAddress;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.RuleChain;
+import org.junit.rules.Timeout;
 
 public class BrokerLeaderChangeTest
 {
