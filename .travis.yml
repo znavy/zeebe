@@ -4,6 +4,3 @@ sudo: required
 
 language: java
 jdk: oraclejdk8
-
-script:
-    - mvn clean install -f broker-core/pom.xml -Dtest=RequestPartitionsTest

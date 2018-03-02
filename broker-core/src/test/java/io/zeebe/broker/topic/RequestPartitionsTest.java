@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -39,6 +40,7 @@ import io.zeebe.test.broker.protocol.clientapi.ClientApiRule;
 import io.zeebe.test.broker.protocol.clientapi.ControlMessageResponse;
 import io.zeebe.test.broker.protocol.clientapi.ErrorResponse;
 
+@Ignore
 public class RequestPartitionsTest
 {
     public ClientApiRule apiRule = new ClientApiRule(false);
