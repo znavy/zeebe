@@ -5,5 +5,5 @@ sudo: required
 language: java
 jdk: oraclejdk8
 
-after_failure:
-    - cat broker-core/target/surefire-reports/io.zeebe.broker.topic.RequestPartitionsTest-output.txt
+script:
+    - mvn clean install -f broker-core/pom.xml -Dtest=RequestPartitionsTest
